@@ -3,6 +3,7 @@ add_library(intcompr STATIC)
 target_sources(intcompr
   PRIVATE
     ic.cpp    
+    ic_impl.cpp
     ic_bitpack.cpp
   INTERFACE
     FILE_SET HEADERS

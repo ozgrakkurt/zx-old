@@ -1,7 +1,7 @@
+#include "./ic_impl.hpp"
+
 #include <cstddef>
 #include <cstdlib>
-
-#include "./ic_impl.hpp"
 
 namespace intcomp {
 
