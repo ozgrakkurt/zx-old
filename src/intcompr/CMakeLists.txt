@@ -1,0 +1,21 @@
+add_library(intcompr STATIC)
+
+target_sources(intcompr
+  PRIVATE
+    ic.cpp    
+    ic_bitpack.cpp
+  INTERFACE
+    FILE_SET HEADERS
+    FILES
+      intcompr.hpp
+)
+target_link_libraries(intcompr
+  fastlanes
+)
+
+add_executable(intcompr_test test.cpp)
+target_link_libraries(intcompr_test
+  intcompr 
+  GTest::gtest_main
+)
+gtest_discover_tests(intcompr_test)
