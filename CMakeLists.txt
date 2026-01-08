@@ -11,6 +11,8 @@ if (KIT_MARCH_NATIVE)
   add_compile_options(-march=native)
 endif()
 
+add_compile_options(-Wall -Wextra)
+
 include(FetchContent)
 
 set(BUILD_GMOCK OFF)

@@ -13,7 +13,7 @@ inline bool is_err(size_t res) { return res == SIZE_MAX; }
 template <typename T>
 size_t compress_data(compress_boundfn_t boundfn,
                      compress_block_t compress_block,
-                     size_t meta_size_per_block, T const* __restrict input,
+                     size_t meta_size_per_block, void const* __restrict input,
                      size_t input_len, uint8_t* __restrict output,
                      size_t output_size) {
   if (input_len == 0) {
@@ -53,7 +53,7 @@ size_t compress_data(compress_boundfn_t boundfn,
   out_offset += 1 + padding_size;
 
   T* out_block = (T*)&output[out_offset];
-  T const* input_blocks = &input[n_remainder];
+  T const* input_blocks = &((T const*)input)[n_remainder];
 
   // panic if output isn't aligned
   if (size_t(out_block) % ALIGNMENT != 0) {
@@ -75,11 +75,11 @@ size_t compress_data(compress_boundfn_t boundfn,
   return out_offset + sizeof(T) * t_written;
 }
 
-#define COMPRESS_DATA(T)                                                       \
-  template size_t compress_data<T>(                                            \
-      compress_boundfn_t boundfn, compress_block_t compress_block,             \
-      size_t meta_size_per_block, T const* __restrict input, size_t input_len, \
-      uint8_t* __restrict output, size_t output_size);
+#define COMPRESS_DATA(T)                                           \
+  template size_t compress_data<T>(                                \
+      compress_boundfn_t boundfn, compress_block_t compress_block, \
+      size_t meta_size_per_block, void const* __restrict input,    \
+      size_t input_len, uint8_t* __restrict output, size_t output_size);
 IC_REPEAT_FOR_IC_TYPES_UNSIGNED(COMPRESS_DATA);
 
 }  // namespace intcomp
