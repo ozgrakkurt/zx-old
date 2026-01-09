@@ -55,6 +55,9 @@ typedef size_t (*compress_boundfn_t)(size_t n);
 typedef size_t (*compress_block_t)(uint8_t* __restrict meta,
                                    void const* __restrict input,
                                    void* __restrict output);
+typedef size_t (*decompress_block_t)(uint8_t const* __restrict meta,
+                                     void const* __restrict input,
+                                     void* __restrict output);
 
 size_t constexpr ALIGNMENT = 64;
 

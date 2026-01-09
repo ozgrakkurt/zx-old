@@ -55,7 +55,7 @@ size_t bit_pack_compress_block(uint8_t* __restrict meta,
 
   fastlanes::bit_pack<T>(in, out, width);
 
-  return 1024 * width / (sizeof(T) * 8);
+  return 1024 / 8 * width;
 }
 
 template <typename T>
