@@ -51,7 +51,7 @@ uint8_t needed_bits(T value) {
 }
 
 template <typename T>
-size_t compress_data(compress_boundfn_t boundfn,
+size_t compress_impl(compress_boundfn_t boundfn,
                      compress_block_t compress_block,
                      size_t meta_size_per_block, void const* __restrict input,
                      size_t input_len, uint8_t* __restrict output,
