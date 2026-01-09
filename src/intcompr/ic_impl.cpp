@@ -6,6 +6,20 @@
 
 #include "./ic_zigzag.hpp"
 
+#define IC_REPEAT_FOR_IC_TYPES(D) \
+  D(uint8_t);                     \
+  D(uint16_t);                    \
+  D(uint32_t);                    \
+  D(uint64_t);                    \
+  D(ic_impl::uint128_t_);         \
+  D(ic_impl::uint256_t_);         \
+  D(int8_t);                      \
+  D(int16_t);                     \
+  D(int32_t);                     \
+  D(int64_t);                     \
+  D(ic_impl::int128_t_);          \
+  D(ic_impl::int256_t_);
+
 namespace ic_impl {
 
 typedef union u128_cast {
@@ -72,6 +86,7 @@ size_t compress_kernel_simple(compress_block_t compress_block,
                               size_t meta_size_per_block,
                               uint8_t* __restrict meta,
                               T const* __restrict input, T* __restrict output) {
+  (void)meta_size_per_block;
   return compress_block(meta, input, output);
 }
 
@@ -81,23 +96,28 @@ size_t compress_kernel_signed(compress_block_t compress_block,
                               uint8_t* __restrict meta,
                               T const* __restrict input, T* __restrict output) {
   alignas(64) U zigzagged[1024];
-  ic_zizag::zigzag_encode<T, U>(input, zigzagged, 1024);
+  ic_zigzag::zigzag_encode<T, U>(input, zigzagged, 1024);
 
-  return compress_kernel<U>(meta, zigzagged, (U* __restrict)output);
+  return compress_kernel<U>(compress_block, meta_size_per_block, meta,
+                            zigzagged, (U* __restrict)output);
 }
 
 template <typename T, typename I>
 size_t compress_kernel_128(compress_block_t compress_block,
                            size_t meta_size_per_block, uint8_t* __restrict meta,
                            T const* __restrict input, T* __restrict output) {
+  auto out = (I*)output;
+
   alignas(64) I in[1024];
 
-  take128<0>(input, in);
-  size_t const b0 = compress_kernel<I>(meta, in, output);
+  take128<0>((uint128_t_ const*)input, (uint64_t*)in);
+  size_t const b0 =
+      compress_kernel<I>(compress_block, meta_size_per_block, meta, in, out);
 
-  take128<1>(input, in);
+  take128<1>((uint128_t_ const*)input, (uint64_t*)in);
   size_t const b1 =
-      compress_kernel<I>(&meta[meta_size_per_block], in, &output[b0]);
+      compress_kernel<I>(compress_block, meta_size_per_block,
+                         &meta[meta_size_per_block], in, &out[b0]);
 
   return b0 + b1;
 }
@@ -106,22 +126,28 @@ template <typename T, typename I>
 size_t compress_kernel_256(compress_block_t compress_block,
                            size_t meta_size_per_block, uint8_t* __restrict meta,
                            T const* __restrict input, T* __restrict output) {
+  auto out = (I*)output;
+
   alignas(64) I in[1024];
 
-  take256<0>(input, in);
-  size_t const b0 = compress_kernel<I>(meta, in, output);
+  take256<0>((uint256_t_ const*)input, (uint64_t*)in);
+  size_t const b0 =
+      compress_kernel<I>(compress_block, meta_size_per_block, meta, in, out);
 
-  take256<1>(input, in);
+  take256<1>((uint256_t_ const*)input, (uint64_t*)in);
   size_t const b1 =
-      compress_kernel<I>(&meta[meta_size_per_block], in, &output[b0]);
+      compress_kernel<I>(compress_block, meta_size_per_block,
+                         &meta[meta_size_per_block], in, &out[b0]);
 
-  take256<2>(input, in);
+  take256<2>((uint256_t_ const*)input, (uint64_t*)in);
   size_t const b2 =
-      compress_kernel<I>(&meta[2 * meta_size_per_block], in, &output[b0 + b1]);
+      compress_kernel<I>(compress_block, meta_size_per_block,
+                         &meta[2 * meta_size_per_block], in, &out[b0 + b1]);
 
-  take256<3>(input, in);
-  size_t const b3 = compress_kernel<I>(&meta[3 * meta_size_per_block], in,
-                                       &output[b0 + b1 + b2]);
+  take256<3>((uint256_t_ const*)input, (uint64_t*)in);
+  size_t const b3 = compress_kernel<I>(compress_block, meta_size_per_block,
+                                       &meta[3 * meta_size_per_block], in,
+                                       &out[b0 + b1 + b2]);
 
   return b0 + b1 + b2 + b3;
 }
@@ -237,17 +263,6 @@ size_t compress_kernel<int256_t_>(compress_block_t compress_block,
 }
 
 template <typename T>
-size_t constexpr block_multiplier() {
-  if (sizeof(T) == 128) {
-    return 2;
-  } else if (sizeof(T) == 256) {
-    return 4;
-  } else {
-    return 1;
-  }
-}
-
-template <typename T>
 size_t compress_impl(compress_boundfn_t boundfn,
                      compress_block_t compress_block,
                      size_t meta_size_per_block, void const* __restrict input,
@@ -273,7 +288,8 @@ size_t compress_impl(compress_boundfn_t boundfn,
 
   size_t out_offset = 0;
 
-  size_t const total_meta_size = meta_size_per_block * n_blocks;
+  size_t const total_meta_size =
+      meta_size_per_block * n_blocks * n_block_metas_multiplier<T>();
   // reserve the metadata space beforehand
   out_offset += total_meta_size;
 
@@ -305,8 +321,8 @@ size_t compress_impl(compress_boundfn_t boundfn,
 
   for (size_t block_idx = 0; block_idx < n_blocks; block_idx++) {
     T const* block = &input_blocks[1024 * block_idx];
-    uint8_t* out_meta =
-        &output[meta_size_per_block * block_idx * block_multiplier<T>()];
+    uint8_t* out_meta = &output[meta_size_per_block * block_idx *
+                                n_block_metas_multiplier<T>()];
     t_written += compress_kernel<T>(compress_block, meta_size_per_block,
                                     out_meta, block, &out_block[t_written]);
   }

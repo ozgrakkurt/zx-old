@@ -21,6 +21,17 @@
 
 namespace ic_impl {
 
+template <typename T>
+inline size_t constexpr n_block_metas_multiplier() {
+  if (sizeof(T) == 128) {
+    return 2;
+  } else if (sizeof(T) == 256) {
+    return 4;
+  } else {
+    return 1;
+  }
+}
+
 typedef _BitInt(128) int128_t_;
 typedef _BitInt(256) int256_t_;
 typedef unsigned _BitInt(128) uint128_t_;
