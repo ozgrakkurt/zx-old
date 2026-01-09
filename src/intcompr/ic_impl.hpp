@@ -19,6 +19,20 @@
   D(ic_impl::int128_t_);          \
   D(ic_impl::int256_t_);
 
+#define IC_REPEAT_FOR_IC_TYPES_WITH_BLOCK_TYPE(D) \
+  D(uint8_t, uint8_t);                            \
+  D(uint16_t, uint16_t);                          \
+  D(uint32_t, uint32_t);                          \
+  D(uint64_t, uint64_t);                          \
+  D(ic_impl::uint128_t_, uint64_t);               \
+  D(ic_impl::uint256_t_, uint64_t);               \
+  D(int8_t, uint8_t);                             \
+  D(int16_t, uint16_t);                           \
+  D(int32_t, uint32_t);                           \
+  D(int64_t, uint64_t);                           \
+  D(ic_impl::int128_t_, uint64_t);                \
+  D(ic_impl::int256_t_, uint64_t);
+
 namespace ic_impl {
 
 template <typename T>

@@ -62,116 +62,15 @@ template <typename T>
 size_t bit_pack_compress(T const* __restrict input, size_t input_len,
                          uint8_t* __restrict output, size_t output_size);
 
-template <>
-size_t bit_pack_compress<uint8_t>(uint8_t const* __restrict input,
-                                  size_t input_len, uint8_t* __restrict output,
-                                  size_t output_size) {
-  return ic_impl::compress_impl<uint8_t>(
-      &bit_pack_compress_bound<uint8_t>, &bit_pack_compress_block<uint8_t>,
-      META_PER_BLOCK, input, input_len, output, output_size);
-}
-
-template <>
-size_t bit_pack_compress<uint16_t>(uint16_t const* __restrict input,
-                                   size_t input_len, uint8_t* __restrict output,
-                                   size_t output_size) {
-  return ic_impl::compress_impl<uint16_t>(
-      &bit_pack_compress_bound<uint16_t>, &bit_pack_compress_block<uint16_t>,
-      META_PER_BLOCK, input, input_len, output, output_size);
-}
-
-template <>
-size_t bit_pack_compress<uint32_t>(uint32_t const* __restrict input,
-                                   size_t input_len, uint8_t* __restrict output,
-                                   size_t output_size) {
-  return ic_impl::compress_impl<uint32_t>(
-      &bit_pack_compress_bound<uint32_t>, &bit_pack_compress_block<uint32_t>,
-      META_PER_BLOCK, input, input_len, output, output_size);
-}
-
-template <>
-size_t bit_pack_compress<uint64_t>(uint64_t const* __restrict input,
-                                   size_t input_len, uint8_t* __restrict output,
-                                   size_t output_size) {
-  return ic_impl::compress_impl<uint64_t>(
-      &bit_pack_compress_bound<uint64_t>, &bit_pack_compress_block<uint64_t>,
-      META_PER_BLOCK, input, input_len, output, output_size);
-}
-
-template <>
-size_t bit_pack_compress<ic_impl::uint128_t_>(
-    ic_impl::uint128_t_ const* __restrict input, size_t input_len,
-    uint8_t* __restrict output, size_t output_size) {
-  return ic_impl::compress_impl<ic_impl::uint128_t_>(
-      &bit_pack_compress_bound<ic_impl::uint128_t_>,
-      &bit_pack_compress_block<uint64_t>, META_PER_BLOCK, input, input_len,
-      output, output_size);
-}
-
-template <>
-size_t bit_pack_compress<ic_impl::uint256_t_>(
-    ic_impl::uint256_t_ const* __restrict input, size_t input_len,
-    uint8_t* __restrict output, size_t output_size) {
-  return ic_impl::compress_impl<ic_impl::uint256_t_>(
-      &bit_pack_compress_bound<ic_impl::uint256_t_>,
-      &bit_pack_compress_block<uint64_t>, META_PER_BLOCK, input, input_len,
-      output, output_size);
-}
-
-template <>
-size_t bit_pack_compress<int8_t>(int8_t const* __restrict input,
-                                 size_t input_len, uint8_t* __restrict output,
-                                 size_t output_size) {
-  return ic_impl::compress_impl<int8_t>(
-      &bit_pack_compress_bound<int8_t>, &bit_pack_compress_block<uint8_t>,
-      META_PER_BLOCK, input, input_len, output, output_size);
-}
-
-template <>
-size_t bit_pack_compress<int16_t>(int16_t const* __restrict input,
-                                  size_t input_len, uint8_t* __restrict output,
-                                  size_t output_size) {
-  return ic_impl::compress_impl<uint16_t>(
-      &bit_pack_compress_bound<int16_t>, &bit_pack_compress_block<uint16_t>,
-      META_PER_BLOCK, input, input_len, output, output_size);
-}
-
-template <>
-size_t bit_pack_compress<int32_t>(int32_t const* __restrict input,
-                                  size_t input_len, uint8_t* __restrict output,
-                                  size_t output_size) {
-  return ic_impl::compress_impl<uint32_t>(
-      &bit_pack_compress_bound<int32_t>, &bit_pack_compress_block<uint32_t>,
-      META_PER_BLOCK, input, input_len, output, output_size);
-}
-
-template <>
-size_t bit_pack_compress<int64_t>(int64_t const* __restrict input,
-                                  size_t input_len, uint8_t* __restrict output,
-                                  size_t output_size) {
-  return ic_impl::compress_impl<uint64_t>(
-      &bit_pack_compress_bound<int64_t>, &bit_pack_compress_block<uint64_t>,
-      META_PER_BLOCK, input, input_len, output, output_size);
-}
-
-template <>
-size_t bit_pack_compress<ic_impl::int128_t_>(
-    ic_impl::int128_t_ const* __restrict input, size_t input_len,
-    uint8_t* __restrict output, size_t output_size) {
-  return ic_impl::compress_impl<ic_impl::int128_t_>(
-      &bit_pack_compress_bound<ic_impl::int128_t_>,
-      &bit_pack_compress_block<uint64_t>, META_PER_BLOCK, input, input_len,
-      output, output_size);
-}
-
-template <>
-size_t bit_pack_compress<ic_impl::int256_t_>(
-    ic_impl::int256_t_ const* __restrict input, size_t input_len,
-    uint8_t* __restrict output, size_t output_size) {
-  return ic_impl::compress_impl<ic_impl::int256_t_>(
-      &bit_pack_compress_bound<ic_impl::int256_t_>,
-      &bit_pack_compress_block<uint64_t>, META_PER_BLOCK, input, input_len,
-      output, output_size);
-}
+#define BITPACKCOMPRESS(T, BT)                                             \
+  template <>                                                              \
+  size_t bit_pack_compress<T>(T const* __restrict input, size_t input_len, \
+                              uint8_t* __restrict output,                  \
+                              size_t output_size) {                        \
+    return ic_impl::compress_impl<T>(                                      \
+        &bit_pack_compress_bound<T>, &bit_pack_compress_block<BT>,         \
+        META_PER_BLOCK, input, input_len, output, output_size);            \
+  }
+IC_REPEAT_FOR_IC_TYPES_WITH_BLOCK_TYPE(BITPACKCOMPRESS);
 
 }  // namespace intcomp
