@@ -10,29 +10,29 @@
 namespace ic_zigzag {
 
 template <typename T, typename U>
-void zigzag_encode(T const* __restrict input, U* __restrict output, size_t n) {
-  for (size_t i = 0; i < n; i++) {
+void zigzag_encode(T const* __restrict input, U* __restrict output) {
+  for (size_t i = 0; i < 1024; i++) {
     T const in = input[i];
     output[i] = (in >> 1) ^ (-(in & 1));
   }
 }
 
 template <typename T, typename U>
-void zigzag_decode(U const* __restrict input, T* __restrict output, size_t n) {
-  for (size_t i = 0; i < n; i++) {
+void zigzag_decode(U const* __restrict input, T* __restrict output) {
+  for (size_t i = 0; i < 1024; i++) {
     U const in = input[i];
     output[i] = (2 * in) ^ (in >> (sizeof(T) * 8 - 1));
   }
 }
 
-#define ENCODE(T, U)                                                           \
-  template void zigzag_encode(T const* __restrict input, U* __restrict output, \
-                              size_t n);
+#define ENCODE(T, U) \
+  template void zigzag_encode(T const* __restrict input, U* __restrict output);
+
 ZIGZAG_REPEAT_FOR_TYPES(ENCODE);
 
-#define DECODE(T, U)                                                           \
-  template void zigzag_decode(U const* __restrict input, T* __restrict output, \
-                              size_t n);
+#define DECODE(T, U) \
+  template void zigzag_decode(U const* __restrict input, T* __restrict output);
+
 ZIGZAG_REPEAT_FOR_TYPES(DECODE);
 
 }  // namespace ic_zigzag

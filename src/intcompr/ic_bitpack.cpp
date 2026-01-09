@@ -33,8 +33,8 @@ IC_REPEAT_FOR_IC_TYPES(COMPR_BOUND);
 
 template <typename T>
 size_t bit_pack_compress_block(uint8_t* __restrict meta,
-                                        void const* __restrict input,
-                                        void* __restrict output) {
+                               void const* __restrict input,
+                               void* __restrict output) {
   auto in = (T const* __restrict)input;
   auto out = (T* __restrict)output;
 

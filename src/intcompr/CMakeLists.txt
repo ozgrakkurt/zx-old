@@ -5,6 +5,7 @@ target_sources(intcompr
     ic_impl.cpp
     # ic_bitpack.cpp
     ic_zigzag.cpp
+    intcompr.cpp
   INTERFACE
     FILE_SET HEADERS
     FILES
