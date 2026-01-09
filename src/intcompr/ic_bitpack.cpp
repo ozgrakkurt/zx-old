@@ -32,7 +32,7 @@ size_t bit_pack_compress_bound(size_t n) {
 IC_REPEAT_FOR_IC_TYPES(COMPR_BOUND);
 
 template <typename T>
-size_t bit_pack_compress_block_unsigned(uint8_t* __restrict meta,
+size_t bit_pack_compress_block(uint8_t* __restrict meta,
                                         void const* __restrict input,
                                         void* __restrict output) {
   auto in = (T const* __restrict)input;
@@ -48,31 +48,6 @@ size_t bit_pack_compress_block_unsigned(uint8_t* __restrict meta,
   meta[0] = width;
 
   fastlanes::bit_pack<T>(in, out, width);
-
-  return 1024 * width / (sizeof(T) * 8);
-}
-
-template <typename T, typename U>
-size_t bit_pack_compress_block_signed(uint8_t* __restrict meta,
-                                      void const* __restrict input,
-                                      void* __restrict output) {
-  auto in_raw = (T const* __restrict)input;
-  auto out = (U* __restrict)output;
-
-  alignas(64) U in[1024];
-
-  ic_zigzag::zigzag_encode(in_raw, in, 1024);
-
-  U m = in[0];
-  for (size_t i = 0; i < 1024; i++) {
-    m = m < in[i] ? in[i] : m;
-  }
-
-  uint8_t const width = ic_impl::needed_bits<U>(m);
-
-  meta[0] = width;
-
-  fastlanes::bit_pack<U>(in, out, width);
 
   return 1024 * width / (sizeof(T) * 8);
 }

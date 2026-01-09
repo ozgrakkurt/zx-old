@@ -5,14 +5,6 @@
 #include <cstdint>
 #include <cstring>
 
-#define IC_REPEAT_FOR_IC_TYPES_UNSIGNED(D) \
-  D(uint8_t);                              \
-  D(uint16_t);                             \
-  D(uint32_t);                             \
-  D(uint64_t);                             \
-  D(ic_impl::uint128_t_);                  \
-  D(ic_impl::uint256_t_);
-
 #define IC_REPEAT_FOR_IC_TYPES(D) \
   D(uint8_t);                     \
   D(uint16_t);                    \

@@ -4,11 +4,78 @@
 #include <cstdio>
 #include <cstdlib>
 
-namespace intcomp {
+namespace ic_impl {
 
-using namespace ic_impl;
+typedef union u128_cast {
+  uint128_t_ v;
+  uint64_t arr[2];
+} u128_cast;
 
-inline bool is_err(size_t res) { return res == SIZE_MAX; }
+typedef union u256_cast {
+  uint256_t_ v;
+  uint64_t arr[4];
+} u256_cast;
+
+template <int I>
+void take128(uint128_t_ const *__restrict input, uint64_t *__restrict output) {
+  for (size_t i=0; i<1024; i++) {
+    u128_cast caster;
+    caster.v = input[i];
+    output[i] = uint64_t(caster.arr[I]);
+  }
+}
+
+template <int I>
+void take256(uint256_t_ const *__restrict input, uint64_t *__restrict output) {
+  for (size_t i=0; i<1024; i++) {
+    u256_cast caster;
+    caster.v = input[i];
+    output[i] = uint64_t(caster.arr[I]);
+  }
+}
+
+void combine128(
+  uint64_t const *__restrict input_0,
+  uint64_t const *__restrict input_1,
+  uint128_t_ *__restrict output
+) {
+  for (size_t i=0; i<1024; i++) {
+      u128_cast caster;
+      caster.arr[0] = input_0[i];
+      caster.arr[1] = input_1[i];
+      output[i] = caster.v;
+  }
+}
+
+void combine256(
+  uint64_t const *__restrict input_0,
+  uint64_t const *__restrict input_1,
+  uint64_t const *__restrict input_2,
+  uint64_t const *__restrict input_3,
+  uint256_t_ *__restrict output
+) {
+  for (size_t i=0; i<1024; i++) {
+    u256_cast caster;
+    caster.arr[0] = input_0[i];
+    caster.arr[1] = input_1[i];
+    caster.arr[2] = input_2[i];
+    caster.arr[3] = input_3[i];
+    output[i] = caster.v;
+  }
+}
+
+template <typename T>
+size_t kernel(compress_block_t compress_block, uint8_t *__restrict meta, void const* __restrict input, uint8_t* __restrict output);
+
+template <typename T>
+size_t kernel_simple(compress_block_t compress_block, uint8_t *__restrict meta, void const* __restrict input, uint8_t* __restrict output) {
+  return compress_block(meta, input, output);
+}
+
+template <typename T, typename U>
+size_t kernel_signed(compress_block_t compress_block, uint8_t *__restrict meta, void const* __restrict input, uint8_t* __restrict output) {
+
+}
 
 template <typename T>
 size_t compress_data(compress_boundfn_t boundfn,
@@ -80,6 +147,10 @@ size_t compress_data(compress_boundfn_t boundfn,
       compress_boundfn_t boundfn, compress_block_t compress_block, \
       size_t meta_size_per_block, void const* __restrict input,    \
       size_t input_len, uint8_t* __restrict output, size_t output_size);
-IC_REPEAT_FOR_IC_TYPES_UNSIGNED(COMPRESS_DATA);
+IC_REPEAT_FOR_IC_TYPES(COMPRESS_DATA);
 
-}  // namespace intcomp
+}  // namespace ic_impl
+
+namespace intcomp {
+  bool is_err(size_t res) { return res == SIZE_MAX; }
+}
