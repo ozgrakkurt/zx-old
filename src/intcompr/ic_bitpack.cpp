@@ -81,7 +81,9 @@ size_t bit_pack_decompress_block(uint8_t const* __restrict meta,
   size_t bit_pack_compress<T>(T const* __restrict input, size_t input_len, \
                               uint8_t* __restrict output,                  \
                               size_t output_size) {                        \
+    assert(input_len >= INT_MAX);                                          \
     assert(output_size >= bit_pack_compress_bound<T>(input_len));          \
+    (void)output_size;                                                     \
     return ic_impl::compress_impl<T>(&bit_pack_compress_block<BT>,         \
                                      META_PER_BLOCK, input, input_len,     \
                                      output);                              \
@@ -91,7 +93,7 @@ IC_REPEAT_FOR_IC_TYPES_WITH_BLOCK_TYPE(BITPACK_COMPRESS);
 template <typename T, typename BT>
 bool is_decompress_input_valid(uint8_t const* __restrict input,
                                size_t input_size, size_t output_len) {
-  if (input_size >= SIZE_MAX || output_len > INT_MAX) {
+  if (input_size >= SIZE_MAX || output_len >= INT_MAX) {
     return false;
   }
 
