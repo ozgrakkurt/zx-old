@@ -103,10 +103,6 @@ size_t decompress_kernel_signed(decompress_block_t decompress_block,
   size_t const n_read = decompress_kernel<U>(
       decompress_block, meta_size_per_block, meta, input, zigzagged);
 
-  if (n_read == SIZE_MAX) {
-    return SIZE_MAX;
-  }
-
   ic_zigzag::zigzag_decode<T, U>(zigzagged, output);
 
   return n_read;
@@ -123,15 +119,9 @@ size_t decompress_kernel_128(decompress_block_t decompress_block,
 
   size_t const b0 = decompress_kernel<I>(decompress_block, meta_size_per_block,
                                          meta, input, out0);
-  if (b0 == SIZE_MAX) {
-    return SIZE_MAX;
-  }
   size_t const b1 =
       decompress_kernel<I>(decompress_block, meta_size_per_block,
                            &meta[meta_size_per_block], &input[b0], out1);
-  if (b1 == SIZE_MAX) {
-    return SIZE_MAX;
-  }
 
   combine128((uint64_t const*)out0, (uint64_t const*)out1, (uint128_t_*)output);
 
@@ -151,27 +141,15 @@ size_t decompress_kernel_256(decompress_block_t decompress_block,
 
   size_t const b0 = decompress_kernel<I>(decompress_block, meta_size_per_block,
                                          meta, input, out0);
-  if (b0 == SIZE_MAX) {
-    return SIZE_MAX;
-  }
   size_t const b1 =
       decompress_kernel<I>(decompress_block, meta_size_per_block,
                            &meta[meta_size_per_block], &input[b0], out1);
-  if (b1 == SIZE_MAX) {
-    return SIZE_MAX;
-  }
   size_t const b2 =
       decompress_kernel<I>(decompress_block, meta_size_per_block,
                            &meta[meta_size_per_block], &input[b0 + b1], out2);
-  if (b2 == SIZE_MAX) {
-    return SIZE_MAX;
-  }
   size_t const b3 = decompress_kernel<I>(decompress_block, meta_size_per_block,
                                          &meta[meta_size_per_block],
                                          &input[b0 + b1 + b2], out3);
-  if (b3 == SIZE_MAX) {
-    return SIZE_MAX;
-  }
 
   combine256((uint64_t const*)out0, (uint64_t const*)out1,
              (uint64_t const*)out2, (uint64_t const*)out3, (uint256_t_*)output);
