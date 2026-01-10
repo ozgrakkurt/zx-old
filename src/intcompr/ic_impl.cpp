@@ -51,51 +51,31 @@ void take256(uint256_t_ const* __restrict input, uint64_t* __restrict output) {
   }
 }
 
-template <int I>
-void put128(uint64_t const* __restrict input, uint128_t_* __restrict output) {
+void combine128(uint64_t const* __restrict input_0,
+                uint64_t const* __restrict input_1,
+                uint128_t_* __restrict output) {
   for (size_t i = 0; i < 1024; i++) {
     u128_cast caster;
-    caster.v = output[i];
-    caster.arr[I] = input[i];
+    caster.arr[0] = input_0[i];
+    caster.arr[1] = input_1[i];
     output[i] = caster.v;
   }
 }
 
-template <int I>
-void put256(uint64_t const* __restrict input, uint256_t_* __restrict output) {
+void combine256(uint64_t const* __restrict input_0,
+                uint64_t const* __restrict input_1,
+                uint64_t const* __restrict input_2,
+                uint64_t const* __restrict input_3,
+                uint256_t_* __restrict output) {
   for (size_t i = 0; i < 1024; i++) {
     u256_cast caster;
-    caster.v = output[i];
-    caster.arr[I] = input[i];
+    caster.arr[0] = input_0[i];
+    caster.arr[1] = input_1[i];
+    caster.arr[2] = input_2[i];
+    caster.arr[3] = input_3[i];
     output[i] = caster.v;
   }
 }
-
-// void combine128(uint64_t const* __restrict input_0,
-//                 uint64_t const* __restrict input_1,
-//                 uint128_t_* __restrict output) {
-//   for (size_t i = 0; i < 1024; i++) {
-//     u128_cast caster;
-//     caster.arr[0] = input_0[i];
-//     caster.arr[1] = input_1[i];
-//     output[i] = caster.v;
-//   }
-// }
-
-// void combine256(uint64_t const* __restrict input_0,
-//                 uint64_t const* __restrict input_1,
-//                 uint64_t const* __restrict input_2,
-//                 uint64_t const* __restrict input_3,
-//                 uint256_t_* __restrict output) {
-//   for (size_t i = 0; i < 1024; i++) {
-//     u256_cast caster;
-//     caster.arr[0] = input_0[i];
-//     caster.arr[1] = input_1[i];
-//     caster.arr[2] = input_2[i];
-//     caster.arr[3] = input_3[i];
-//     output[i] = caster.v;
-//   }
-// }
 
 template <typename T>
 size_t decompress_kernel(decompress_block_t decompress_block,
@@ -127,26 +107,186 @@ size_t decompress_kernel_signed(decompress_block_t decompress_block,
     return SIZE_MAX;
   }
 
-  ic_zigzag::zigzag_decode<T, U>(zigzagged, (U*)output);
+  ic_zigzag::zigzag_decode<T, U>(zigzagged, output);
 
   return n_read;
 }
 
-// template <typename T, typename I>
-// size_t decompress_kernel_128(decompress_block_t decompress_block,
-//                              size_t meta_size_per_block,
-//                              uint8_t const* __restrict meta,
-//                              uint8_t const* __restrict input,
-//                              T* __restrict output) {
-//   auto in = (I const*)input;
+template <typename T, typename I>
+size_t decompress_kernel_128(decompress_block_t decompress_block,
+                             size_t meta_size_per_block,
+                             uint8_t const* __restrict meta,
+                             uint8_t const* __restrict input,
+                             T* __restrict output) {
+  alignas(64) I out0[1024];
+  alignas(64) I out1[1024];
 
-//   alignas(64) I out[1024];
+  size_t const b0 = decompress_kernel<I>(decompress_block, meta_size_per_block,
+                                         meta, input, out0);
+  if (b0 == SIZE_MAX) {
+    return SIZE_MAX;
+  }
+  size_t const b1 =
+      decompress_kernel<I>(decompress_block, meta_size_per_block,
+                           &meta[meta_size_per_block], &input[b0], out1);
+  if (b1 == SIZE_MAX) {
+    return SIZE_MAX;
+  }
 
-//   size_t const b0 = decompress_kernel<I>(
-//     decompress_block, meta_size_per_block, meta, in, out,
-//   );
-//   put128<0>();
-// }
+  combine128((uint64_t const*)out0, (uint64_t const*)out1, (uint128_t_*)output);
+
+  return b0 + b1;
+}
+
+template <typename T, typename I>
+size_t decompress_kernel_256(decompress_block_t decompress_block,
+                             size_t meta_size_per_block,
+                             uint8_t const* __restrict meta,
+                             uint8_t const* __restrict input,
+                             T* __restrict output) {
+  alignas(64) I out0[1024];
+  alignas(64) I out1[1024];
+  alignas(64) I out2[1024];
+  alignas(64) I out3[1024];
+
+  size_t const b0 = decompress_kernel<I>(decompress_block, meta_size_per_block,
+                                         meta, input, out0);
+  if (b0 == SIZE_MAX) {
+    return SIZE_MAX;
+  }
+  size_t const b1 =
+      decompress_kernel<I>(decompress_block, meta_size_per_block,
+                           &meta[meta_size_per_block], &input[b0], out1);
+  if (b1 == SIZE_MAX) {
+    return SIZE_MAX;
+  }
+  size_t const b2 =
+      decompress_kernel<I>(decompress_block, meta_size_per_block,
+                           &meta[meta_size_per_block], &input[b0 + b1], out2);
+  if (b2 == SIZE_MAX) {
+    return SIZE_MAX;
+  }
+  size_t const b3 = decompress_kernel<I>(decompress_block, meta_size_per_block,
+                                         &meta[meta_size_per_block],
+                                         &input[b0 + b1 + b2], out3);
+  if (b3 == SIZE_MAX) {
+    return SIZE_MAX;
+  }
+
+  combine256((uint64_t const*)out0, (uint64_t const*)out1,
+             (uint64_t const*)out2, (uint64_t const*)out3, (uint256_t_*)output);
+
+  return b0 + b1 + b2 + b3;
+}
+
+template <>
+size_t decompress_kernel<uint8_t>(decompress_block_t decompress_block,
+                                  size_t meta_size_per_block,
+                                  uint8_t const* __restrict meta,
+                                  uint8_t const* __restrict input,
+                                  uint8_t* __restrict output) {
+  return decompress_kernel_simple<uint8_t>(
+      decompress_block, meta_size_per_block, meta, input, output);
+}
+template <>
+size_t decompress_kernel<uint16_t>(decompress_block_t decompress_block,
+                                   size_t meta_size_per_block,
+                                   uint8_t const* __restrict meta,
+                                   uint8_t const* __restrict input,
+                                   uint16_t* __restrict output) {
+  return decompress_kernel_simple<uint16_t>(
+      decompress_block, meta_size_per_block, meta, input, output);
+}
+template <>
+size_t decompress_kernel<uint32_t>(decompress_block_t decompress_block,
+                                   size_t meta_size_per_block,
+                                   uint8_t const* __restrict meta,
+                                   uint8_t const* __restrict input,
+                                   uint32_t* __restrict output) {
+  return decompress_kernel_simple<uint32_t>(
+      decompress_block, meta_size_per_block, meta, input, output);
+}
+template <>
+size_t decompress_kernel<uint64_t>(decompress_block_t decompress_block,
+                                   size_t meta_size_per_block,
+                                   uint8_t const* __restrict meta,
+                                   uint8_t const* __restrict input,
+                                   uint64_t* __restrict output) {
+  return decompress_kernel_simple<uint64_t>(
+      decompress_block, meta_size_per_block, meta, input, output);
+}
+template <>
+size_t decompress_kernel<uint128_t_>(decompress_block_t decompress_block,
+                                     size_t meta_size_per_block,
+                                     uint8_t const* __restrict meta,
+                                     uint8_t const* __restrict input,
+                                     uint128_t_* __restrict output) {
+  return decompress_kernel_128<uint128_t_, uint64_t>(
+      decompress_block, meta_size_per_block, meta, input, output);
+}
+template <>
+size_t decompress_kernel<uint256_t_>(decompress_block_t decompress_block,
+                                     size_t meta_size_per_block,
+                                     uint8_t const* __restrict meta,
+                                     uint8_t const* __restrict input,
+                                     uint256_t_* __restrict output) {
+  return decompress_kernel_256<uint256_t_, uint64_t>(
+      decompress_block, meta_size_per_block, meta, input, output);
+}
+template <>
+size_t decompress_kernel<int8_t>(decompress_block_t decompress_block,
+                                 size_t meta_size_per_block,
+                                 uint8_t const* __restrict meta,
+                                 uint8_t const* __restrict input,
+                                 int8_t* __restrict output) {
+  return decompress_kernel_signed<int8_t, uint8_t>(
+      decompress_block, meta_size_per_block, meta, input, output);
+}
+template <>
+size_t decompress_kernel<int16_t>(decompress_block_t decompress_block,
+                                  size_t meta_size_per_block,
+                                  uint8_t const* __restrict meta,
+                                  uint8_t const* __restrict input,
+                                  int16_t* __restrict output) {
+  return decompress_kernel_signed<int16_t, uint16_t>(
+      decompress_block, meta_size_per_block, meta, input, output);
+}
+template <>
+size_t decompress_kernel<int32_t>(decompress_block_t decompress_block,
+                                  size_t meta_size_per_block,
+                                  uint8_t const* __restrict meta,
+                                  uint8_t const* __restrict input,
+                                  int32_t* __restrict output) {
+  return decompress_kernel_signed<int32_t, uint32_t>(
+      decompress_block, meta_size_per_block, meta, input, output);
+}
+template <>
+size_t decompress_kernel<int64_t>(decompress_block_t decompress_block,
+                                  size_t meta_size_per_block,
+                                  uint8_t const* __restrict meta,
+                                  uint8_t const* __restrict input,
+                                  int64_t* __restrict output) {
+  return decompress_kernel_signed<int64_t, uint64_t>(
+      decompress_block, meta_size_per_block, meta, input, output);
+}
+template <>
+size_t decompress_kernel<int128_t_>(decompress_block_t decompress_block,
+                                    size_t meta_size_per_block,
+                                    uint8_t const* __restrict meta,
+                                    uint8_t const* __restrict input,
+                                    int128_t_* __restrict output) {
+  return decompress_kernel_128<int128_t_, int64_t>(
+      decompress_block, meta_size_per_block, meta, input, output);
+}
+template <>
+size_t decompress_kernel<int256_t_>(decompress_block_t decompress_block,
+                                    size_t meta_size_per_block,
+                                    uint8_t const* __restrict meta,
+                                    uint8_t const* __restrict input,
+                                    int256_t_* __restrict output) {
+  return decompress_kernel_256<int256_t_, int64_t>(
+      decompress_block, meta_size_per_block, meta, input, output);
+}
 
 template <typename T>
 size_t compress_kernel(compress_block_t compress_block,
@@ -224,6 +364,15 @@ size_t compress_kernel_256(compress_block_t compress_block,
   return b0 + b1 + b2 + b3;
 }
 
+template <>
+size_t compress_kernel<uint8_t>(compress_block_t compress_block,
+                                size_t meta_size_per_block,
+                                uint8_t* __restrict meta,
+                                uint8_t const* __restrict input,
+                                uint8_t* __restrict output) {
+  return compress_kernel_simple<uint8_t>(compress_block, meta_size_per_block,
+                                         meta, input, output);
+}
 template <>
 size_t compress_kernel<uint16_t>(compress_block_t compress_block,
                                  size_t meta_size_per_block,
