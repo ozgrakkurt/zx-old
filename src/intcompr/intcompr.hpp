@@ -6,7 +6,7 @@
 
 namespace intcompr {
 
-bool is_err(size_t res);
+bool is_decompress_error(size_t res);
 
 template <typename T>
 size_t bit_pack_compress_bound(size_t n);

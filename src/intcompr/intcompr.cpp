@@ -3,5 +3,5 @@
 #include <cstddef>
 
 namespace intcompr {
-bool is_err(size_t res) { return res == SIZE_MAX; }
+bool is_decompress_error(size_t res) { return res == SIZE_MAX; }
 }  // namespace intcompr

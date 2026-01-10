@@ -1,3 +1,4 @@
+#include <cassert>
 #include <climits>
 #include <cstddef>
 #include <cstdlib>
@@ -12,9 +13,7 @@ size_t constexpr META_PER_BLOCK = sizeof(uint8_t);
 template <typename T>
 size_t bit_pack_compress_bound(size_t n) {
   // return error if n is too big
-  if (n >= INT_MAX) {
-    return SIZE_MAX;
-  }
+  assert(n < INT_MAX);
 
   size_t const n_blocks = n / 1024;
   size_t const n_remainder = n % 1024;

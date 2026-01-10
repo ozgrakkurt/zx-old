@@ -462,21 +462,11 @@ size_t compress_impl(compress_boundfn_t boundfn,
     return 0;
   }
 
-  // return error if input isn't aligned
-  if (size_t(input) % ALIGNMENT != 0) {
-    return SIZE_MAX;
-  }
-
-  // return error if output isn't aligned
-  if (size_t(output) % ALIGNMENT != 0) {
-    return SIZE_MAX;
-  }
-
-  // return error if output size isn't bigger than the bound
-  size_t const bound = boundfn(input_len);
-  if (bound == SIZE_MAX || output_size < bound) {
-    return SIZE_MAX;
-  }
+  assert(size_t(input) % ALIGNMENT == 0);
+  assert(size_t(output) % ALIGNMENT == 0);
+  assert(output_size >= boundfn(bound));
+  (void)boundfn;
+  (void)output_size;
 
   size_t const n_remainder = input_len % 1024;
   size_t const n_blocks = input_len / 1024;
