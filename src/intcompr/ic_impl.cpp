@@ -144,11 +144,11 @@ size_t decompress_kernel_256(decompress_block_t decompress_block,
   size_t const b1 =
       decompress_kernel<I>(decompress_block, meta_size_per_block,
                            &meta[meta_size_per_block], &input[b0], out1);
-  size_t const b2 =
-      decompress_kernel<I>(decompress_block, meta_size_per_block,
-                           &meta[meta_size_per_block], &input[b0 + b1], out2);
+  size_t const b2 = decompress_kernel<I>(decompress_block, meta_size_per_block,
+                                         &meta[2 * meta_size_per_block],
+                                         &input[b0 + b1], out2);
   size_t const b3 = decompress_kernel<I>(decompress_block, meta_size_per_block,
-                                         &meta[meta_size_per_block],
+                                         &meta[3 * meta_size_per_block],
                                          &input[b0 + b1 + b2], out3);
 
   combine256((uint64_t const*)out0, (uint64_t const*)out1,
@@ -265,6 +265,62 @@ size_t decompress_kernel<int256_t_>(decompress_block_t decompress_block,
   return decompress_kernel_256<int256_t_, int64_t>(
       decompress_block, meta_size_per_block, meta, input, output);
 }
+
+template <typename T>
+size_t decompress_impl(decompress_block_t decompress_block,
+                       size_t meta_size_per_block,
+                       uint8_t const* __restrict input, void* __restrict output,
+                       size_t output_len) {
+  if (output_len == 0) {
+    return 0;
+  }
+
+  assert(size_t(input) % ALIGNMENT == 0);
+  assert(size_t(output) % ALIGNMENT == 0);
+
+  size_t const n_remainder = output_len % 1024;
+  size_t const n_blocks = output_len / 1024;
+
+  size_t in_offset = 0;
+
+  size_t const total_meta_size =
+      meta_size_per_block * n_blocks * n_block_metas_multiplier<T>();
+  // reserve the metadata space beforehand
+  in_offset += total_meta_size;
+
+  size_t const padding_size = input[in_offset];
+  in_offset += padding_size + 1;
+
+  assert(size_t(&input[in_offset]) % ALIGNMENT != 0);
+
+  T* output_block = (T*)output;
+  uint8_t const* in_meta = input;
+
+  for (size_t i = 0; i < n_blocks; i++) {
+    assert(size_t(&input[in_offset]) % ALIGNMENT == 0);
+    assert(size_t(output_block) % ALIGNMENT == 0);
+
+    in_offset += decompress_kernel<T>(decompress_block, meta_size_per_block,
+                                      in_meta, &input[in_offset], output_block);
+
+    output_block += 1024;
+    in_meta += meta_size_per_block * n_block_metas_multiplier<T>();
+  }
+
+  if (n_remainder > 0) {
+    memcpy(output_block, &input[in_offset], sizeof(T) * n_remainder);
+    in_offset += sizeof(T) * n_remainder;
+  }
+
+  return in_offset;
+}
+
+#define DECOMPRESS_DATA(T)                                             \
+  template size_t decompress_impl<T>(                                  \
+      decompress_block_t decompress_block, size_t meta_size_per_block, \
+      uint8_t const* __restrict input, void* __restrict output,        \
+      size_t output_len);
+IC_REPEAT_FOR_IC_TYPES(DECOMPRESS_DATA);
 
 template <typename T>
 size_t compress_kernel(compress_block_t compress_block,
@@ -453,20 +509,15 @@ size_t compress_kernel<int256_t_>(compress_block_t compress_block,
 }
 
 template <typename T>
-size_t compress_impl(compress_boundfn_t boundfn,
-                     compress_block_t compress_block,
+size_t compress_impl(compress_block_t compress_block,
                      size_t meta_size_per_block, void const* __restrict input,
-                     size_t input_len, uint8_t* __restrict output,
-                     size_t output_size) {
+                     size_t input_len, uint8_t* __restrict output) {
   if (input_len == 0) {
     return 0;
   }
 
   assert(size_t(input) % ALIGNMENT == 0);
   assert(size_t(output) % ALIGNMENT == 0);
-  assert(output_size >= boundfn(bound));
-  (void)boundfn;
-  (void)output_size;
 
   size_t const n_remainder = input_len % 1024;
   size_t const n_blocks = input_len / 1024;
@@ -514,9 +565,9 @@ size_t compress_impl(compress_boundfn_t boundfn,
 
 #define COMPRESS_DATA(T)                                           \
   template size_t compress_impl<T>(                                \
-      compress_boundfn_t boundfn, compress_block_t compress_block, \
-      size_t meta_size_per_block, void const* __restrict input,    \
-      size_t input_len, uint8_t* __restrict output, size_t output_size);
+      compress_block_t compress_block, size_t meta_size_per_block, \
+      void const* __restrict input, size_t input_len,              \
+      uint8_t* __restrict output);
 IC_REPEAT_FOR_IC_TYPES(COMPRESS_DATA);
 
 }  // namespace ic_impl
