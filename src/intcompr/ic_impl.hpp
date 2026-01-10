@@ -72,6 +72,12 @@ size_t compress_impl(compress_block_t compress_block,
                      size_t meta_size_per_block, void const* __restrict input,
                      size_t input_len, uint8_t* __restrict output);
 
+template <typename T>
+size_t decompress_impl(decompress_block_t decompress_block,
+                       size_t meta_size_per_block,
+                       uint8_t const* __restrict input, void* __restrict output,
+                       size_t output_len);
+
 }  // namespace ic_impl
 
 #endif
