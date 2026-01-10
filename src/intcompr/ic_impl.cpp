@@ -51,31 +51,51 @@ void take256(uint256_t_ const* __restrict input, uint64_t* __restrict output) {
   }
 }
 
-void combine128(uint64_t const* __restrict input_0,
-                uint64_t const* __restrict input_1,
-                uint128_t_* __restrict output) {
+template <int I>
+void put128(uint64_t const* __restrict input, uint128_t_* __restrict output) {
   for (size_t i = 0; i < 1024; i++) {
     u128_cast caster;
-    caster.arr[0] = input_0[i];
-    caster.arr[1] = input_1[i];
+    caster.v = output[i];
+    caster.arr[I] = input[i];
     output[i] = caster.v;
   }
 }
 
-void combine256(uint64_t const* __restrict input_0,
-                uint64_t const* __restrict input_1,
-                uint64_t const* __restrict input_2,
-                uint64_t const* __restrict input_3,
-                uint256_t_* __restrict output) {
+template <int I>
+void put256(uint64_t const* __restrict input, uint256_t_* __restrict output) {
   for (size_t i = 0; i < 1024; i++) {
     u256_cast caster;
-    caster.arr[0] = input_0[i];
-    caster.arr[1] = input_1[i];
-    caster.arr[2] = input_2[i];
-    caster.arr[3] = input_3[i];
+    caster.v = output[i];
+    caster.arr[I] = input[i];
     output[i] = caster.v;
   }
 }
+
+// void combine128(uint64_t const* __restrict input_0,
+//                 uint64_t const* __restrict input_1,
+//                 uint128_t_* __restrict output) {
+//   for (size_t i = 0; i < 1024; i++) {
+//     u128_cast caster;
+//     caster.arr[0] = input_0[i];
+//     caster.arr[1] = input_1[i];
+//     output[i] = caster.v;
+//   }
+// }
+
+// void combine256(uint64_t const* __restrict input_0,
+//                 uint64_t const* __restrict input_1,
+//                 uint64_t const* __restrict input_2,
+//                 uint64_t const* __restrict input_3,
+//                 uint256_t_* __restrict output) {
+//   for (size_t i = 0; i < 1024; i++) {
+//     u256_cast caster;
+//     caster.arr[0] = input_0[i];
+//     caster.arr[1] = input_1[i];
+//     caster.arr[2] = input_2[i];
+//     caster.arr[3] = input_3[i];
+//     output[i] = caster.v;
+//   }
+// }
 
 template <typename T>
 size_t decompress_kernel(decompress_block_t decompress_block,
@@ -112,16 +132,21 @@ size_t decompress_kernel_signed(decompress_block_t decompress_block,
   return n_read;
 }
 
-template <typename T, typename I>
-size_t decompress_kernel_128(decompress_block_t decompress_block,
-                             size_t meta_size_per_block,
-                             uint8_t const* __restrict meta,
-                             uint8_t const* __restrict input,
-                             T* __restrict output) {
-  auto in = (I const*)input;
+// template <typename T, typename I>
+// size_t decompress_kernel_128(decompress_block_t decompress_block,
+//                              size_t meta_size_per_block,
+//                              uint8_t const* __restrict meta,
+//                              uint8_t const* __restrict input,
+//                              T* __restrict output) {
+//   auto in = (I const*)input;
 
-  alignas(64) I out[1024];
-}
+//   alignas(64) I out[1024];
+
+//   size_t const b0 = decompress_kernel<I>(
+//     decompress_block, meta_size_per_block, meta, in, out,
+//   );
+//   put128<0>();
+// }
 
 template <typename T>
 size_t compress_kernel(compress_block_t compress_block,
@@ -310,6 +335,11 @@ size_t compress_impl(compress_boundfn_t boundfn,
     return 0;
   }
 
+  // return error if input isn't aligned
+  if (size_t(input) % ALIGNMENT != 0) {
+    return SIZE_MAX;
+  }
+
   // return error if output isn't aligned
   if (size_t(output) % ALIGNMENT != 0) {
     return SIZE_MAX;
@@ -331,37 +361,35 @@ size_t compress_impl(compress_boundfn_t boundfn,
   // reserve the metadata space beforehand
   out_offset += total_meta_size;
 
-  if (n_remainder > 0) {
-    memcpy(&output[out_offset], input, sizeof(T) * n_remainder);
-    out_offset += sizeof(T) * n_remainder;
-  }
-
   // align output
   size_t out_addr = size_t(&output[out_offset + 1]);
   size_t aligned_out_addr = (out_addr + ALIGNMENT - 1) / ALIGNMENT * ALIGNMENT;
   uint8_t padding_size = (uint8_t)(aligned_out_addr - out_addr);
   output[out_offset] = padding_size;
-  out_offset += 1 + padding_size;
+  out_offset += 1;
+  memset(&output[out_offset], 0, padding_size);
+  out_offset += padding_size;
 
-  T const* input_blocks = &((T const*)input)[n_remainder];
+  assert(size_t(&output[out_offset]) % ALIGNMENT != 0);
 
-  // panic if output isn't aligned
-  if (size_t(&output[out_offset]) % ALIGNMENT != 0) {
-    fprintf(stderr,
-            "unexpected alignment, this should be impossible, panicking. line "
-            "%d in file %s\n",
-            __LINE__, __FILE__);
-    abort();
+  T const* input_block = (T const*)input;
+  uint8_t* out_meta = output;
+
+  for (size_t i = 0; i < n_blocks; i++) {
+    assert(size_t(&output[out_offset]) % ALIGNMENT == 0);
+    assert(size_t(input_block) % ALIGNMENT == 0);
+
+    out_offset +=
+        compress_kernel<T>(compress_block, meta_size_per_block, out_meta,
+                           input_block, &output[out_offset]);
+
+    input_block += 1024;
+    out_meta += meta_size_per_block * n_block_metas_multiplier<T>();
   }
 
-  for (size_t block_idx = 0; block_idx < n_blocks; block_idx++) {
-    T const* block = &input_blocks[1024 * block_idx];
-    uint8_t* out_meta = &output[meta_size_per_block * block_idx *
-                                n_block_metas_multiplier<T>()];
-    out_offset += compress_kernel<T>(compress_block, meta_size_per_block,
-                                     out_meta, block, &output[out_offset]);
-
-    assert(size_t(&output[out_offset]) % ALIGNMENT == 0);
+  if (n_remainder > 0) {
+    memcpy(&output[out_offset], input_block, sizeof(T) * n_remainder);
+    out_offset += sizeof(T) * n_remainder;
   }
 
   return out_offset;
