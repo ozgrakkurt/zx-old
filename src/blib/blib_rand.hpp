@@ -2,6 +2,7 @@
 #define BLIB_RAND_HPP
 
 #include <cstdint>
+
 #include "./blib_int.hpp"
 
 namespace blib {
