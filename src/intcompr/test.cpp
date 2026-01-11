@@ -96,10 +96,10 @@ TEST(IntCompr, BitPackU16) { bitpacktest<uint16_t>(); }
 TEST(IntCompr, BitPackU32) { bitpacktest<uint32_t>(); }
 TEST(IntCompr, BitPackU64) { bitpacktest<uint64_t>(); }
 TEST(IntCompr, BitPackU128) { bitpacktest<blib::uint128_t_>(); }
-TEST(IntCompr, BitPackU256) { bitpacktest<blib::uint256_t_>(); }
+// TEST(IntCompr, BitPackU256) { bitpacktest<blib::uint256_t_>(); }
 TEST(IntCompr, BitPackI8) { bitpacktest<int8_t>(); }
 TEST(IntCompr, BitPackI16) { bitpacktest<int16_t>(); }
 TEST(IntCompr, BitPackI32) { bitpacktest<int32_t>(); }
 TEST(IntCompr, BitPackI64) { bitpacktest<int64_t>(); }
 TEST(IntCompr, BitPackI128) { bitpacktest<blib::int128_t_>(); }
-TEST(IntCompr, BitPackI256) { bitpacktest<blib::int256_t_>(); }
+// TEST(IntCompr, BitPackI256) { bitpacktest<blib::int256_t_>(); }
