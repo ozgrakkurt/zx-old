@@ -6,12 +6,16 @@
 #include <cstdint>
 #include <intcompr.hpp>
 
+#define UNSIGNED_TYPE(T) __typeof__(((__typeof__(T))0) + 0U)
+
 template <typename T>
 void random_with_width(uint64_t* seed, T base, T* data, size_t n,
-                       uint8_t width) {
-  T const mask = (T(1) << width) - 1;
+                       size_t width) {
+  typedef UNSIGNED_TYPE(T) U;
+
+  T const mask = sizeof(U) * 8 == width ? !U(0) : (U(1) << width) - 1;
   for (size_t i = 0; i < n; i++) {
-    data[i] = base + (blib::random<T>(seed) & mask);
+    data[i] = base + T(blib::random<U>(seed) & mask);
   }
 }
 
@@ -56,7 +60,7 @@ void bitpacktest_impl(uint8_t* input, uint8_t* compressed, uint8_t* output,
     ASSERT_GE(capacity, len);
     ASSERT_GE(raw_capacity, bound);
 
-    for (uint8_t width = 0; width < N_BITS + 1; width++) {
+    for (size_t width = 0; width < N_BITS + 1; width++) {
       random_with_width<T>(&seed, 0, in, len, width);
 
       size_t const compressed_size =
@@ -96,10 +100,10 @@ TEST(IntCompr, BitPackU16) { bitpacktest<uint16_t>(); }
 TEST(IntCompr, BitPackU32) { bitpacktest<uint32_t>(); }
 TEST(IntCompr, BitPackU64) { bitpacktest<uint64_t>(); }
 TEST(IntCompr, BitPackU128) { bitpacktest<blib::uint128_t_>(); }
-// TEST(IntCompr, BitPackU256) { bitpacktest<blib::uint256_t_>(); }
+TEST(IntCompr, BitPackU256) { bitpacktest<blib::uint256_t_>(); }
 TEST(IntCompr, BitPackI8) { bitpacktest<int8_t>(); }
 TEST(IntCompr, BitPackI16) { bitpacktest<int16_t>(); }
 TEST(IntCompr, BitPackI32) { bitpacktest<int32_t>(); }
 TEST(IntCompr, BitPackI64) { bitpacktest<int64_t>(); }
 TEST(IntCompr, BitPackI128) { bitpacktest<blib::int128_t_>(); }
-// TEST(IntCompr, BitPackI256) { bitpacktest<blib::int256_t_>(); }
+TEST(IntCompr, BitPackI256) { bitpacktest<blib::int256_t_>(); }
