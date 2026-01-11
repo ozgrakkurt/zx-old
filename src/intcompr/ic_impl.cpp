@@ -23,6 +23,8 @@
 
 namespace ic_impl {
 
+size_t constexpr ALIGNMENT = 64;
+
 typedef union u128_cast {
   uint128_t_ v;
   uint64_t arr[2];

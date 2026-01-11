@@ -29,6 +29,7 @@ FetchContent_MakeAvailable(googletest)
 enable_testing()
 include(GoogleTest)
 
+add_subdirectory(./src/blib)
 add_subdirectory(./src/fastlanes)
 add_subdirectory(./src/intcompr)
 

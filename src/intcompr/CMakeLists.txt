@@ -15,9 +15,10 @@ target_link_libraries(intcompr
   fastlanes
 )
 
-# add_executable(intcompr_test test.cpp)
-# target_link_libraries(intcompr_test
-#   intcompr 
-#   GTest::gtest_main
-# )
-# gtest_discover_tests(intcompr_test)
+add_executable(intcompr_test test.cpp)
+target_link_libraries(intcompr_test
+  intcompr 
+  blib
+  GTest::gtest_main
+)
+gtest_discover_tests(intcompr_test)

@@ -59,8 +59,6 @@ typedef size_t (*decompress_block_t)(uint8_t const* __restrict meta,
                                      void const* __restrict input,
                                      void* __restrict output);
 
-size_t constexpr ALIGNMENT = 64;
-
 template <typename T>
 uint8_t needed_bits(T value) {
   if (value == 0) return 0;
