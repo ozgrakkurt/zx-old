@@ -6,16 +6,12 @@
 #include <cstdint>
 #include <intcompr.hpp>
 
-#define UNSIGNED_TYPE(T) __typeof__(((__typeof__(T))0) + 0U)
-
 template <typename T>
 void random_with_width(uint64_t* seed, T base, T* data, size_t n,
                        size_t width) {
-  typedef UNSIGNED_TYPE(T) U;
-
-  T const mask = sizeof(U) * 8 == width ? !U(0) : (U(1) << width) - 1;
+  T const mask = sizeof(T) * 8 == width ? !T(0) : (T(1) << width) - 1;
   for (size_t i = 0; i < n; i++) {
-    data[i] = base + T(blib::random<U>(seed) & mask);
+    data[i] = base + (blib::random<T>(seed) & mask);
   }
 }
 
