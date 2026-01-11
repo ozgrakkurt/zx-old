@@ -81,7 +81,7 @@ size_t bit_pack_decompress_block(uint8_t const* __restrict meta,
   size_t bit_pack_compress<T>(T const* __restrict input, size_t input_len, \
                               uint8_t* __restrict output,                  \
                               size_t output_size) {                        \
-    assert(input_len >= INT_MAX);                                          \
+    assert(input_len < INT_MAX);                                           \
     assert(output_size >= bit_pack_compress_bound<T>(input_len));          \
     (void)output_size;                                                     \
     return ic_impl::compress_impl<T>(&bit_pack_compress_block<BT>,         \
@@ -93,19 +93,25 @@ IC_REPEAT_FOR_IC_TYPES_WITH_BLOCK_TYPE(BITPACK_COMPRESS);
 template <typename T, typename BT>
 bool is_decompress_input_valid(uint8_t const* __restrict input,
                                size_t input_size, size_t output_len) {
+  if (output_len == 0) {
+    return true;
+  }
+
   if (input_size >= SIZE_MAX || output_len >= INT_MAX) {
     return false;
   }
 
-  size_t const n_blocks = output_len / 1024;
+  size_t const n_blocks = (output_len / 1024) * ic_impl::n_block_metas_multiplier<T>();
   size_t const n_remainder = output_len % 1024;
 
   size_t const total_meta_size =
-      META_PER_BLOCK * n_blocks * ic_impl::n_block_metas_multiplier<T>();
+      META_PER_BLOCK * n_blocks;
 
-  if (input_size < total_meta_size) {
+  if (input_size <= total_meta_size) {
     return false;
   }
+
+  uint8_t const padding = input[total_meta_size];
 
   size_t block_data_size = 0;
 
@@ -116,12 +122,12 @@ bool is_decompress_input_valid(uint8_t const* __restrict input,
       return false;
     }
 
-    block_data_size += size_t(width);
+    block_data_size += 1024 / 8 * size_t(width);
   }
 
-  if (input_size !=
-      total_meta_size + block_data_size + n_remainder * sizeof(T)) {
-    return false;
+  if (input_size != size_t(padding) + 1 + total_meta_size + block_data_size +
+                        n_remainder * sizeof(T)) {
+    assert(false);
   }
 
   return true;

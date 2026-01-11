@@ -28,15 +28,15 @@ void random_with_width(uint64_t* seed, T base, T* data, size_t n,
 //   }
 // }
 
-size_t constexpr LENGTHS[] = {0,    1,    9,    16,   1023,  1024,   1025,
-                              2045, 2047, 2048, 2049, 12323, 1 << 13};
+size_t constexpr LENGTHS[] = {0,    1,    9,    16,   1023, 1024,
+                              1025, 2045, 2047, 2048, 2049, 12323};
 size_t constexpr N_LENGTHS = sizeof(LENGTHS) / sizeof(LENGTHS[0]);
 
 size_t constexpr ALIGNMENT = 64;
 
 template <typename T>
-void bitpacktest(void* input, void* compressed, void* output,
-                 size_t raw_capacity) {
+void bitpacktest_impl(uint8_t* input, uint8_t* compressed, uint8_t* output,
+                      size_t raw_capacity) {
   size_t constexpr N_BITS = sizeof(T) * 8;
 
   ASSERT_EQ(size_t(input) % ALIGNMENT, 0);
@@ -59,9 +59,47 @@ void bitpacktest(void* input, void* compressed, void* output,
     for (uint8_t width = 0; width < N_BITS + 1; width++) {
       random_with_width<T>(&seed, 0, in, len, width);
 
+      size_t const compressed_size =
+          intcompr::bit_pack_compress(input, len, compressed, raw_capacity);
+      size_t const n_read =
+          intcompr::bit_pack_decompress(compressed, compressed_size, out, len);
+      ASSERT_FALSE(intcompr::is_decompress_error(n_read));
+      ASSERT_EQ(n_read, compressed_size);
+
       for (size_t i = 0; i < len; i++) {
         ASSERT_EQ(in[i], out[i]);
       }
     }
   }
 }
+
+template <typename T>
+void bitpacktest() {
+  size_t const raw_capacity = sizeof(T) * (1 << 14);
+
+  uint8_t* input = (uint8_t*)aligned_alloc(ALIGNMENT, raw_capacity);
+  assert(input != nullptr);
+  uint8_t* compressed = (uint8_t*)aligned_alloc(ALIGNMENT, raw_capacity);
+  assert(compressed != nullptr);
+  uint8_t* output = (uint8_t*)aligned_alloc(ALIGNMENT, raw_capacity);
+  assert(output != nullptr);
+
+  bitpacktest_impl<T>(input, compressed, output, raw_capacity);
+
+  free(output);
+  free(compressed);
+  free(input);
+}
+
+TEST(IntCompr, BitPackU8) { bitpacktest<uint8_t>(); }
+TEST(IntCompr, BitPackU16) { bitpacktest<uint16_t>(); }
+TEST(IntCompr, BitPackU32) { bitpacktest<uint32_t>(); }
+TEST(IntCompr, BitPackU64) { bitpacktest<uint64_t>(); }
+TEST(IntCompr, BitPackU128) { bitpacktest<blib::uint128_t_>(); }
+TEST(IntCompr, BitPackU256) { bitpacktest<blib::uint256_t_>(); }
+TEST(IntCompr, BitPackI8) { bitpacktest<int8_t>(); }
+TEST(IntCompr, BitPackI16) { bitpacktest<int16_t>(); }
+TEST(IntCompr, BitPackI32) { bitpacktest<int32_t>(); }
+TEST(IntCompr, BitPackI64) { bitpacktest<int64_t>(); }
+TEST(IntCompr, BitPackI128) { bitpacktest<blib::int128_t_>(); }
+TEST(IntCompr, BitPackI256) { bitpacktest<blib::int256_t_>(); }

@@ -293,7 +293,7 @@ size_t decompress_impl(decompress_block_t decompress_block,
   size_t const padding_size = input[in_offset];
   in_offset += padding_size + 1;
 
-  assert(size_t(&input[in_offset]) % ALIGNMENT != 0);
+  assert(size_t(&input[in_offset]) % ALIGNMENT == 0);
 
   T* output_block = (T*)output;
   uint8_t const* in_meta = input;
@@ -540,7 +540,7 @@ size_t compress_impl(compress_block_t compress_block,
   memset(&output[out_offset], 0, padding_size);
   out_offset += padding_size;
 
-  assert(size_t(&output[out_offset]) % ALIGNMENT != 0);
+  assert(size_t(&output[out_offset]) % ALIGNMENT == 0);
 
   T const* input_block = (T const*)input;
   uint8_t* out_meta = output;

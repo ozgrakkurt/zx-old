@@ -37,9 +37,9 @@ namespace ic_impl {
 
 template <typename T>
 inline size_t constexpr n_block_metas_multiplier() {
-  if (sizeof(T) == 128) {
+  if (sizeof(T) == 16) {
     return 2;
-  } else if (sizeof(T) == 256) {
+  } else if (sizeof(T) == 32) {
     return 4;
   } else {
     return 1;
