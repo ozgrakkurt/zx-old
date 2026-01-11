@@ -540,6 +540,7 @@ size_t compress_impl(compress_block_t compress_block,
   memset(&output[out_offset], 0, padding_size);
   out_offset += padding_size;
 
+  assert(padding_size < 64);
   assert(size_t(&output[out_offset]) % ALIGNMENT == 0);
 
   T const* input_block = (T const*)input;

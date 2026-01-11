@@ -13,7 +13,6 @@ size_t constexpr META_PER_BLOCK = sizeof(uint8_t);
 
 template <typename T>
 size_t bit_pack_compress_bound(size_t n) {
-  // return error if n is too big
   assert(n < INT_MAX);
 
   size_t const n_blocks = n / 1024;
@@ -59,7 +58,7 @@ size_t bit_pack_compress_block(uint8_t* __restrict meta,
 
   fastlanes::bit_pack<T>(in, out, width);
 
-  return 1024 / 8 * width;
+  return (1024 / 8) * width;
 }
 
 template <typename T>
@@ -73,7 +72,7 @@ size_t bit_pack_decompress_block(uint8_t const* __restrict meta,
 
   fastlanes::bit_unpack(in, out, width);
 
-  return 1024 / 8 * width;
+  return (1024 / 8) * width;
 }
 
 #define BITPACK_COMPRESS(T, BT)                                            \
@@ -101,33 +100,34 @@ bool is_decompress_input_valid(uint8_t const* __restrict input,
     return false;
   }
 
-  size_t const n_blocks = (output_len / 1024) * ic_impl::n_block_metas_multiplier<T>();
+  size_t const n_block_metas =
+      (output_len / 1024) * ic_impl::n_block_metas_multiplier<T>();
   size_t const n_remainder = output_len % 1024;
 
-  size_t const total_meta_size =
-      META_PER_BLOCK * n_blocks;
+  size_t const total_meta_size = n_block_metas;
 
   if (input_size <= total_meta_size) {
     return false;
   }
 
-  uint8_t const padding = input[total_meta_size];
-
   size_t block_data_size = 0;
 
-  for (size_t i = 0; i < n_blocks; i++) {
+  for (size_t i = 0; i < n_block_metas; i++) {
     uint8_t const width = input[i];
 
     if (width > sizeof(BT) * 8) {
       return false;
     }
 
-    block_data_size += 1024 / 8 * size_t(width);
+    block_data_size += (1024 / 8) * width;
   }
 
-  if (input_size != size_t(padding) + 1 + total_meta_size + block_data_size +
-                        n_remainder * sizeof(T)) {
-    assert(false);
+  uint8_t const padding = input[total_meta_size];
+  size_t const expected_size = total_meta_size + 1 + size_t(padding) +
+                               block_data_size + n_remainder * sizeof(T);
+
+  if (input_size != expected_size) {
+    return false;
   }
 
   return true;

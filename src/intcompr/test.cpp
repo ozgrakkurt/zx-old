@@ -60,9 +60,9 @@ void bitpacktest_impl(uint8_t* input, uint8_t* compressed, uint8_t* output,
       random_with_width<T>(&seed, 0, in, len, width);
 
       size_t const compressed_size =
-          intcompr::bit_pack_compress(input, len, compressed, raw_capacity);
-      size_t const n_read =
-          intcompr::bit_pack_decompress(compressed, compressed_size, out, len);
+          intcompr::bit_pack_compress<T>(in, len, compressed, raw_capacity);
+      size_t const n_read = intcompr::bit_pack_decompress<T>(
+          compressed, compressed_size, out, len);
       ASSERT_FALSE(intcompr::is_decompress_error(n_read));
       ASSERT_EQ(n_read, compressed_size);
 
