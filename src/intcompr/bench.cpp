@@ -141,7 +141,10 @@ static void BM_IntCompr_BitPack(benchmark::State& state, BenchInput input) {
   }
 }
 
-size_t constexpr LENGTHS[] = {0, 19, 2045, 2048, 12323};
+size_t constexpr LENGTHS[] = {
+  //0, 19, 2045, 2048,
+  12323
+};
 size_t constexpr N_LENGTHS = sizeof(LENGTHS) / sizeof(LENGTHS[0]);
 
 template <typename T>
