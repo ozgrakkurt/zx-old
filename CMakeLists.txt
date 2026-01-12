@@ -18,13 +18,20 @@ include(FetchContent)
 set(BUILD_GMOCK OFF)
 set(INSTALL_GTEST OFF)
 set(GTEST_HAS_ABSL OFF)
-
 FetchContent_Declare(
   googletest
   GIT_REPOSITORY https://github.com/google/googletest.git
   GIT_TAG 52eb8108c5bdec04579160ae17225d66034bd723
 )
 FetchContent_MakeAvailable(googletest)
+
+set(BENCHMARK_ENABLE_TESTING OFF)
+FetchContent_Declare(
+  benchmark 
+  GIT_REPOSITORY https://github.com/google/benchmark.git
+  GIT_TAG eddb0241389718a23a42db6af5f0164b6e0139af
+)
+FetchContent_MakeAvailable(benchmark)
 
 enable_testing()
 include(GoogleTest)
