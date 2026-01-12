@@ -29,6 +29,7 @@ typedef struct BenchCtx {
   uint8_t* compressed;
   uint8_t* output;
   size_t raw_capacity;
+  uint64_t* seed;
 } BenchCtx;
 
 void BenchCtx_init(BenchCtx* ctx) {
@@ -41,10 +42,15 @@ void BenchCtx_init(BenchCtx* ctx) {
   uint8_t* output = (uint8_t*)aligned_alloc(ALIGNMENT, raw_capacity);
   assert(output != nullptr);
 
+  uint64_t* seed = (uint64_t*)malloc(sizeof(uint64_t));
+  assert(seed != nullptr);
+  *seed = 123;
+
   ctx->input = input;
   ctx->compressed = compressed;
   ctx->output = output;
   ctx->raw_capacity = raw_capacity;
+  ctx->seed = seed;
 }
 
 void BenchCtx_free_member(uint8_t** member) {
@@ -60,6 +66,9 @@ void BenchCtx_deinit(BenchCtx* ctx) {
 
   assert(ctx->raw_capacity == BUFFER_CAPACITY);
   ctx->raw_capacity = 0;
+
+  assert(ctx->seed != nullptr);
+  ctx->seed = nullptr;
 }
 
 typedef struct BenchInput {
@@ -78,14 +87,39 @@ void random_with_width(uint64_t* seed, T base, T* data, size_t n,
 
 template <typename T>
 static void BM_IntCompr_BitPack(benchmark::State& state, BenchInput input) {
-  (void)input;
+  size_t const width = (sizeof(T) * 8 / 2) - 1;
+
+  size_t const len = input.len;
+  size_t const raw_capacity = input.ctx->raw_capacity;
+  size_t const capacity = raw_capacity / sizeof(T);
+  assert(input.len < capacity);
+
+  auto in = (T*)input.ctx->input;
+  auto compr = input.ctx->compressed;
+  auto out = (T*)input.ctx->output;
+
+  uint64_t* seed = input.ctx->seed;
+
+  random_with_width<T>(seed, 0, in, capacity, width);
+
+  size_t const bound = intcompr::bit_pack_compress_bound<T>(len);
+  assert(bound < raw_capacity);
 
   for (auto _ : state) {
+    size_t const in_offset = blib::random<size_t>(seed) % (capacity - len);
+    size_t const compr_offset =
+        blib::random<size_t>(seed) % (raw_capacity - bound);
+
+    intcompr::bit_pack_compress(&in[in_offset], len, &compr[compr_offset],
+                                bound);
+
+    benchmark::ClobberMemory();
   }
+
+  (void)out;
 }
 
-size_t constexpr LENGTHS[] = {0,    1,    9,    16,   1023, 1024,
-                              1025, 2045, 2047, 2048, 2049, 12323};
+size_t constexpr LENGTHS[] = {0, 19, 2045, 2048, 12323};
 size_t constexpr N_LENGTHS = sizeof(LENGTHS) / sizeof(LENGTHS[0]);
 
 template <typename T>
