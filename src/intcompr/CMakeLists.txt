@@ -27,5 +27,5 @@ add_executable(intcompr_bench bench.cpp)
 target_link_libraries(intcompr_bench
   intcompr
   blib
-  benchmark::benchmark_main
+  benchmark::benchmark
 )
