@@ -170,7 +170,9 @@ void register_bitpack_bench(char const* type_name, char const* algo_name,
   register_bitpack_bench<T, ic_test_helper::BitPack>(#T, "BitPack",         \
                                                      bench_reg_param_ctx_); \
   register_bitpack_bench<T, ic_test_helper::ForPack>(#T, "ForPack",         \
-                                                     bench_reg_param_ctx_);
+                                                     bench_reg_param_ctx_); \
+  register_bitpack_bench<T, ic_test_helper::DeltaPack>(#T, "DeltaPack",     \
+                                                       bench_reg_param_ctx_);
 
 int main(int argc, char** argv) {
   benchmark::MaybeReenterWithoutASLR(argc, argv);

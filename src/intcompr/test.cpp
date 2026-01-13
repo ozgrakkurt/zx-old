@@ -90,6 +90,8 @@ void do_test() {
                                         raw_capacity);
   test_impl<T, ic_test_helper::ForPack>(input, compressed, output,
                                         raw_capacity);
+  test_impl<T, ic_test_helper::DeltaPack>(input, compressed, output,
+                                          raw_capacity);
 
   free(output);
   free(compressed);

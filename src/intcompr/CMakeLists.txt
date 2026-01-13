@@ -5,6 +5,7 @@ target_sources(intcompr
     ic_impl.cpp
     ic_bitpack.cpp
     ic_forpack.cpp
+    ic_deltapack.cpp
     ic_zigzag.cpp
     intcompr.cpp
   INTERFACE
