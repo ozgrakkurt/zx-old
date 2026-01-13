@@ -1,9 +1,33 @@
 #ifndef INTCOMPR_TEST_HELPER_HPP
 #define INTCOMPR_TEST_HELPER_HPP
 
+#include <blib_int.hpp>
+#include <blib_rand.hpp>
 #include <intcompr.hpp>
 
 namespace ic_test_helper {
+
+template <typename T>
+static void random_with_width_impl(uint64_t* seed, T* data, size_t n,
+                                   size_t width) {
+  T const mask = sizeof(T) * 8 == width ? !T(0) : (T(1) << width) - 1;
+  for (size_t i = 0; i < n; i++) {
+    data[i] = blib::random<T>(seed) & mask;
+  }
+}
+
+template <typename T>
+static void random_delta_with_width_impl(uint64_t* seed, T* data, size_t n,
+                                         size_t width) {
+  T const mask = sizeof(T) * 8 == width ? !T(0) : (T(1) << width) - 1;
+
+  T v = blib::random<T>(seed);
+  for (size_t i = 0; i < n; i++) {
+    T const delta = blib::random<T>(seed) & mask;
+    __builtin_add_overflow(v, delta, &v);
+    data[i] = v;
+  }
+}
 
 struct BitPack {
   template <typename T>
@@ -23,6 +47,12 @@ struct BitPack {
                            T* __restrict output, size_t output_len) {
     return intcompr::bit_pack_decompress<T>(input, input_size, output,
                                             output_len);
+  }
+
+  template <typename T>
+  static void random_with_width(uint64_t* seed, T* data, size_t n,
+                                size_t width) {
+    random_with_width_impl(seed, data, n, width);
   }
 };
 
@@ -45,6 +75,12 @@ struct ForPack {
     return intcompr::for_pack_decompress<T>(input, input_size, output,
                                             output_len);
   }
+
+  template <typename T>
+  static void random_with_width(uint64_t* seed, T* data, size_t n,
+                                size_t width) {
+    random_with_width_impl(seed, data, n, width);
+  }
 };
 
 struct DeltaPack {
@@ -65,6 +101,12 @@ struct DeltaPack {
                            T* __restrict output, size_t output_len) {
     return intcompr::delta_pack_decompress<T>(input, input_size, output,
                                               output_len);
+  }
+
+  template <typename T>
+  static void random_with_width(uint64_t* seed, T* data, size_t n,
+                                size_t width) {
+    random_delta_with_width_impl(seed, data, n, width);
   }
 };
 

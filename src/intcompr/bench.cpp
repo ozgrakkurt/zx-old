@@ -1,6 +1,5 @@
 #include <benchmark/benchmark.h>
 
-#include <blib_rand.hpp>
 #include <cassert>
 #include <cstddef>
 #include <cstdint>
@@ -78,15 +77,6 @@ typedef struct BenchInput {
   size_t len;
 } BenchInput;
 
-template <typename T>
-void random_with_width(uint64_t* seed, T base, T* data, size_t n,
-                       size_t width) {
-  T const mask = sizeof(T) * 8 == width ? !T(0) : (T(1) << width) - 1;
-  for (size_t i = 0; i < n; i++) {
-    data[i] = base + (blib::random<T>(seed) & mask);
-  }
-}
-
 size_t align_up(size_t offset, size_t alignment) {
   return (offset + alignment - 1) / alignment * alignment;
 }
@@ -108,7 +98,7 @@ static void BM_IntCompr(benchmark::State& state, BenchInput input) {
 
   uint64_t* seed = input.ctx->seed;
 
-  random_with_width<T>(seed, 0, in, capacity, width);
+  Algo::template random_with_width<T>(seed, in, capacity, width);
 
   size_t const bound = Algo::template compress_bound<T>(len);
   assert(bound + ALIGNMENT < raw_capacity);
