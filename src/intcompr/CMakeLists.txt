@@ -4,6 +4,7 @@ target_sources(intcompr
   PRIVATE
     ic_impl.cpp
     ic_bitpack.cpp
+    ic_forpack.cpp
     ic_zigzag.cpp
     intcompr.cpp
   INTERFACE

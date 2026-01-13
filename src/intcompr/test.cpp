@@ -6,6 +6,8 @@
 #include <cstdint>
 #include <intcompr.hpp>
 
+#include "./test_helper.hpp"
+
 template <typename T>
 void random_with_width(uint64_t* seed, T base, T* data, size_t n,
                        size_t width) {
@@ -34,9 +36,9 @@ size_t constexpr N_LENGTHS = sizeof(LENGTHS) / sizeof(LENGTHS[0]);
 
 size_t constexpr ALIGNMENT = 64;
 
-template <typename T>
-void bitpacktest_impl(uint8_t* input, uint8_t* compressed, uint8_t* output,
-                      size_t raw_capacity) {
+template <typename T, typename Algo>
+void test_impl(uint8_t* input, uint8_t* compressed, uint8_t* output,
+               size_t raw_capacity) {
   size_t constexpr N_BITS = sizeof(T) * 8;
 
   ASSERT_EQ(size_t(input) % ALIGNMENT, 0);
@@ -52,7 +54,7 @@ void bitpacktest_impl(uint8_t* input, uint8_t* compressed, uint8_t* output,
 
   for (size_t len_idx = 0; len_idx < N_LENGTHS; len_idx++) {
     size_t const len = LENGTHS[len_idx];
-    size_t const bound = intcompr::bit_pack_compress_bound<T>(len);
+    size_t const bound = Algo::template compress_bound<T>(len);
     ASSERT_GE(capacity, len);
     ASSERT_GE(raw_capacity, bound);
 
@@ -60,9 +62,9 @@ void bitpacktest_impl(uint8_t* input, uint8_t* compressed, uint8_t* output,
       random_with_width<T>(&seed, 0, in, len, width);
 
       size_t const compressed_size =
-          intcompr::bit_pack_compress<T>(in, len, compressed, raw_capacity);
-      size_t const n_read = intcompr::bit_pack_decompress<T>(
-          compressed, compressed_size, out, len);
+          Algo::template compress<T>(in, len, compressed, raw_capacity);
+      size_t const n_read =
+          Algo::template decompress<T>(compressed, compressed_size, out, len);
       ASSERT_FALSE(intcompr::is_decompress_error(n_read));
       ASSERT_EQ(n_read, compressed_size);
 
@@ -74,7 +76,7 @@ void bitpacktest_impl(uint8_t* input, uint8_t* compressed, uint8_t* output,
 }
 
 template <typename T>
-void bitpacktest() {
+void do_test() {
   size_t const raw_capacity = sizeof(T) * (1 << 14);
 
   uint8_t* input = (uint8_t*)aligned_alloc(ALIGNMENT, raw_capacity);
@@ -84,22 +86,25 @@ void bitpacktest() {
   uint8_t* output = (uint8_t*)aligned_alloc(ALIGNMENT, raw_capacity);
   assert(output != nullptr);
 
-  bitpacktest_impl<T>(input, compressed, output, raw_capacity);
+  test_impl<T, ic_test_helper::BitPack>(input, compressed, output,
+                                        raw_capacity);
+  test_impl<T, ic_test_helper::ForPack>(input, compressed, output,
+                                        raw_capacity);
 
   free(output);
   free(compressed);
   free(input);
 }
 
-TEST(IntCompr, BitPackU8) { bitpacktest<uint8_t>(); }
-TEST(IntCompr, BitPackU16) { bitpacktest<uint16_t>(); }
-TEST(IntCompr, BitPackU32) { bitpacktest<uint32_t>(); }
-TEST(IntCompr, BitPackU64) { bitpacktest<uint64_t>(); }
-TEST(IntCompr, BitPackU128) { bitpacktest<blib::uint128_t_>(); }
-TEST(IntCompr, BitPackU256) { bitpacktest<blib::uint256_t_>(); }
-TEST(IntCompr, BitPackI8) { bitpacktest<int8_t>(); }
-TEST(IntCompr, BitPackI16) { bitpacktest<int16_t>(); }
-TEST(IntCompr, BitPackI32) { bitpacktest<int32_t>(); }
-TEST(IntCompr, BitPackI64) { bitpacktest<int64_t>(); }
-TEST(IntCompr, BitPackI128) { bitpacktest<blib::int128_t_>(); }
-TEST(IntCompr, BitPackI256) { bitpacktest<blib::int256_t_>(); }
+TEST(IntCompr, PackU8) { do_test<uint8_t>(); }
+TEST(IntCompr, PackU16) { do_test<uint16_t>(); }
+TEST(IntCompr, PackU32) { do_test<uint32_t>(); }
+TEST(IntCompr, PackU64) { do_test<uint64_t>(); }
+TEST(IntCompr, PackU128) { do_test<blib::uint128_t_>(); }
+TEST(IntCompr, PackU256) { do_test<blib::uint256_t_>(); }
+TEST(IntCompr, PackI8) { do_test<int8_t>(); }
+TEST(IntCompr, PackI16) { do_test<int16_t>(); }
+TEST(IntCompr, PackI32) { do_test<int32_t>(); }
+TEST(IntCompr, PackI64) { do_test<int64_t>(); }
+TEST(IntCompr, PackI128) { do_test<blib::int128_t_>(); }
+TEST(IntCompr, PackI256) { do_test<blib::int256_t_>(); }

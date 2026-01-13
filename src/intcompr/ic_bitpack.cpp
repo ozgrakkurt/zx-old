@@ -41,9 +41,9 @@ size_t bit_pack_compress_bound(size_t n) {
 IC_REPEAT_FOR_IC_TYPES(COMPR_BOUND);
 
 template <typename T>
-size_t bit_pack_compress_block(uint8_t* __restrict meta,
-                               void const* __restrict input,
-                               void* __restrict output) {
+static size_t bit_pack_compress_block(uint8_t* __restrict meta,
+                                      void const* __restrict input,
+                                      void* __restrict output) {
   auto in = (T const* __restrict)input;
   auto out = (T* __restrict)output;
 
@@ -62,15 +62,15 @@ size_t bit_pack_compress_block(uint8_t* __restrict meta,
 }
 
 template <typename T>
-size_t bit_pack_decompress_block(uint8_t const* __restrict meta,
-                                 void const* __restrict input,
-                                 void* __restrict output) {
+static size_t bit_pack_decompress_block(uint8_t const* __restrict meta,
+                                        void const* __restrict input,
+                                        void* __restrict output) {
   auto in = (T const* __restrict)input;
   auto out = (T* __restrict)output;
 
   uint8_t const width = meta[0];
 
-  fastlanes::bit_unpack(in, out, width);
+  fastlanes::bit_unpack<T>(in, out, width);
 
   return (1024 / 8) * width;
 }
@@ -90,8 +90,8 @@ size_t bit_pack_decompress_block(uint8_t const* __restrict meta,
 IC_REPEAT_FOR_IC_TYPES_WITH_BLOCK_TYPE(BITPACK_COMPRESS);
 
 template <typename T, typename BT>
-bool is_decompress_input_valid(uint8_t const* __restrict input,
-                               size_t input_size, size_t output_len) {
+static bool is_decompress_input_valid(uint8_t const* __restrict input,
+                                      size_t input_size, size_t output_len) {
   if (output_len == 0) {
     return true;
   }

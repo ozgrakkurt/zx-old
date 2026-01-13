@@ -1,8 +1,8 @@
 #ifndef BLIB_RAND_HPP
 #define BLIB_RAND_HPP
 
-#include <cstdint>
 #include <cstddef>
+#include <cstdint>
 
 #include "./blib_int.hpp"
 
