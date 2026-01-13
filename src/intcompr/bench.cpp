@@ -7,6 +7,8 @@
 #include <intcompr.hpp>
 #include <sstream>
 
+#include "./test_helper.hpp"
+
 size_t constexpr ALIGNMENT = 64;
 size_t constexpr BUFFER_CAPACITY = 1 << 30;
 
@@ -89,8 +91,8 @@ size_t align_up(size_t offset, size_t alignment) {
   return (offset + alignment - 1) / alignment * alignment;
 }
 
-template <typename T>
-static void BM_IntCompr_BitPack(benchmark::State& state, BenchInput input) {
+template <typename T, typename Algo>
+static void BM_IntCompr(benchmark::State& state, BenchInput input) {
   size_t constexpr typed_align = ALIGNMENT / sizeof(T);
 
   size_t const width = (sizeof(T) * 8 / 2) - 1;
@@ -108,7 +110,7 @@ static void BM_IntCompr_BitPack(benchmark::State& state, BenchInput input) {
 
   random_with_width<T>(seed, 0, in, capacity, width);
 
-  size_t const bound = intcompr::bit_pack_compress_bound<T>(len);
+  size_t const bound = Algo::template compress_bound<T>(len);
   assert(bound + ALIGNMENT < raw_capacity);
 
   for (auto _ : state) {
@@ -122,15 +124,15 @@ static void BM_IntCompr_BitPack(benchmark::State& state, BenchInput input) {
         align_up(blib::random<size_t>(seed) % (capacity - len - typed_align),
                  typed_align);
 
-    size_t const compr_size = intcompr::bit_pack_compress(
+    size_t const compr_size = Algo::template compress<T>(
         &in[in_offset], len, &compr[compr_offset], bound);
 
     benchmark::ClobberMemory();
 
-    size_t const ret = intcompr::bit_pack_decompress(
+    size_t const ret = Algo::template decompress<T>(
         &compr[compr_offset], compr_size, &out[out_offset], len);
     assert(ret == compr_size);
-    assert(ret != SIZE_MAX);
+    assert(!intcompr::is_decompress_error(ret));
     (void)ret;
 
     for (size_t i = 0; i < len; i++) {
@@ -146,8 +148,9 @@ size_t constexpr LENGTHS[] = {
     12323};
 size_t constexpr N_LENGTHS = sizeof(LENGTHS) / sizeof(LENGTHS[0]);
 
-template <typename T>
-void register_bitpack_bench(char const* type_name, BenchCtx const* ctx) {
+template <typename T, typename Algo>
+void register_bitpack_bench(char const* type_name, char const* algo_name,
+                            BenchCtx const* ctx) {
   for (size_t length_idx = 0; length_idx < N_LENGTHS; length_idx++) {
     size_t const length = LENGTHS[length_idx];
 
@@ -156,15 +159,18 @@ void register_bitpack_bench(char const* type_name, BenchCtx const* ctx) {
     input.len = length;
 
     std::stringstream ss;
-    ss << "IntCompr_BitPack<" << type_name << ">_Length" << length;
+    ss << "IntCompr_" << algo_name << '<' << type_name << ">_Length" << length;
     std::string bench_name = ss.str();
 
-    benchmark::RegisterBenchmark(bench_name, BM_IntCompr_BitPack<T>, input);
+    benchmark::RegisterBenchmark(bench_name, BM_IntCompr<T, Algo>, input);
   }
 }
 
-#define REGISTER_BITPACK_BENCH(T) \
-  register_bitpack_bench<T>(#T, bench_reg_param_ctx_);
+#define REGISTER_BITPACK_BENCH(T)                                           \
+  register_bitpack_bench<T, ic_test_helper::BitPack>(#T, "BitPack",         \
+                                                     bench_reg_param_ctx_); \
+  register_bitpack_bench<T, ic_test_helper::ForPack>(#T, "ForPack",         \
+                                                     bench_reg_param_ctx_);
 
 int main(int argc, char** argv) {
   benchmark::MaybeReenterWithoutASLR(argc, argv);
