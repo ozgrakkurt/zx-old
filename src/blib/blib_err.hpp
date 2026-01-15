@@ -44,8 +44,8 @@ namespace err {
 static uint32_t constexpr MAX_STACK_DEPTH = 128;
 static uint32_t constexpr STACK_DEPTH_MASK = MAX_STACK_DEPTH - 1;
 
-_Thread_local static char const* stack_trace[MAX_STACK_DEPTH];
-_Thread_local static uint32_t stack_depth = 0;
+_Thread_local char const* stack_trace[MAX_STACK_DEPTH];
+_Thread_local uint32_t stack_depth = 0;
 
 }  // namespace err
 

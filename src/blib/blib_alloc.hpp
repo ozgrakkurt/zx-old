@@ -24,7 +24,7 @@ struct Alloc {
     // Check that we are not creating a misaligned pointer.
     BLIB_ERR_ASSERT(align >= alignof(T));
 
-    // Check that alignment is at most 4KB. 
+    // Check that alignment is at most 4KB.
     BLIB_ERR_ASSERT(align <= (1 << 12));
 
     // check that alignment is a power of two.
