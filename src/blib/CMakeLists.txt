@@ -6,12 +6,15 @@ target_sources(blib
     FILES
       blib_rand.hpp
       blib_int.hpp
+      blib_hashmap.hpp
+      blib_err.hpp
+      blib_alloc.hpp
 )
 
-# add_executable(fastlanes_test test.cpp)
-# target_link_libraries(fastlanes_test 
-#   fastlanes
-#   GTest::gtest_main
-# )
-# gtest_discover_tests(fastlanes_test)
+add_executable(blib_test test.cpp)
+target_link_libraries(blib_test
+  blib 
+  GTest::gtest_main
+)
+gtest_discover_tests(blib_test)
 

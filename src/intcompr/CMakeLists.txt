@@ -15,6 +15,7 @@ target_sources(intcompr
 )
 target_link_libraries(intcompr
   fastlanes
+  blib
 )
 
 add_executable(intcompr_test test.cpp)
