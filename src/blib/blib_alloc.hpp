@@ -1,8 +1,8 @@
 #ifndef BLIB_ALLOC_HPP
 #define BLIB_ALLOC_HPP
 
-#include <cstdint>
 #include <cstddef>
+#include <cstdint>
 
 #include "./blib_err.hpp"
 
