@@ -54,6 +54,7 @@ enum class [[nodiscard]] Status : uint8_t {
   InvalidInput,
   UnexpectedError,
   AssertFail,
+  OutOfMemory,
 };
 
 Status err_assert(bool cond) {
