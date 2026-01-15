@@ -26,7 +26,7 @@
 
 #define BLIB_ERR_TRY(expr)                                            \
   do {                                                                \
-    lib::Status blib_err_status_ = (expr);                            \
+    blib::Status blib_err_status_ = (expr);                            \
     if (blib_err_status_ != blib::Status::Ok) {                       \
       blib::err::stack_depth =                                        \
           (blib::err::stack_depth + 1) & blib::err::STACK_DEPTH_MASK; \

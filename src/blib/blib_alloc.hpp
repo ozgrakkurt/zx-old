@@ -2,6 +2,7 @@
 #define BLIB_ALLOC_HPP
 
 #include <cstdint>
+#include <cstddef>
 
 #include "./blib_err.hpp"
 
@@ -9,22 +10,22 @@ namespace blib {
 
 struct Alloc {
   void* ctx;
-  Status (*alloc)(void* ctx, void** ptr, size_t size, uint8_t align);
-  void (*free)(void* ctx, void* ptr, size_t size);
+  Status (*alloc_)(void* ctx, void** ptr, size_t size, uint8_t align);
+  void (*free_)(void* ctx, void* ptr, size_t size);
 
   template <typename T>
-  Status alloc(T** ptr, size_t len) {
+  Status alloc(T** ptr, size_t len) const {
     BLIB_ERR_TRY(
-        this.alloc(this.ctx, (void**)ptr, sizeof(T) * len, alignof(T)));
+        this->alloc_(this->ctx, (void**)ptr, sizeof(T) * len, alignof(T)));
     return blib::Status::Ok;
   }
 
   template <typename T>
-  Status aligned_alloc(T** ptr, size_t len, uint8_t align) {
+  Status aligned_alloc(T** ptr, size_t len, uint8_t align) const {
     BLIB_ERR_ASSERT(align >= alignof(T));
     BLIB_ERR_ASSERT((align & (align - 1)) == 0);
 
-    BLIB_ERR_TRY(this.alloc(this.ctx, (void**)ptr, sizeof(T) * len, align));
+    BLIB_ERR_TRY(this->alloc_(this->ctx, (void**)ptr, sizeof(T) * len, align));
 
     BLIB_ERR_ASSERT(size_t(*ptr) % align == 0);
 
@@ -32,16 +33,10 @@ struct Alloc {
   }
 
   template <typename T>
-  void free(T* ptr, size_t len) {
-    BLIB_ERR_TRY(this.free(this.ctx, (void**)ptr, sizeof(T) * len));
+  void free(T* ptr, size_t len) const {
+    this->free_(this->ctx, (void**)ptr, sizeof(T) * len);
   }
 };
-
-struct FixedBufAlloc {};
-
-struct ArenaAlloc {};
-
-struct HugePageAlloc {};
 
 }  // namespace blib
 
