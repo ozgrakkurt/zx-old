@@ -51,7 +51,6 @@ _Thread_local static uint32_t stack_depth = 0;
 
 enum class [[nodiscard]] Status : uint8_t {
   Ok,
-  InvalidInput,
   UnexpectedError,
   AssertFail,
   OutOfMemory,
