@@ -41,7 +41,7 @@ namespace blib {
 
 namespace err {
 
-static uint32_t constexpr MAX_STACK_DEPTH = 128;
+static uint32_t constexpr MAX_STACK_DEPTH = 512;
 static uint32_t constexpr STACK_DEPTH_MASK = MAX_STACK_DEPTH - 1;
 
 _Thread_local char const* stack_trace[MAX_STACK_DEPTH];

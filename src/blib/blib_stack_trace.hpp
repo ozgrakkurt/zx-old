@@ -6,8 +6,6 @@
 
 namespace blib {
 
-char const* collect_stack_trace(blib::Alloc alloc) {}
-
 }  // namespace blib
 
 #endif

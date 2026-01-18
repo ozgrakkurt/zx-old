@@ -3,6 +3,7 @@ add_library(blib STATIC)
 target_sources(blib
   PRIVATE
     blib_slub.cpp
+    blib_stack_trace.cpp
   INTERFACE
     FILE_SET HEADERS
     FILES
@@ -10,6 +11,7 @@ target_sources(blib
       blib_int.hpp
       blib_hashmap.hpp
       blib_err.hpp
+      blib_stack_trace.hpp
       blib_alloc.hpp
       blib_slub.hpp
 )
