@@ -17,6 +17,7 @@ FetchContent_Declare(
   GIT_REPOSITORY https://github.com/google/googletest.git
   GIT_TAG "v1.17.0"
 )
+set(FETCHCONTENT_QUIET OFF)
 FetchContent_MakeAvailable(googletest)
 
 set(BENCHMARK_ENABLE_TESTING OFF)
@@ -25,6 +26,7 @@ FetchContent_Declare(
   GIT_REPOSITORY https://github.com/google/benchmark.git
   GIT_TAG "v1.9.4"
 )
+set(FETCHCONTENT_QUIET OFF)
 FetchContent_MakeAvailable(benchmark)
 
 enable_testing()
