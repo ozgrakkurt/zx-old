@@ -1,8 +1,6 @@
-add_library(blib STATIC)
+add_library(blib INTERFACE)
 
 target_sources(blib
-  PRIVATE
-    blib_stack_trace.cpp
   INTERFACE
     FILE_SET HEADERS
     FILES

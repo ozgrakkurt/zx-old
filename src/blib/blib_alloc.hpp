@@ -9,18 +9,18 @@
 namespace blib {
 
 struct Alloc {
-  void* buf;
+  uint8_t* buf;
   size_t capacity;
   size_t offset;
 };
 
-Alloc Alloc_init(void* buf, size_t capacity) {
+Alloc Alloc_init(uint8_t* buf, size_t capacity) {
   return {.buf = buf, .capacity = capacity, .offset = 0};
 }
 
 void Alloc_reset(Alloc* obj) { obj->offset = 0; }
 
-Status Alloc_alloc(Alloc* obj, size_t align, size_t size, void** ptr) {
+Status Alloc_alloc(Alloc* obj, size_t align, size_t size, uint8_t** ptr) {
   BLIB_ERR_ASSERT(obj != nullptr);
   BLIB_ERR_ASSERT(ptr != nullptr);
 
@@ -32,7 +32,7 @@ Status Alloc_alloc(Alloc* obj, size_t align, size_t size, void** ptr) {
 
   Alloc const state = *obj;
 
-  size_t const addr = size_t(state.buf + state.offset);
+  size_t const addr = size_t(&state.buf[state.offset]);
   size_t const aligned_addr = (addr + align - 1) / align * align;
   size_t const padding = aligned_addr - addr;
 
