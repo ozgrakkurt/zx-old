@@ -28,9 +28,9 @@
   do {                                                                \
     blib::Status blib_err_status_ = (expr);                           \
     if (blib_err_status_ != blib::Status::Ok) {                       \
+      blib::err::stack_trace[blib::err::stack_depth] = BLIB_ERR_LOC;  \
       blib::err::stack_depth =                                        \
           (blib::err::stack_depth + 1) & blib::err::STACK_DEPTH_MASK; \
-      blib::err::stack_trace[blib::err::stack_depth] = BLIB_ERR_LOC;  \
       return blib_err_status_;                                        \
     }                                                                 \
   } while (0)
@@ -44,19 +44,19 @@ namespace err {
 static uint32_t constexpr MAX_STACK_DEPTH = 512;
 static uint32_t constexpr STACK_DEPTH_MASK = MAX_STACK_DEPTH - 1;
 
-_Thread_local char const* stack_trace[MAX_STACK_DEPTH];
-_Thread_local uint32_t stack_depth = 0;
+extern _Thread_local char const* stack_trace[MAX_STACK_DEPTH];
+extern _Thread_local uint32_t stack_depth;
 
 }  // namespace err
 
 enum class [[nodiscard]] Status : uint8_t {
-  Ok,
-  UnexpectedError,
-  AssertFail,
-  OutOfMemory,
+  Ok = 0,
+  UnexpectedError = 1,
+  AssertFail = 2,
+  OutOfMemory = 3,
 };
 
-Status err_assert(bool cond) {
+inline Status err_assert(bool cond) {
   if (cond) {
     return Status::Ok;
   } else {

@@ -29,8 +29,8 @@ constexpr size_t index(size_t row, size_t lane) {
 }
 
 template <typename T>
-T make_mask(uint8_t width) {
-  return (T(1) << width) - 1;
+T make_mask(size_t width) {
+  return T(T(1) << width) - T(1);
 }
 
 }  // namespace fl_impl

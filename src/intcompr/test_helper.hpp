@@ -1,6 +1,7 @@
 #ifndef INTCOMPR_TEST_HELPER_HPP
 #define INTCOMPR_TEST_HELPER_HPP
 
+#include <blib_err.hpp>
 #include <blib_int.hpp>
 #include <blib_rand.hpp>
 #include <intcompr.hpp>
@@ -10,7 +11,7 @@ namespace ic_test_helper {
 template <typename T>
 static void random_with_width_impl(uint64_t* seed, T* data, size_t n,
                                    size_t width) {
-  T const mask = sizeof(T) * 8 == width ? !T(0) : (T(1) << width) - 1;
+  T const mask = sizeof(T) * 8 == width ? !T(0) : T(T(1) << width) - 1;
   for (size_t i = 0; i < n; i++) {
     data[i] = blib::random<T>(seed) & mask;
   }
@@ -19,7 +20,7 @@ static void random_with_width_impl(uint64_t* seed, T* data, size_t n,
 template <typename T>
 static void random_delta_with_width_impl(uint64_t* seed, T* data, size_t n,
                                          size_t width) {
-  T const mask = sizeof(T) * 8 == width ? !T(0) : (T(1) << width) - 1;
+  T const mask = sizeof(T) * 8 == width ? !T(0) : T(T(1) << width) - 1;
 
   T v = blib::random<T>(seed);
   for (size_t i = 0; i < n; i++) {
@@ -43,10 +44,11 @@ struct BitPack {
   }
 
   template <typename T>
-  static size_t decompress(uint8_t const* __restrict input, size_t input_size,
-                           T* __restrict output, size_t output_len) {
+  static blib::Status decompress(uint8_t const* __restrict input,
+                                 size_t input_size, T* __restrict output,
+                                 size_t output_len, size_t* n_read) {
     return intcompr::bit_pack_decompress<T>(input, input_size, output,
-                                            output_len);
+                                            output_len, n_read);
   }
 
   template <typename T>
@@ -70,10 +72,11 @@ struct ForPack {
   }
 
   template <typename T>
-  static size_t decompress(uint8_t const* __restrict input, size_t input_size,
-                           T* __restrict output, size_t output_len) {
+  static blib::Status decompress(uint8_t const* __restrict input,
+                                 size_t input_size, T* __restrict output,
+                                 size_t output_len, size_t* n_read) {
     return intcompr::for_pack_decompress<T>(input, input_size, output,
-                                            output_len);
+                                            output_len, n_read);
   }
 
   template <typename T>
@@ -97,10 +100,11 @@ struct DeltaPack {
   }
 
   template <typename T>
-  static size_t decompress(uint8_t const* __restrict input, size_t input_size,
-                           T* __restrict output, size_t output_len) {
+  static blib::Status decompress(uint8_t const* __restrict input,
+                                 size_t input_size, T* __restrict output,
+                                 size_t output_len, size_t* n_read) {
     return intcompr::delta_pack_decompress<T>(input, input_size, output,
-                                              output_len);
+                                              output_len, n_read);
   }
 
   template <typename T>

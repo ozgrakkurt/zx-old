@@ -1,5 +1,6 @@
 #include "./ic_impl.hpp"
 
+#include <blib_err.hpp>
 #include <cassert>
 #include <cstddef>
 #include <cstdio>

@@ -14,13 +14,14 @@ struct Alloc {
   size_t offset;
 };
 
-Alloc Alloc_init(uint8_t* buf, size_t capacity) {
+inline Alloc Alloc_init(uint8_t* buf, size_t capacity) {
   return {.buf = buf, .capacity = capacity, .offset = 0};
 }
 
-void Alloc_reset(Alloc* obj) { obj->offset = 0; }
+inline void Alloc_reset(Alloc* obj) { obj->offset = 0; }
 
-Status Alloc_alloc(Alloc* obj, size_t align, size_t size, uint8_t** ptr) {
+inline Status Alloc_alloc(Alloc* obj, size_t align, size_t size,
+                          uint8_t** ptr) {
   BLIB_ERR_ASSERT(obj != nullptr);
   BLIB_ERR_ASSERT(ptr != nullptr);
 

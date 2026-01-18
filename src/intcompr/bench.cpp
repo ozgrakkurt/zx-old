@@ -1,5 +1,7 @@
 #include <benchmark/benchmark.h>
 
+#include <blib_err.hpp>
+#include <blib_stack_trace.hpp>
 #include <cassert>
 #include <cstddef>
 #include <cstdint>
@@ -119,11 +121,11 @@ static void BM_IntCompr(benchmark::State& state, BenchInput input) {
 
     benchmark::ClobberMemory();
 
-    size_t const ret = Algo::template decompress<T>(
-        &compr[compr_offset], compr_size, &out[out_offset], len);
-    assert(ret == compr_size);
-    assert(!intcompr::is_decompress_error(ret));
-    (void)ret;
+    size_t n_read = 0;
+    blib::Status const decompress_status = Algo::template decompress<T>(
+        &compr[compr_offset], compr_size, &out[out_offset], len, &n_read);
+    assert(n_read == compr_size);
+    BLIB_STACK_TRACE_UNWRAP(decompress_status);
 
     for (size_t i = 0; i < len; i++) {
       assert(in[in_offset + i] == out[out_offset + i]);

@@ -1,7 +1,9 @@
 #include <gtest/gtest.h>
 #include <stdlib.h>
 
+#include <blib_err.hpp>
 #include <blib_rand.hpp>
+#include <blib_stack_trace.hpp>
 #include <cstddef>
 #include <cstdint>
 #include <intcompr.hpp>
@@ -11,7 +13,7 @@
 template <typename T>
 void random_with_width(uint64_t* seed, T base, T* data, size_t n,
                        size_t width) {
-  T const mask = sizeof(T) * 8 == width ? !T(0) : (T(1) << width) - 1;
+  T const mask = sizeof(T) * 8 == width ? !T(0) : T(T(1) << width) - 1;
   for (size_t i = 0; i < n; i++) {
     data[i] = base + (blib::random<T>(seed) & mask);
   }
@@ -63,9 +65,9 @@ void test_impl(uint8_t* input, uint8_t* compressed, uint8_t* output,
 
       size_t const compressed_size =
           Algo::template compress<T>(in, len, compressed, raw_capacity);
-      size_t const n_read =
-          Algo::template decompress<T>(compressed, compressed_size, out, len);
-      ASSERT_FALSE(intcompr::is_decompress_error(n_read));
+      size_t n_read = 0;
+      BLIB_STACK_TRACE_UNWRAP(Algo::template decompress<T>(
+          compressed, compressed_size, out, len, &n_read));
       ASSERT_EQ(n_read, compressed_size);
 
       for (size_t i = 0; i < len; i++) {

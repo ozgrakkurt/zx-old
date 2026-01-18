@@ -122,9 +122,7 @@ static blib::Status validate_decompress_input(uint8_t const* __restrict input,
     return blib::Status::Ok;
   }
 
-  if (input_size >= SIZE_MAX || output_len >= INT_MAX) {
-    BLIB_ERR_START(blib::Status::InvalidInput);
-  }
+  BLIB_ERR_ASSERT(input_size < SIZE_MAX && output_len < INT_MAX);
 
   size_t const n_block_metas =
       (output_len / 1024) * ic_impl::n_block_metas_multiplier<T>();
@@ -132,9 +130,7 @@ static blib::Status validate_decompress_input(uint8_t const* __restrict input,
 
   size_t const total_meta_size = meta_size_per_block<T>() * n_block_metas;
 
-  if (input_size <= total_meta_size) {
-    BLIB_ERR_START(blib::Status::InvalidInput);
-  }
+  BLIB_ERR_ASSERT(input_size > total_meta_size);
 
   size_t block_data_size = 0;
 
@@ -144,9 +140,7 @@ static blib::Status validate_decompress_input(uint8_t const* __restrict input,
     uint8_t const width = uint8_t(*meta_p);
     meta_p += 2;
 
-    if (width > sizeof(BT) * 8) {
-      BLIB_ERR_START(blib::Status::InvalidInput);
-    }
+    BLIB_ERR_ASSERT(width <= sizeof(BT) * 8);
 
     block_data_size += (1024 / 8) * width;
   }
@@ -156,24 +150,22 @@ static blib::Status validate_decompress_input(uint8_t const* __restrict input,
   size_t const expected_size = total_meta_size + 1 + size_t(padding) +
                                block_data_size + n_remainder * sizeof(T);
 
-  if (input_size != expected_size) {
-    BLIB_ERR_START(blib::Status::InvalidInput);
-  }
+  BLIB_ERR_ASSERT(input_size < expected_size);
 
   return blib::Status::Ok;
 }
 
-#define FORPACK_DECOMPRESS(T, BT)                                          \
-  template <>                                                              \
-  size_t for_pack_decompress<T>(uint8_t const* __restrict input,           \
-                                size_t input_size, T* __restrict output,   \
-                                size_t output_len, size_t* n_read) {       \
-    BLIB_ERR_TRY(                                                          \
-        validate_decompress_input<T, BT>(input, input_size, output_len));  \
-    *n_read = ic_impl::decompress_impl<T>(&for_pack_decompress_block<BT>,  \
-                                          meta_size_per_block<T>(), input, \
-                                          output, output_len);             \
-    return blib::Status::Ok;                                               \
+#define FORPACK_DECOMPRESS(T, BT)                                              \
+  template <>                                                                  \
+  blib::Status for_pack_decompress<T>(uint8_t const* __restrict input,         \
+                                      size_t input_size, T* __restrict output, \
+                                      size_t output_len, size_t* n_read) {     \
+    BLIB_ERR_TRY(                                                              \
+        (validate_decompress_input<T, BT>(input, input_size, output_len)));    \
+    *n_read = ic_impl::decompress_impl<T>(&for_pack_decompress_block<BT>,      \
+                                          meta_size_per_block<T>(), input,     \
+                                          output, output_len);                 \
+    return blib::Status::Ok;                                                   \
   }
 IC_REPEAT_FOR_IC_TYPES_WITH_BLOCK_TYPE(FORPACK_DECOMPRESS);
 

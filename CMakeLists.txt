@@ -5,6 +5,8 @@ project(kit)
 set(CMAKE_CXX_STANDARD 20)
 set(CMAKE_CXX_STANDARD_REQUIRED ON)
 
+add_compile_options(-Wall -Wextra -march=native -Wconversion -Wsign-conversion)
+
 include(FetchContent)
 
 set(BUILD_GMOCK OFF)
@@ -31,11 +33,3 @@ include(GoogleTest)
 add_subdirectory(./src/blib)
 add_subdirectory(./src/fastlanes)
 add_subdirectory(./src/intcompr)
-
-add_executable(hello
-  main.cpp
-)
-
-target_link_libraries(hello
-  fastlanes
-)
