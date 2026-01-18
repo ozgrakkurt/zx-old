@@ -150,7 +150,7 @@ static blib::Status validate_decompress_input(uint8_t const* __restrict input,
   size_t const expected_size = total_meta_size + 1 + size_t(padding) +
                                block_data_size + n_remainder * sizeof(T);
 
-  BLIB_ERR_ASSERT(input_size < expected_size);
+  BLIB_ERR_ASSERT(input_size >= expected_size);
 
   return blib::Status::Ok;
 }

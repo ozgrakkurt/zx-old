@@ -38,7 +38,7 @@ inline Status Alloc_alloc(Alloc* obj, size_t align, size_t size,
   size_t const padding = aligned_addr - addr;
 
   if (padding + size > state.capacity) {
-    BLIB_ERR_START(Status::OutOfMemory);
+    BLIB_ERR_TRY(Status::OutOfMemory);
   }
 
   *ptr = state.buf + state.offset;

@@ -7,23 +7,6 @@
 #define BLIB_ERR_LINE_TO_STRING(x) BLIB_ERR_STRINGIFY(x)
 #define BLIB_ERR_LOC __FILE__ ":_line_" BLIB_ERR_LINE_TO_STRING(__LINE__)
 
-#define BLIB_ERR_START(expr)                  \
-  do {                                        \
-    blib::Status blib_err_status_ = (expr);   \
-    blib::err::stack_trace[0] = BLIB_ERR_LOC; \
-    blib::err::stack_depth = 1;               \
-    return blib_err_status_;                  \
-  } while (0)
-
-#define BLIB_ERR_PUSH(expr)                                         \
-  do {                                                              \
-    blib::Status blib_err_status_ = (expr);                         \
-    blib::err::stack_trace[blib::err::stack_depth] = BLIB_ERR_LOC;  \
-    blib::err::stack_depth =                                        \
-        (blib::err::stack_depth + 1) & blib::err::STACK_DEPTH_MASK; \
-    return blib_err_status_;                                        \
-  } while (0)
-
 #define BLIB_ERR_TRY(expr)                                            \
   do {                                                                \
     blib::Status blib_err_status_ = (expr);                           \
@@ -35,7 +18,7 @@
     }                                                                 \
   } while (0)
 
-#define BLIB_ERR_ASSERT(expr) BLIB_ERR_PUSH(blib::err_assert((expr)));
+#define BLIB_ERR_ASSERT(expr) BLIB_ERR_TRY(blib::err_assert((expr)));
 
 namespace blib {
 
@@ -60,7 +43,7 @@ inline Status err_assert(bool cond) {
   if (cond) {
     return Status::Ok;
   } else {
-    BLIB_ERR_START(Status::AssertFail);
+    return Status::AssertFail;
   }
 }
 
