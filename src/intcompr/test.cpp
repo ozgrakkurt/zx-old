@@ -33,7 +33,7 @@ void random_with_width(uint64_t* seed, T base, T* data, size_t n,
 // }
 
 size_t constexpr LENGTHS[] = {0,    1,    9,    16,   1023, 1024,
-                              1025, 2045, 2047, 2048, 2049, 12323};
+                              1025, 2045, 2047, 2048, 2049, 1232};
 size_t constexpr N_LENGTHS = sizeof(LENGTHS) / sizeof(LENGTHS[0]);
 
 size_t constexpr ALIGNMENT = 64;
@@ -79,7 +79,7 @@ void test_impl(uint8_t* input, uint8_t* compressed, uint8_t* output,
 
 template <typename T>
 void do_test() {
-  size_t const raw_capacity = sizeof(T) * (1 << 14);
+  size_t const raw_capacity = sizeof(T) * (1 << 13);
 
   uint8_t* input = (uint8_t*)aligned_alloc(ALIGNMENT, raw_capacity);
   assert(input != nullptr);

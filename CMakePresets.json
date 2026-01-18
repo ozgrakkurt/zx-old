@@ -1,0 +1,39 @@
+{
+  "version": 3,
+  "configurePresets": [
+    {
+      "name": "base-clang",
+      "hidden": true,
+      "cacheVariables": {
+        "CMAKE_C_COMPILER": "clang",
+        "CMAKE_CXX_COMPILER": "clang++"
+      }
+    },
+    {
+      "name": "debug",
+      "inherits": "base-clang",
+      "binaryDir": "${sourceDir}/build/debug",
+      "cacheVariables": {
+        "CMAKE_BUILD_TYPE": "Debug"
+      }
+    },
+    {
+      "name": "release",
+      "inherits": "base-clang",
+      "binaryDir": "${sourceDir}/build/release",
+      "cacheVariables": {
+        "CMAKE_BUILD_TYPE": "Release"
+      }
+    },
+    {
+      "name": "optimized-debug",
+      "inherits": "base-clang",
+      "binaryDir": "${sourceDir}/build/opt-debug",
+      "cacheVariables": {
+        "CMAKE_BUILD_TYPE": "None",
+        "CMAKE_C_FLAGS": "-O2 -g -DNDEBUG",
+        "CMAKE_CXX_FLAGS": "-O2 -g -DNDEBUG"
+      }
+    }
+  ]
+}

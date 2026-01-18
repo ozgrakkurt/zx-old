@@ -14,8 +14,8 @@ void stack_trace_panic(Status status) {
   size_t const stack_depth = blib::err::stack_depth;
   char const* const* stack_trace = blib::err::stack_trace;
 
-  fprintf(stderr, "Failed with error: %d, printing stack trace:\n",
-          uint8_t(status));
+  fprintf(stderr, "Failed with status: %s, printing stack trace:\n",
+          status_as_str(status));
 
   for (uint32_t i = 0; i < stack_depth; i++) {
     fprintf(stderr, "\t%s\n", stack_trace[i]);

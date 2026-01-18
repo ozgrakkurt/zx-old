@@ -39,6 +39,21 @@ enum class [[nodiscard]] Status : uint8_t {
   OutOfMemory = 3,
 };
 
+inline char const* status_as_str(Status status) {
+  switch (status) {
+  case Status::Ok:
+    return "Status::Ok";
+  case Status::UnexpectedError:
+    return "Status::UnexpectedError";
+  case Status::AssertFail:
+    return "Status::AssertFail";
+  case Status::OutOfMemory:
+    return "Status::OutOfMemory";
+  default:
+    return "Status::Unknown";
+  }
+}
+
 inline Status err_assert(bool cond) {
   if (cond) {
     return Status::Ok;
