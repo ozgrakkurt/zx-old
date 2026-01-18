@@ -33,7 +33,7 @@ void random_with_width(uint64_t* seed, T base, T* data, size_t n,
 // }
 
 size_t constexpr LENGTHS[] = {0,    1,    9,    16,   1023, 1024,
-                              1025, 2045, 2047, 2048, 2049, 1232};
+                              1025, 2045, 2047, 2048, 2049, 2123};
 size_t constexpr N_LENGTHS = sizeof(LENGTHS) / sizeof(LENGTHS[0]);
 
 size_t constexpr ALIGNMENT = 64;
