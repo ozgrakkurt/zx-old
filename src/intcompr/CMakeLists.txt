@@ -7,7 +7,6 @@ target_sources(intcompr
     ic_forpack.cpp
     ic_deltapack.cpp
     ic_zigzag.cpp
-    intcompr.cpp
   INTERFACE
     FILE_SET HEADERS
     FILES

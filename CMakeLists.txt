@@ -5,14 +5,6 @@ project(kit)
 set(CMAKE_CXX_STANDARD 20)
 set(CMAKE_CXX_STANDARD_REQUIRED ON)
 
-option(KIT_MARCH_NATIVE "compile for native architecture" ON)
-
-if (KIT_MARCH_NATIVE)
-  add_compile_options(-march=native)
-endif()
-
-add_compile_options(-Wall -Wextra)
-
 include(FetchContent)
 
 set(BUILD_GMOCK OFF)
@@ -21,7 +13,7 @@ set(GTEST_HAS_ABSL OFF)
 FetchContent_Declare(
   googletest
   GIT_REPOSITORY https://github.com/google/googletest.git
-  GIT_TAG 52eb8108c5bdec04579160ae17225d66034bd723
+  GIT_TAG "v1.17.0"
 )
 FetchContent_MakeAvailable(googletest)
 
@@ -29,7 +21,7 @@ set(BENCHMARK_ENABLE_TESTING OFF)
 FetchContent_Declare(
   benchmark 
   GIT_REPOSITORY https://github.com/google/benchmark.git
-  GIT_TAG eddb0241389718a23a42db6af5f0164b6e0139af
+  GIT_TAG "v1.9.4"
 )
 FetchContent_MakeAvailable(benchmark)
 
