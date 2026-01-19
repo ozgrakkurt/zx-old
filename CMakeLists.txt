@@ -5,9 +5,11 @@ project(kit)
 set(CMAKE_CXX_STANDARD 17)
 set(CMAKE_CXX_STANDARD_REQUIRED ON)
 
-add_compile_options(-Wall -Wextra -march=native -Wconversion -Wsign-conversion)
+add_compile_options(-Wall -Wextra -Wconversion -Wsign-conversion -march=native)
 
 include(FetchContent)
+
+set(FETCHCONTENT_QUIET OFF)
 
 set(BUILD_GMOCK OFF)
 set(INSTALL_GTEST OFF)
@@ -17,7 +19,6 @@ FetchContent_Declare(
   GIT_REPOSITORY https://github.com/google/googletest.git
   GIT_TAG "v1.17.0"
 )
-set(FETCHCONTENT_QUIET OFF)
 FetchContent_MakeAvailable(googletest)
 
 set(BENCHMARK_ENABLE_TESTING OFF)
@@ -26,7 +27,6 @@ FetchContent_Declare(
   GIT_REPOSITORY https://github.com/google/benchmark.git
   GIT_TAG "v1.9.4"
 )
-set(FETCHCONTENT_QUIET OFF)
 FetchContent_MakeAvailable(benchmark)
 
 enable_testing()

@@ -31,3 +31,9 @@ target_link_libraries(intcompr_bench
   blib
   benchmark::benchmark
 )
+
+add_executable(intcompr_fuzz fuzz.cpp)
+target_link_libraries(intcompr_fuzz
+  intcompr
+  blib
+)

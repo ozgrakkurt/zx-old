@@ -35,6 +35,19 @@
         "CMAKE_C_FLAGS": "-O2 -g",
         "CMAKE_CXX_FLAGS": "-O2 -g"
       }
+    },
+    {
+      "name": "fuzzinger",
+      "binaryDir": "${sourceDir}/build/fuzzinger",
+      "generator": "Ninja",
+      "cacheVariables": {
+        "CMAKE_C_COMPILER": "${sourceDir}/../honggfuzz/hfuzz_cc/hfuzz-clang",
+        "CMAKE_CXX_COMPILER": "${sourceDir}/../honggfuzz/hfuzz_cc/hfuzz-clang++",
+        "CMAKE_BUILD_TYPE": "None",
+        "CMAKE_C_FLAGS": "-O2 -g -fsanitize=address -fsanitize=undefined",
+        "CMAKE_CXX_FLAGS": "-O2 -g -fsanitize=address -fsanitize=undefined",
+        "CMAKE_LINK_FLAGS": "-fsanitize=address -fsanitize=undefined"
+      }
     }
   ]
 }
