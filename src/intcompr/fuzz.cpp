@@ -1,34 +1,93 @@
+#include <limits.h>
+
 #include <blib_err.hpp>
+#include <blib_int.hpp>
 #include <blib_stack_trace.hpp>
 #include <cstddef>
 #include <cstdint>
+#include <cstdlib>
+#include <cstring>
 #include <intcompr.hpp>
 
-// uint32_t constexpr OUTPUT_BUF_SIZE = 1 << 14;
-//
-// static uint8_t* buf;
-//
-// extern "C" int LLVMFuzzerInitialize(int *argc, char ***argv) {
-//   buf = aligned_alloc(sizeof(blib::uint256_t_));
-// }
-//
-extern "C" int LLVMFuzzerTestOneInput(uint8_t const* buf, size_t len) {
-  // if (len > UINT32_MAX) return 0;
-  //
-  // uint32_t const len32 = uint32_t(len);
-  //
-  // if (len32 < sizeof(uint32_t)) {
-  //   return 0;
-  // }
-  //
-  // uint32_t const input_len = blib::min<uint32_t>(
-  //     len32 - 4, blib::int_from_bytes<uint32_t>(buf) % uint32_t(INT_MAX /
-  //     2));
+uint32_t constexpr BUF_SIZE = 1 << 17;
 
-  // BLIB_STACK_TRACE_UNWRAP(());
+static uint8_t* OUT_BUF = nullptr;
+static uint8_t* IN_BUF = nullptr;
 
-  if (len == 1131 && buf[31] == 69) {
-    BLIB_STACK_TRACE_UNWRAP(blib::Status::AssertFail);
+size_t constexpr ALIGNMENT = 64;
+
+extern "C" int LLVMFuzzerInitialize(int* argc, char*** argv) {
+  (void)argc;
+  (void)argv;
+
+  OUT_BUF = (uint8_t*)aligned_alloc(ALIGNMENT, BUF_SIZE);
+  if (OUT_BUF == nullptr) {
+    BLIB_STACK_TRACE_UNWRAP(blib::Status::OutOfMemory);
   }
+  IN_BUF = (uint8_t*)aligned_alloc(ALIGNMENT, BUF_SIZE);
+  if (IN_BUF == nullptr) {
+    BLIB_STACK_TRACE_UNWRAP(blib::Status::OutOfMemory);
+  }
+
+  return 0;
+}
+
+template <typename T>
+blib::Status decompr_test(uint8_t const* input, size_t input_size, T* output,
+                          size_t output_len) {
+  BLIB_ERR_ASSERT((size_t(input) % ALIGNMENT == 0));
+  BLIB_ERR_ASSERT((size_t(output) % ALIGNMENT == 0));
+  BLIB_ERR_ASSERT((input != nullptr));
+  BLIB_ERR_ASSERT((output != nullptr));
+
+  size_t n_read = 0;
+
+  BLIB_ERR_TRY((intcompr::bit_pack_decompress(input, input_size, output,
+                                              output_len, &n_read)));
+  BLIB_ERR_ASSERT((n_read < INT_MAX));
+
+  BLIB_ERR_TRY((intcompr::for_pack_decompress(input, input_size, output,
+                                              output_len, &n_read)));
+  BLIB_ERR_ASSERT((n_read < INT_MAX));
+
+  BLIB_ERR_TRY((intcompr::delta_pack_decompress(input, input_size, output,
+                                                output_len, &n_read)));
+  BLIB_ERR_ASSERT((n_read < INT_MAX));
+
+  return blib::Status::Ok;
+}
+
+template <typename T>
+blib::Status test_per_T(uint8_t const* input, size_t input_size,
+                        uint8_t* output, size_t output_size) {
+  T* out = (T*)output;
+  uint32_t const output_len = uint32_t(output_size / sizeof(T));
+
+  BLIB_ERR_TRY((decompr_test<T>(input, input_size, out, output_len)));
+
+  return blib::Status::Ok;
+}
+
+extern "C" int LLVMFuzzerTestOneInput(uint8_t const* fuzz_input,
+                                      size_t fuzz_input_len) {
+  if (fuzz_input_len < sizeof(uint32_t) * 2) {
+    return 0;
+  }
+
+  uint32_t const input_size_raw = blib::int_from_bytes<uint32_t>(fuzz_input);
+  uint32_t const output_size_raw =
+      blib::int_from_bytes<uint32_t>(&fuzz_input[sizeof(uint32_t)]);
+
+  uint32_t const input_size_max = blib::min<uint32_t>(
+      uint32_t(fuzz_input_len - 2 * sizeof(uint32_t)), BUF_SIZE);
+  uint32_t const input_size =
+      input_size_max == 0 ? 0 : (input_size_raw % input_size_max);
+  uint32_t const output_size = output_size_raw % BUF_SIZE;
+
+  memcpy(IN_BUF, &fuzz_input[2 * sizeof(uint32_t)], input_size);
+
+  BLIB_STACK_TRACE_UNWRAP(
+      (test_per_T<blib::uint256_t_>(IN_BUF, input_size, OUT_BUF, output_size)));
+
   return 0;
 }
