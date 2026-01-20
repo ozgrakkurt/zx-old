@@ -1,3 +1,4 @@
+#include <cassert>
 #include <cstddef>
 #include <cstdlib>
 
@@ -60,7 +61,7 @@ void bit_pack_dispatch(T const* __restrict input, T* __restrict output,
   } else if constexpr (WC < sizeof(T) * 8) {
     bit_pack_dispatch<T, WC + 1>(input, output, width);
   } else {
-    __builtin_unreachable();
+    assert(false);
   }
 }
 
@@ -73,7 +74,7 @@ void bit_pack(T const* __restrict input, T* __restrict output, uint8_t width) {
   } else if (width == N_BITS) {
     return bit_pack_copy<T>(input, output);
   } else if (width > N_BITS) {
-    __builtin_unreachable();
+    assert(false);
   } else {
     return bit_pack_dispatch<T, 1>(input, output, width);
   }

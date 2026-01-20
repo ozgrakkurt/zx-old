@@ -10,6 +10,8 @@
 
 namespace intcompr {
 
+size_t constexpr ALIGNMENT = 64;
+
 template <typename T>
 static size_t meta_size_per_block() {
   if (sizeof(T) == 32) {
@@ -93,6 +95,7 @@ static size_t for_pack_decompress_block(uint8_t const* __restrict meta,
   assert(size_t(meta) % sizeof(T) == 0);
   auto meta_p = (T const*)meta;
   uint8_t const width = uint8_t(meta_p[0]);
+  assert(width <= sizeof(T) * 8);
   T const base = meta_p[1];
 
   fastlanes::for_unpack<T>(base, in, out, width);
@@ -146,6 +149,8 @@ static blib::Status validate_decompress_input(uint8_t const* __restrict input,
   }
 
   uint8_t const padding = input[total_meta_size];
+
+  BLIB_ERR_ASSERT(((padding + 1 + total_meta_size) % ALIGNMENT == 0));
 
   size_t const expected_size = total_meta_size + 1 + size_t(padding) +
                                block_data_size + n_remainder * sizeof(T);

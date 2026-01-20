@@ -3,7 +3,6 @@
 
 #include <cstddef>
 #include <cstdint>
-#include <cstring>
 
 #define IC_REPEAT_FOR_IC_TYPES(D) \
   D(uint8_t);                     \

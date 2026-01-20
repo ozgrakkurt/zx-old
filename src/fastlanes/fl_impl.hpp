@@ -1,6 +1,7 @@
 #ifndef FASTLANES_FL_IMPL_HPP
 #define FASTLANES_FL_IMPL_HPP
 
+#include <cassert>
 #include <cstddef>
 #include <cstdint>
 
@@ -30,6 +31,8 @@ constexpr size_t index(size_t row, size_t lane) {
 
 template <typename T>
 T make_mask(size_t width) {
+  assert(width < sizeof(T) * 8);
+
   return T(T(1) << width) - T(1);
 }
 

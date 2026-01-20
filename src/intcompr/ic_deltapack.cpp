@@ -3,6 +3,7 @@
 #include <climits>
 #include <cstddef>
 #include <cstdlib>
+#include <cstring>
 #include <fastlanes.hpp>
 
 #include "./ic_impl.hpp"
@@ -10,6 +11,7 @@
 
 namespace intcompr {
 
+size_t constexpr ALIGNMENT = 64;
 size_t constexpr META_PER_BLOCK = sizeof(uint8_t);
 
 // This is fastlanes N_LANES * sizeof(T).
@@ -85,6 +87,7 @@ static size_t delta_pack_decompress_block(uint8_t const* __restrict meta,
   size_t constexpr N_BASES = BASES_SIZE / sizeof(T);
 
   uint8_t const width = meta[0];
+  assert(width <= sizeof(T) * 8);
 
   alignas(64) T transposed[1024];
   fastlanes::bit_unpack_delta_decode(in, &in[N_BASES], transposed, width);
@@ -137,6 +140,9 @@ static blib::Status validate_decompress_input(uint8_t const* __restrict input,
   }
 
   uint8_t const padding = input[total_meta_size];
+
+  BLIB_ERR_ASSERT(((padding + 1 + total_meta_size) % ALIGNMENT == 0));
+
   size_t const expected_size = total_meta_size + 1 + size_t(padding) +
                                block_data_size + n_remainder * sizeof(T);
 

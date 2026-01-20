@@ -1,3 +1,4 @@
+#include <cassert>
 #include <cstddef>
 #include <cstdlib>
 
@@ -94,7 +95,7 @@ void bit_unpack_delta_decode_dispatch(T const* __restrict bases,
   } else if constexpr (WC < sizeof(T) * 8) {
     bit_unpack_delta_decode_dispatch<T, WC + 1>(bases, input, output, width);
   } else {
-    __builtin_unreachable();
+    assert(false);
   }
 }
 
@@ -109,7 +110,7 @@ void bit_unpack_delta_decode(T const* __restrict bases,
   } else if (width == N_BITS) {
     return bit_unpack_delta_decode_copy<T>(bases, input, output);
   } else if (width > N_BITS) {
-    __builtin_unreachable();
+    assert(false);
   } else {
     return bit_unpack_delta_decode_dispatch<T, 1>(bases, input, output, width);
   }

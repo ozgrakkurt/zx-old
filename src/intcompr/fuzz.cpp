@@ -11,8 +11,8 @@
 
 uint32_t constexpr BUF_SIZE = 1 << 17;
 
-static uint8_t* OUT_BUF = nullptr;
-static uint8_t* IN_BUF = nullptr;
+_Thread_local uint8_t* OUT_BUF = nullptr;
+_Thread_local uint8_t* IN_BUF = nullptr;
 
 size_t constexpr ALIGNMENT = 64;
 
