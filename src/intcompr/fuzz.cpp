@@ -42,16 +42,16 @@ blib::Status decompr_test(uint8_t const* input, size_t input_size, T* output,
 
   size_t n_read = 0;
 
-  BLIB_ERR_TRY((intcompr::bit_pack_decompress(input, input_size, output,
-                                              output_len, &n_read)));
+  (void)(intcompr::bit_pack_decompress(input, input_size, output, output_len,
+                                       &n_read));
   BLIB_ERR_ASSERT((n_read < INT_MAX));
 
-  BLIB_ERR_TRY((intcompr::for_pack_decompress(input, input_size, output,
-                                              output_len, &n_read)));
+  (void)(intcompr::for_pack_decompress(input, input_size, output, output_len,
+                                       &n_read));
   BLIB_ERR_ASSERT((n_read < INT_MAX));
 
-  BLIB_ERR_TRY((intcompr::delta_pack_decompress(input, input_size, output,
-                                                output_len, &n_read)));
+  (void)(intcompr::delta_pack_decompress(input, input_size, output, output_len,
+                                         &n_read));
   BLIB_ERR_ASSERT((n_read < INT_MAX));
 
   return blib::Status::Ok;
