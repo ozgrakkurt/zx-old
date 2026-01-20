@@ -87,7 +87,7 @@ extern "C" int LLVMFuzzerTestOneInput(uint8_t const* fuzz_input,
   memcpy(IN_BUF, &fuzz_input[2 * sizeof(uint32_t)], input_size);
 
   BLIB_STACK_TRACE_UNWRAP(
-      (test_per_T<blib::uint256_t_>(IN_BUF, input_size, OUT_BUF, output_size)));
+      (test_per_T<uint64_t>(IN_BUF, input_size, OUT_BUF, output_size)));
 
   return 0;
 }
