@@ -5,9 +5,8 @@
 #include <cstdlib>
 #include <cstring>
 #include <fastlanes.hpp>
-
-#include "./ic_impl.hpp"
-#include "./intcompr.hpp"
+#include <ic_impl.hpp>
+#include <intcompr.hpp>
 
 namespace intcompr {
 

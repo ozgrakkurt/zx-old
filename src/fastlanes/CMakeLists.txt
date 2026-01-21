@@ -9,7 +9,8 @@ target_sources(fastlanes
     fl_delta.cpp
     fl_bit_unpack_delta_decode.cpp
     fl_rle.cpp
-  INTERFACE
+    fl_impl.hpp
+  PUBLIC 
     FILE_SET HEADERS
     FILES
       fastlanes.hpp

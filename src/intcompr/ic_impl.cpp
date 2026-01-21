@@ -1,13 +1,11 @@
-#include "./ic_impl.hpp"
-
 #include <blib_err.hpp>
 #include <cassert>
 #include <cstddef>
 #include <cstdio>
 #include <cstdlib>
 #include <cstring>
-
-#include "./ic_zigzag.hpp"
+#include <ic_impl.hpp>
+#include <ic_zigzag.hpp>
 
 #define IC_REPEAT_FOR_IC_TYPES(D) \
   D(uint8_t);                     \

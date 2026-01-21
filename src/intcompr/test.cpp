@@ -7,8 +7,7 @@
 #include <cstddef>
 #include <cstdint>
 #include <intcompr.hpp>
-
-#include "./test_helper.hpp"
+#include <test_helper.hpp>
 
 template <typename T>
 void random_with_width(uint64_t* seed, T base, T* data, size_t n,

@@ -7,8 +7,7 @@
 #include <cstdint>
 #include <intcompr.hpp>
 #include <sstream>
-
-#include "./test_helper.hpp"
+#include <test_helper.hpp>
 
 size_t constexpr ALIGNMENT = 64;
 size_t constexpr BUFFER_CAPACITY = 1 << 30;
