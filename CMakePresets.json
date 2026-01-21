@@ -11,11 +11,13 @@
       }
     },
     {
-      "name": "debug",
+      "name": "test",
       "inherits": "base-config",
-      "binaryDir": "${sourceDir}/build/debug",
+      "binaryDir": "${sourceDir}/build/test",
       "cacheVariables": {
-        "CMAKE_BUILD_TYPE": "Debug"
+        "CMAKE_BUILD_TYPE": "None",
+        "CMAKE_C_FLAGS": "-O2 -g",
+        "CMAKE_CXX_FLAGS": "-O2 -g"
       }
     },
     {
@@ -27,26 +29,16 @@
       }
     },
     {
-      "name": "optimized-debug",
-      "inherits": "base-config",
-      "binaryDir": "${sourceDir}/build/opt-debug",
-      "cacheVariables": {
-        "CMAKE_BUILD_TYPE": "None",
-        "CMAKE_C_FLAGS": "-O2 -g",
-        "CMAKE_CXX_FLAGS": "-O2 -g"
-      }
-    },
-    {
-      "name": "fuzzinger",
-      "binaryDir": "${sourceDir}/build/fuzzinger",
+      "name": "fuzz",
+      "binaryDir": "${sourceDir}/build/fuzz",
       "generator": "Ninja",
       "cacheVariables": {
         "CMAKE_C_COMPILER": "${sourceDir}/../honggfuzz/hfuzz_cc/hfuzz-clang",
         "CMAKE_CXX_COMPILER": "${sourceDir}/../honggfuzz/hfuzz_cc/hfuzz-clang++",
         "CMAKE_BUILD_TYPE": "None",
-        "CMAKE_C_FLAGS": "-O2 -g -fsanitize=address -fsanitize=undefined",
-        "CMAKE_CXX_FLAGS": "-O2 -g -fsanitize=address -fsanitize=undefined",
-        "CMAKE_LINK_FLAGS": "-fsanitize=address -fsanitize=undefined"
+        "CMAKE_C_FLAGS": "-O2 -g",
+        "CMAKE_CXX_FLAGS": "-O2 -g",
+        "KIT_FUZZ_TARGETS": "ON"
       }
     }
   ]

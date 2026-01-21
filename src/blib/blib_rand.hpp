@@ -1,10 +1,9 @@
 #ifndef BLIB_RAND_HPP
 #define BLIB_RAND_HPP
 
+#include <blib_int.hpp>
 #include <cstddef>
 #include <cstdint>
-
-#include "./blib_int.hpp"
 
 namespace blib {
 

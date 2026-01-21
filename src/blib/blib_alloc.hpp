@@ -1,10 +1,9 @@
 #ifndef BLIB_ALLOC_HPP
 #define BLIB_ALLOC_HPP
 
+#include <blib_err.hpp>
 #include <cstddef>
 #include <cstdint>
-
-#include "./blib_err.hpp"
 
 namespace blib {
 

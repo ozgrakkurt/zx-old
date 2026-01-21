@@ -13,9 +13,9 @@ TGT=$1
 
 CORPUS_DIR="./fuzz_input/$TGT"
 REPORT_DIR="./fuzz_output/$TGT"
-FUZZ_BINARY="./build/fuzzinger/src/$TGT/${TGT}_fuzz"
+FUZZ_BINARY="./build/fuzz/src/$TGT/${TGT}_fuzz"
 
-ninja -C build/fuzzinger
+ninja -C build/fuzz
 
 echo "Setting up directories for $TGT..."
 mkdir -p "$CORPUS_DIR" "$REPORT_DIR"
