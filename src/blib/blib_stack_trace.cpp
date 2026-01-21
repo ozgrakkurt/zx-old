@@ -15,9 +15,7 @@ Status stack_trace_collect(Status status, Alloc* alloc, char const** trace,
   char const* const* stack_trace = blib::err::stack_trace;
 
   size_t* lengths = nullptr;
-  BLIB_ERR_TRY(
-      (Alloc_alloc(alloc, alignof(size_t), stack_depth * sizeof(size_t),
-                   (uint8_t**)&lengths)));
+  BLIB_ERR_TRY((alloc->alloc<size_t>(stack_depth, &lengths)));
 
   size_t total_len = 0;
 
@@ -35,9 +33,7 @@ Status stack_trace_collect(Status status, Alloc* alloc, char const** trace,
   size_t offset = status_str_len + prefix_len + 1;
 
   char* buf = nullptr;
-  BLIB_ERR_TRY(
-      (Alloc_alloc(alloc, alignof(char),
-                   (total_len + offset + 1) * sizeof(char), (uint8_t**)&buf)));
+  BLIB_ERR_TRY((alloc->alloc<char>(total_len + offset + 1, &buf)));
 
   memcpy(buf, prefix, prefix_len);
   memcpy(&buf[prefix_len], status_str, status_str_len);
@@ -73,7 +69,7 @@ void stack_trace_panic(Status status) {
     abort();
   }
 
-  Alloc alloc = Alloc_init(buf, capacity);
+  Alloc alloc = Alloc::init(buf, capacity);
 
   char const* trace = "";
   size_t trace_len = 0;

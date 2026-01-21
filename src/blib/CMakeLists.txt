@@ -13,7 +13,6 @@ target_sources(blib
       blib_err.hpp
       blib_stack_trace.hpp
       blib_alloc.hpp
-
 )
 
 add_executable(blib_test test.cpp)
