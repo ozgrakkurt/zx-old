@@ -42,10 +42,12 @@ void BenchCtx_init(BenchCtx* ctx) {
   BLIB_STACK_TRACE_UNWRAP((blib::page_alloc_thp(raw_capacity, (void**)&input)));
 
   uint8_t* compressed = nullptr;
-  BLIB_STACK_TRACE_UNWRAP((blib::page_alloc_thp(raw_capacity, (void**)&compressed)));
+  BLIB_STACK_TRACE_UNWRAP(
+      (blib::page_alloc_thp(raw_capacity, (void**)&compressed)));
 
   uint8_t* output = nullptr;
-  BLIB_STACK_TRACE_UNWRAP((blib::page_alloc_thp(raw_capacity, (void**)&output)));
+  BLIB_STACK_TRACE_UNWRAP(
+      (blib::page_alloc_thp(raw_capacity, (void**)&output)));
 
   uint64_t* seed = (uint64_t*)malloc(sizeof(uint64_t));
   assert(seed != nullptr);
@@ -60,7 +62,7 @@ void BenchCtx_init(BenchCtx* ctx) {
 
 void BenchCtx_free_member(uint8_t** member) {
   assert(*member != nullptr);
-  free(*member);
+  BLIB_STACK_TRACE_UNWRAP(blib::page_free(*member, BUFFER_CAPACITY));
   *member = nullptr;
 }
 
@@ -160,13 +162,15 @@ void register_bitpack_bench(char const* type_name, char const* algo_name,
   }
 }
 
-#define REGISTER_BITPACK_BENCH(T)                                           \
-  register_bitpack_bench<T, ic_test_helper::BitPack>(#T, "BitPack",         \
-                                                     bench_reg_param_ctx_); \
-  register_bitpack_bench<T, ic_test_helper::ForPack>(#T, "ForPack",         \
-                                                     bench_reg_param_ctx_); \
-  register_bitpack_bench<T, ic_test_helper::DeltaPack>(#T, "DeltaPack",     \
-                                                       bench_reg_param_ctx_);
+#define REGISTER_BITPACK_BENCH(T)                                             \
+  register_bitpack_bench<T, ic_test_helper::BitPack>(#T, "BitPack",           \
+                                                     bench_reg_param_ctx_);   \
+  register_bitpack_bench<T, ic_test_helper::ForPack>(#T, "ForPack",           \
+                                                     bench_reg_param_ctx_);   \
+  register_bitpack_bench<T, ic_test_helper::DeltaPack>(#T, "DeltaPack",       \
+                                                       bench_reg_param_ctx_); \
+  register_bitpack_bench<T, ic_test_helper::Memcpy>(#T, "Memcpy",             \
+                                                    bench_reg_param_ctx_);
 
 int main(int argc, char** argv) {
   benchmark::MaybeReenterWithoutASLR(argc, argv);

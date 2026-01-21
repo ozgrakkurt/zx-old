@@ -4,6 +4,8 @@
 #include <blib_err.hpp>
 #include <blib_int.hpp>
 #include <blib_rand.hpp>
+#include <cassert>
+#include <cstring>
 #include <intcompr.hpp>
 
 namespace ic_test_helper {
@@ -111,6 +113,42 @@ struct DeltaPack {
   static void random_with_width(uint64_t* seed, T* data, size_t n,
                                 size_t width) {
     random_delta_with_width_impl(seed, data, n, width);
+  }
+};
+
+struct Memcpy {
+  template <typename T>
+  static size_t compress_bound(size_t n) {
+    return sizeof(T) * n;
+  }
+
+  template <typename T>
+  static size_t compress(T const* __restrict input, size_t input_len,
+                         uint8_t* __restrict output, size_t output_size) {
+    size_t const size = sizeof(T) * input_len;
+    assert(size <= output_size);
+    (void)output_size;
+    memcpy(output, input, size);
+    return size;
+  }
+
+  template <typename T>
+  static blib::Status decompress(uint8_t const* __restrict input,
+                                 size_t input_size, T* __restrict output,
+                                 size_t output_len, size_t* n_read) {
+    size_t const size = sizeof(T) * output_len;
+    BLIB_ERR_ASSERT((size <= input_size));
+
+    memcpy(output, input, size);
+
+    *n_read = size;
+    return blib::Status::Ok;
+  }
+
+  template <typename T>
+  static void random_with_width(uint64_t* seed, T* data, size_t n,
+                                size_t width) {
+    random_with_width_impl(seed, data, n, width);
   }
 };
 
