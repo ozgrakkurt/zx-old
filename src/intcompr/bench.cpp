@@ -1,6 +1,7 @@
 #include <benchmark/benchmark.h>
 
 #include <blib_err.hpp>
+#include <blib_page_alloc.hpp>
 #include <blib_stack_trace.hpp>
 #include <cassert>
 #include <cstddef>
@@ -37,12 +38,14 @@ typedef struct BenchCtx {
 void BenchCtx_init(BenchCtx* ctx) {
   size_t const raw_capacity = BUFFER_CAPACITY;
 
-  uint8_t* input = (uint8_t*)aligned_alloc(ALIGNMENT, raw_capacity);
-  assert(input != nullptr);
-  uint8_t* compressed = (uint8_t*)aligned_alloc(ALIGNMENT, raw_capacity);
-  assert(compressed != nullptr);
-  uint8_t* output = (uint8_t*)aligned_alloc(ALIGNMENT, raw_capacity);
-  assert(output != nullptr);
+  uint8_t* input = nullptr;
+  BLIB_STACK_TRACE_UNWRAP((blib::page_alloc_thp(raw_capacity, (void**)&input)));
+
+  uint8_t* compressed = nullptr;
+  BLIB_STACK_TRACE_UNWRAP((blib::page_alloc_thp(raw_capacity, (void**)&compressed)));
+
+  uint8_t* output = nullptr;
+  BLIB_STACK_TRACE_UNWRAP((blib::page_alloc_thp(raw_capacity, (void**)&output)));
 
   uint64_t* seed = (uint64_t*)malloc(sizeof(uint64_t));
   assert(seed != nullptr);
