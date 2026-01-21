@@ -4,6 +4,7 @@ target_sources(blib
   PRIVATE
     blib_stack_trace.cpp
     blib_err.cpp
+    blib_page_alloc.cpp
   PUBLIC
     FILE_SET HEADERS
     FILES
@@ -13,6 +14,7 @@ target_sources(blib
       blib_err.hpp
       blib_stack_trace.hpp
       blib_alloc.hpp
+      blib_page_alloc.hpp
 )
 
 add_executable(blib_test test.cpp)
