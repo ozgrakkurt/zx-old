@@ -9,6 +9,20 @@
 #include <cstring>
 #include <intcompr.hpp>
 
+#define REPEAT_PER_T(D) \
+  D(uint8_t);           \
+  D(uint16_t);          \
+  D(uint32_t);          \
+  D(uint64_t);          \
+  D(blib::uint128_t_);  \
+  D(blib::uint256_t_);  \
+  D(int8_t);            \
+  D(int16_t);           \
+  D(int32_t);           \
+  D(int64_t);           \
+  D(blib::int128_t_);   \
+  D(blib::int256_t_);
+
 uint32_t constexpr BUF_SIZE = 1 << 17;
 
 _Thread_local uint8_t* OUT_BUF = nullptr;
@@ -86,8 +100,10 @@ extern "C" int LLVMFuzzerTestOneInput(uint8_t const* fuzz_input,
 
   memcpy(IN_BUF, &fuzz_input[2 * sizeof(uint32_t)], input_size);
 
-  BLIB_STACK_TRACE_UNWRAP(
-      (test_per_T<uint64_t>(IN_BUF, input_size, OUT_BUF, output_size)));
+#define TEST_PER_T(T)      \
+  BLIB_STACK_TRACE_UNWRAP( \
+      (test_per_T<T>(IN_BUF, input_size, OUT_BUF, output_size)));
+  REPEAT_PER_T(TEST_PER_T);
 
   return 0;
 }
