@@ -1,6 +1,7 @@
 #ifndef BLIB_INT_HPP
 #define BLIB_INT_HPP
 
+#include <blib_err.hpp>
 #include <cstddef>
 #include <cstdint>
 
@@ -24,10 +25,32 @@ T min(T left, T right) {
 template <typename T>
 T int_from_bytes(uint8_t const* bytes) {
   T val;
-  for (size_t i = 0; i < sizeof(T); i++) {
-    ((uint8_t*)&val)[i] = bytes[i];
-  }
+  __builtin_memcpy(&val, bytes, sizeof(T));
   return val;
+}
+
+template <typename T>
+struct is_unsigned {
+  static const bool value = T(-1) > T(0);
+};
+
+template <typename T>
+Status next_power_of_two(T x, T* out) {
+  static_assert(is_unsigned<T>::value, "T must be an unsigned integer type");
+  size_t constexpr N_BITS = sizeof(T) * 8;
+
+  if (x <= 1) {
+    *out = x;
+    return Status::Ok;
+  };
+
+  size_t shift = N_BITS - __builtin_clzg(T(x - 1));
+
+  BLIB_ERR_ASSERT((shift < N_BITS));
+
+  *out = T(T(1) << shift);
+
+  return Status::Ok;
 }
 
 }  // namespace blib
