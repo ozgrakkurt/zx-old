@@ -2,182 +2,218 @@
 
 Builds on top of ninja_syntax.py to export a declarative API for
 generating .ninja files to build a C project.
-
-Creates seperate build folders and build.ninja files for each requested profile.
-
-Profiles can have fuzzing enabled to generate fuzz targets that use hoggfuzz.
 """
 
-from argparse import ArgumentParser
 import os
 import sys
+from dataclasses import dataclass, field
+from typing import Optional, Dict, Set, List
 
 import ninja_syntax
 
-# define API as dataclasses and implement ninja_gen function that takes a Project instance
 
-rootpath = os.path.dirname(os.path.abspath(__file__))
-
-PROJECT_NAME = "shin"
-
-parser = ArgumentParser(
-    prog="configure.py",
-    description=f"Generate build.ninja file for {PROJECT_NAME}",
-)
-parser.add_argument(
-    "--honggfuzz_path",
-    help="Absolute path to honggfuzz folder which can be created by cloning honggfuzz repo and running a build",
-    metavar="PATH",
-    required=True,
-)
-parser.add_argument(
-    "--cc",
-    default="clang",
-    help="C compiler name",
-    metavar="EXE",
-)
-parser.add_argument(
-    "--build_dir",
-    default="build",
-    help="Relative path to build directory to store the build.ninja file. Relative to 'configure.py' location.",
-    metavar="PATH",
-)
-parser.add_argument(
-    "--march",
-    default="native",
-    help="target CPU architecture to be passed into the compiler",
-)
-parser.add_argument(
-    "--ar",
-    default="ar",
-    help="AR executable to use for creating static libraries.",
-    metavar="EXE",
-)
-
-args = parser.parse_args()
-
-print(f"Starting configure.py for project {PROJECT_NAME}")
-
-print(f"Running with arguments: {args}")
-
-if os.path.isabs(args.build_dir):
-    sys.exit(f"Fatal Error: --build_dir can't be an absolute path. It needs to be a relative to 'configure.py' location.")
-
-hfuzz_path = args.honggfuzz_path
-
-if not os.path.isabs(hfuzz_path):
-    sys.exit(f"Fatal Error: --honggfuzz_path has to be an absolute path.")
-
-buildpath = os.path.join(rootpath, args.build_dir)
-
-print(f"buildpath={buildpath}")
-
-if os.path.isdir(buildpath):
-    sys.exit(f"Fatal Error: Specified --build_dir ({buildpath}) already exists.")
-
-BUILD_FILENAME = "build.ninja"
-
-os.mkdir(buildpath)
-
-ninjapath = os.path.join(buildpath, BUILD_FILENAME)
-
-cflags = [
-    # Warnings.
-    "-Wall",
-    "-Wextra",
-    "-Wconversion",
-    "-Wsign-conversion",
-    # Treat warnings as errors.
-    "-Werror",
-    # Target arch, preferably 'native'.
-    f"-march={args.march}",
-    # Use c23 standard.
-    "-std=c23",
-    # Required for correctness.
-    # Use 'restrict'/'register' in performance-critical code.
-    "-fno-strict-aliasing",
-    # Disable libc.
-    "-nostdlib",
-    "-fno-builtin",
-    # Enable thin LTO.
-    "-flto=thin",
-    # Use pipes instead of temporary files in compilation.
-    "-pipe",
-]
-
-def profile_lto_cache_path(profile_name):
-    return os.path.join(buildpath, profile_name, "ltocache")
-
-def profile_build_path
-
-ldflags = [
-    # Disable libc.
-    "-nostdlib",
-    # Static linking.
-    "-static",
-    # Enable thin LTO.
-    "-flto=thin",
-    # Enable incremental ThinLTO by giving a cache path.
-    f"-Wl,--thinlto-cache-dir={lto_cache_path}",
-    # Search for libraries in the build folder.
-    "-L$builddir",
-]
-
-# Disable debugging and apply optimization.
-# Anything above level 2 optimization is considered not-worth.
-release_flags =  ["-O2", "-DNDEBUG"]
-# Disable optimization and keep debug symbols.
-debug_flags = ["-O0", "-g"]
-# Keep debug symbols but apply optimization.
-fuzz_flags = ["-O2", "-g"]
-
-nw = ninja_syntax.Writer(open(ninjapath, 'w'))
-
-nw.variable("buildpath", buildpath)
-
-nw.newline()
-
-nw.variable("cc", args.cc)
-nw.variable("ar", args.ar)
-
-nw.newline()
-
-hfuzz_cc = os.path.join(hfuzz_path, "hfuzz_cc", "hfuzz-cc")
-hfuzz = os.path.join(hfuzz_path, "honggfuzz")
-nw.variable("hfuzz_cc", hfuzz_cc)
-nw.variable("hfuzz", hfuzz)
-
-nw.newline()
-
-nw.variable("ldflags", " ".join(ldflags))
-
-nw.newline()
-
-nw.variable("release_flags", " ".join(release_flags + cflags))
-nw.variable("debug_flags", " ".join(debug_flags + cflags))
-nw.variable("fuzz_flags", " ".join(fuzz_flags + cflags))
-
-nw.newline()
-
-nw.rule(
-    f"ar",
-    command="rm -f $out && $ar crs $out $in",
-    description=f"AR $out",
-)
-
-nw.newline()
-
-nw.rule(
-    f"link",
-    command="$cc $ldflags -o $out $in $libs",
-    description=f"LINK $out",
-)
-nw.rule(
-    f"fuzz_link",
-    command="$hfuzz_cc $ldflags -o $out $in $libs",
-    description=f"FUZZ_LINK $out",
-)
-
-nw.newline()
+@dataclass
+class TestTarget:
+    source_files: Set[str] = field(default_factory=set)
+    private_header_files: Set[str] = field(default_factory=set)
+    dependencies: Set[str] = field(default_factory=set)
 
 
+@dataclass
+class Library:
+    source_files: Set[str] = field(default_factory=set)
+    public_header_files: Set[str] = field(default_factory=set)
+    private_header_files: Set[str] = field(default_factory=set)
+    dependencies: Set[str] = field(default_factory=set)
+    test_targets: Dict[str, TestTarget] = field(default_factory=dict)
+    fuzz_targets: Dict[str, TestTarget] = field(default_factory=dict)
+
+
+@dataclass
+class Executable:
+    source_files: Set[str] = field(default_factory=set)
+    private_header_files: Set[str] = field(default_factory=set)
+    dependencies: Set[str] = field(default_factory=set)
+
+
+@dataclass
+class Project:
+    libraries: Dict[str, Library] = field(default_factory=dict)
+    executables: Dict[str, Executable] = field(default_factory=dict)
+
+
+@dataclass
+class Config:
+    cc: str = "clang"
+    ar: str = "llvm-ar"
+    march: str = "native"
+    target: Optional[str] = None
+    thin_lto: bool = True
+    no_libc: bool = True
+    # Enable fuzz targets and disable regular executables
+    fuzzing: bool = False
+
+
+@dataclass
+class Profile:
+    opt_level: int = 0
+    debug_info_enabled: bool = True
+    debug_assert_enabled: bool = True
+
+
+def validate_library(libs: Dict[str, Library], lib_name: str, lib: Library) -> None:
+    assert (
+        len(lib.source_files) > 0 or len(lib.public_header_files) > 0,
+        "a library has to have at least one source file or at least one public header file",
+    )
+    for dep_name in lib.dependencies:
+        assert (dep_name != lib_name, f"library {lib_name} depends on itself")
+        assert (
+            dep_name in libs,
+            f"dep {dep_name} of library {lib_name} doesn't exist in library list",
+        )
+
+
+def validate_exe(libs: Dict[str, Library], exe_name: str, exe: Executable) -> None:
+    assert (
+        len(exe.source_files) > 0,
+        "an executable has to have at least one source file",
+    )
+    for dep_name in exe.dependencies:
+        assert (
+            dep_name in libs,
+            f"dep {dep_name} of exe {exe_name} doesn't exist in library list",
+        )
+
+
+def validate_project(project: Project) -> None:
+    for lib_name, lib in project.libraries.items():
+        validate_library(project.libraries, lib_name, lib)
+        assert (
+            lib_name not in project.executables,
+            f"{lib_name} used as library name and executable name simultaneously",
+        )
+    for exe_name, exe in project.executables.items():
+        validate_exe(project.libraries, exe_name, exe)
+
+
+def validate_profile(profile: Profile) -> None:
+    assert (
+        profile.opt_level >= 0 and profile.opt_level <= 2,
+        "profile optimization level has to be 0, 1 or 2",
+    )
+
+
+def make_cflags(profile: Profile, config: Config) -> List[str]:
+    cflags = [
+        # Warnings.
+        "-Wall",
+        "-Wextra",
+        "-Wconversion",
+        "-Wsign-conversion",
+        # Treat warnings as errors.
+        "-Werror",
+        # Target arch, preferably 'native'.
+        f"-march={config.march}",
+        # Use c23 standard.
+        "-std=c23",
+        # Required for correctness.
+        # Use 'restrict'/'register' in performance-critical code.
+        "-fno-strict-aliasing",
+        # Use pipes instead of temporary files in compilation.
+        "-pipe",
+        f"-O{profile.opt_level}",
+    ]
+
+    if profile.debug_info_enabled:
+        cflags.append("-g")
+    else:
+        cflags.append("-s")
+
+    if profile.debug_assert_enabled:
+        cflags.append("-DSHIN_DBG_ASSERT=1")
+
+    if config.no_libc:
+        cflags.append("-nostdlib")
+        cflags.append("-fno-builtin")
+
+    if config.thin_lto:
+        cflags.append("-flto=thin")
+
+    if config.target is not None:
+        cflags.append(f"--target={config.target}")
+
+    return cflags
+
+
+def make_ldflags(build_path: str, config: Config) -> List[str]:
+    ldflags = [
+        # Static linking.
+        "-static",
+        # Search for libraries in the build folder.
+        "-L$build_path",
+    ]
+
+    if config.no_libc:
+        ldflags.append("-nostdlib")
+        ldflags.append("-fno-builtin")
+
+    if config.thin_lto:
+        ldflags.append("-flto=thin")
+
+        # Enable incremental ThinLTO by giving a cache path.
+        ldflags.append(f"-Wl,--thinlto-cache-dir=$build_path/thinlto-cache")
+
+    return ldflags
+
+
+def gen_ninja_build(
+    build_path: str, profile: Profile, config: Config, project: Project
+) -> None:
+    assert (os.path.isabs(build_path), "build_path has to be an absolute path")
+    validate_profile(profile)
+    validate_config(config)
+    validate_project(project)
+
+    cflags = make_cflags(profile, config)
+    ldflags = make_ldflags(build_path, config)
+
+    # build_path is required to be absolute by validation
+    ninjapath = os.path.join(build_path, "build.ninja")
+    nw = ninja_syntax.Writer(open(ninjapath, "w"))
+
+    nw.variable("build_path", build_path)
+
+    nw.newline()
+
+    nw.variable("cflags", " ".join(cflags))
+    nw.variable("ldflags", " ".join(ldflags))
+
+    nw.newline()
+
+    nw.variable("cc", args.cc)
+    nw.variable("ar", args.ar)
+
+    nw.newline()
+
+    nw.rule(
+        "cc",
+        command="$cc -MMD -MT $out -MF $out.d $cflags -c $in -o $out",
+        depfile="$out.d",
+        deps="gcc",
+        description="CC $out",
+    )
+    nw.rule(
+        "ar",
+        command="rm -f $out && $ar crs $out $in",
+        description=f"AR $out",
+    )
+    nw.rule(
+        "link",
+        command="$cc $ldflags -o $out $in $libs",
+        description=f"LINK $out",
+    )
+
+    nw.newline()
+
+    nw.close()
