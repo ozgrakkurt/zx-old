@@ -5,7 +5,8 @@
 - Define the project structure in proj_cfg.py in the project root like it is done in this project.
 - Run ./configure.py with desired flags to generate ninja build directories per profile.
     Can use ./configure.py --help to see the available flags.
-- Run ninja -C build/<profile_name> to run source build in that folder.
+- Run 'ninja -C build/<profile_name>' to run source build with desired profile.
+- Run 'ninja -C build/<profile_name> test' to run all tests with desired profile.
 """
 
 import argparse
@@ -306,6 +307,19 @@ def gen_ninja_build(
     )
     nw.newline()
 
+    nw.comment(
+        "Run a test executable. On success, create a stamp file to not re-run unless needed."
+    )
+    nw.rule(
+        "runtest",
+        command="$in && touch $out",
+        description="RUNTEST $in",
+    )
+    nw.newline()
+
+    test_stamps = []
+
+    # process libraries
     for lib_name, lib in project.libraries.items():
         nw.comment(f"library #{lib_name}")
 
@@ -326,6 +340,7 @@ def gen_ninja_build(
         nw.newline()
 
         if config.fuzzing:
+            # process fuzz targets for this library
             if len(lib.fuzz_targets) > 0:
                 nw.comment(f"fuzz targets for library #{lib_name}")
             for fuzz_tgt_name, fuzz_tgt in lib.fuzz_targets.items():
@@ -335,6 +350,7 @@ def gen_ninja_build(
                 exe.dependencies.add(lib_name)
                 process_exe(nw, project.libraries, exe_name, exe)
         else:
+            # process test targets for this library
             if len(lib.test_targets) > 0:
                 nw.comment(f"test targets for library #{lib_name}")
             for test_tgt_name, test_tgt in lib.test_targets.items():
@@ -344,10 +360,23 @@ def gen_ninja_build(
                 exe.dependencies.add(lib_name)
                 process_exe(nw, project.libraries, exe_name, exe)
 
+                # Add test execution step
+                exe_path = os.path.join("$build_path", exe_name)
+                stamp_path = os.path.join("$build_path", "stamps", f"{exe_name}.passed")
+
+                nw.build(stamp_path, "runtest", exe_path)
+                test_stamps.append(stamp_path)
+
+    # process executables
     if not config.fuzzing:
         for exe_name, exe in project.executables.items():
             nw.comment(f"executable #{exe_name}")
             process_exe(nw, project.libraries, exe_name, exe)
+
+    # create phony to run all tests in parallel
+    if not config.fuzzing:
+        nw.comment("Run all tests in parallel")
+        nw.build("test", "phony", test_stamps)
 
     nw.close()
 
