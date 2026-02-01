@@ -252,22 +252,26 @@ def gen_ninja_build(
     nw = ninja_syntax.Writer(open(ninjapath, "w"))
 
     # all of these path variables are absolute (checked in validation)
+    nw.comment("path variables")
     nw.variable("src_path", project.src_path)
     nw.variable("include_path", project.include_path)
     nw.variable("build_path", build_path)
 
     nw.newline()
 
+    nw.comment("build flags")
     nw.variable("cflags", " ".join(cflags))
     nw.variable("ldflags", " ".join(ldflags))
 
     nw.newline()
 
+    nw.comment("tools")
     nw.variable("cc", config.cc)
     nw.variable("ar", config.ar)
 
     nw.newline()
 
+    nw.comment("rules")
     nw.rule(
         "cc",
         command="$cc -MMD -MT $out -MF $out.d $cflags -c $in -o $out",
@@ -288,9 +292,11 @@ def gen_ninja_build(
 
     nw.newline()
 
-    test_exes = []
+    test_run_targets = []
 
     for lib_name, lib in project.libraries.items():
+        nw.comment(f"library #{lib_name}")
+
         obj_files = []
 
         for source_file in lib.source_files:
@@ -308,21 +314,23 @@ def gen_ninja_build(
         nw.newline()
 
         if config.fuzzing:
+            nw.comment(f"fuzz targets for library #{lib_name}")
             for fuzz_tgt_name, fuzz_tgt in lib.fuzz_targets.items():
                 exe_name = f"{lib_name}_fuzz_{fuzz_tgt_name}"
                 exe = copy.deepcopy(fuzz_tgt)
                 exe.dependencies.add(lib_name)
                 process_exe(nw, project.libraries, exe_name, exe)
         else:
+            nw.comment(f"test targets for library #{lib_name}")
             for test_tgt_name, test_tgt in lib.test_targets.items():
                 exe_name = f"{lib_name}_test_{test_tgt_name}"
                 exe = copy.deepcopy(test_tgt)
                 exe.dependencies.add(lib_name)
                 process_exe(nw, project.libraries, exe_name, exe)
-                test_exes.append(exe_name)
 
     if not config.fuzzing:
         for exe_name, exe in project.executables.items():
+            nw.comment(f"executable #{exe_name}")
             process_exe(nw, project.libraries, exe_name, exe)
 
     nw.close()
