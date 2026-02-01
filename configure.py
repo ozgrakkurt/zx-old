@@ -135,12 +135,12 @@ def make_cflags(profile: Profile, config: Config) -> List[str]:
         "-I$include_path",
     ]
 
-    if profile.debug_info_enabled:
+    if profile.enable_debug_info:
         cflags.append("-g")
     else:
         cflags.append("-s")
 
-    if profile.debug_assert_enabled:
+    if profile.enable_debug_assert:
         cflags.append("-DSHIN_DBG_ASSERT=1")
 
     if config.no_libc:
@@ -404,6 +404,9 @@ if __name__ == "__main__":
     for profile_name, profile in proj_cfg.PROFILES.items():
         build_path = os.path.join(ROOTPATH, args.build_dir, profile_name)
 
+        if not os.path.exists(build_path):
+            os.makedirs(build_path)
+
         gen_ninja_build(build_path, profile, cfg, proj_cfg.PROJECT)
 
         if args.honggfuzz_path is not None:
@@ -414,5 +417,8 @@ if __name__ == "__main__":
             fuzz_cfg = copy.deepcopy(cfg)
             fuzz_cfg.cc = os.path.join(args.honggfuzz_path, "hfuzz_cc", "hfuzz-cc")
             fuzz_cfg.fuzzing = True
+
+            if not os.path.exists(fuzz_build_path):
+                os.makedirs(fuzz_build_path)
 
             gen_ninja_build(fuzz_build_path, profile, fuzz_cfg, proj_cfg.PROJECT)

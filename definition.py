@@ -7,13 +7,13 @@ ROOTPATH = os.path.dirname(os.path.abspath(__file__))
 
 @dataclass
 class Executable:
-    source_files: Set[str] = field(default_factory=set)
+    source_files: Set[str]
     dependencies: Set[str] = field(default_factory=set)
 
 
 @dataclass
 class Library:
-    source_files: Set[str] = field(default_factory=set)
+    source_files: Set[str]
     dependencies: Set[str] = field(default_factory=set)
     test_targets: Dict[str, Executable] = field(default_factory=dict)
     fuzz_targets: Dict[str, Executable] = field(default_factory=dict)
@@ -30,5 +30,5 @@ class Project:
 @dataclass
 class Profile:
     opt_level: int
-    debug_info_enabled: bool
-    debug_assert_enabled: bool
+    enable_debug_info: bool
+    enable_debug_assert: bool
