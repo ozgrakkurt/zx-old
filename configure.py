@@ -1,10 +1,14 @@
 #!/usr/bin/env python3
 
-"""Script that generates the build.ninja file"""
+"""This script generates the Ninja build files/structure for the project.
+- Put this script and ninja_syntax.py and definition.py at the project root together.
+- Define the project structure in proj_cfg.py in the project root like it is done in this project.
+- Run ./configure.py with desired flags to generate ninja build directories per profile.
+    Can use ./configure.py --help to see the available flags.
+- Run ninja -C build/<profile_name> to run source build in that folder.
+"""
 
-from argparse import ArgumentParser
-import ninja_syntax
-
+import argparse
 import os
 import sys
 import copy
@@ -12,47 +16,23 @@ from dataclasses import dataclass, field
 from typing import Optional, Dict, Set, List
 
 import ninja_syntax
+import proj_cfg
+from definition import Executable, Library, Project, Profile
 
 
-@dataclass
-class Executable:
-    source_files: Set[str] = field(default_factory=set)
-    dependencies: Set[str] = field(default_factory=set)
-
-
-@dataclass
-class Library:
-    source_files: Set[str] = field(default_factory=set)
-    dependencies: Set[str] = field(default_factory=set)
-    test_targets: Dict[str, Executable] = field(default_factory=dict)
-    fuzz_targets: Dict[str, Executable] = field(default_factory=dict)
-
-
-@dataclass
-class Project:
-    src_path: str
-    include_path: str
-    libraries: Dict[str, Library] = field(default_factory=dict)
-    executables: Dict[str, Executable] = field(default_factory=dict)
+ROOTPATH = os.path.dirname(os.path.abspath(__file__))
 
 
 @dataclass
 class Config:
-    cc: str = "clang"
-    ar: str = "llvm-ar"
-    march: str = "native"
-    target: Optional[str] = None
-    thin_lto: bool = True
-    no_libc: bool = True
-    # Enable fuzz targets and disable regular executables
-    fuzzing: bool = False
-
-
-@dataclass
-class Profile:
-    opt_level: int = 0
-    debug_info_enabled: bool = True
-    debug_assert_enabled: bool = True
+    cc: str
+    ar: str
+    march: str
+    target: Optional[str]
+    thin_lto: bool
+    no_libc: bool
+    # Enable fuzz targets and disable tests/executables
+    fuzzing: bool
 
 
 def validate_library(libs: Dict[str, Library], lib_name: str, lib: Library) -> None:
@@ -353,7 +333,7 @@ def gen_ninja_build(
 
 
 if __name__ == "__main__":
-    parser = ArgumentParser(
+    parser = argparse.ArgumentParser(
         prog="configure.py",
         description="Generate build.ninja file for shin",
     )
@@ -362,19 +342,6 @@ if __name__ == "__main__":
         "--build_dir",
         default="build",
         help="Relative path to build directory to store the build.ninja file. Relative to 'configure.py' location.",
-        metavar="PATH",
-    )
-    parser.add_argument(
-        "--src_dir",
-        default="src",
-        help="Relative path to build directory for the source '.c' files. Relative to 'configure.py' location.",
-        metavar="PATH",
-    )
-    parser.add_argument(
-        "--include_dir",
-        default="include",
-        help="Relative path to include directory. Relative to 'configure.py' location.",
-        metavar="PATH",
     )
     parser.add_argument(
         "--honggfuzz_path",
@@ -388,21 +355,64 @@ if __name__ == "__main__":
         metavar="EXE",
     )
     parser.add_argument(
+        "--ar",
+        default="llvm-ar",
+        help="AR executable to use for creating static libraries.",
+        metavar="EXE",
+    )
+    parser.add_argument(
         "--march",
         default="native",
         help="target CPU architecture to be passed into the compiler",
     )
     parser.add_argument(
-        "--ar",
-        default="ar",
-        help="AR executable to use for creating static libraries.",
-        metavar="EXE",
-    )
-    parser.add_argument(
         "--target",
         help="LLVM target triple to use. Defaults to passing no target to clang which should target the host system.",
+    )
+    parser.add_argument(
+        "--thin-lto",
+        action=argparse.BooleanOptionalAction,
+        default=True,
+        help="enable LLVM thin-lto",
+    )
+    parser.add_argument(
+        "--disable-libc",
+        action=argparse.BooleanOptionalAction,
+        default=True,
+        help="disable linking/using libc and compiler built-ins",
     )
 
     args = parser.parse_args()
 
-    rootpath = os.path.dirname(os.path.abspath(__file__))
+    assert not os.path.isabs(args.build_dir), "build_dir can't be an absolute path"
+
+    if args.honggfuzz_path is not None:
+        assert os.path.isabs(args.honggfuzz_path), (
+            "honggfuzz_path has to be an absolute path"
+        )
+
+    cfg = Config(
+        cc=args.cc,
+        ar=args.ar,
+        march=args.march,
+        target=args.target,
+        thin_lto=args.thin_lto,
+        no_libc=args.disable_libc,
+        fuzzing=False,
+    )
+
+    for profile_name, profile in proj_cfg.PROFILES.items():
+        build_path = os.path.join(ROOTPATH, args.build_dir, profile_name)
+
+        gen_ninja_build(build_path, profile, cfg, proj_cfg.PROJECT)
+
+        if args.honggfuzz_path is not None:
+            fuzz_build_path = os.path.join(
+                ROOTPATH, args.build_dir, f"{profile_name}_fuzz"
+            )
+
+            fuzz_cfg = copy.deepcopy(cfg)
+            fuzz_cfg.cc = os.path.join(args.honggfuzz_path, "hfuzz_cc", "hfuzz-cc")
+            fuzz_cfg.fuzzing = True
+
+            gen_ninja_build(fuzz_build_path, profile, fuzz_cfg, proj_cfg.PROJECT)
