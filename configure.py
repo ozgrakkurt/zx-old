@@ -17,6 +17,7 @@ from typing import Optional, Dict, Set, List
 
 import ninja_syntax
 import proj_cfg
+import definition
 from definition import Executable, Library, Project, Profile
 
 
@@ -286,7 +287,24 @@ def gen_ninja_build(
 
     nw.newline()
 
-    test_run_targets = []
+    nw.comment("regeneration")
+    nw.rule(
+        "configure",
+        command=f"{os.path.abspath(__file__)} {' '.join(sys.argv[1:])}",
+        generator=True,
+        description="Regenerate build.ninja via configure script",
+    )
+    nw.build(
+        "build.ninja",
+        "configure",
+        implicit=[
+            os.path.abspath(ninja_syntax.__file__),
+            os.path.abspath(definition.__file__),
+            os.path.abspath(proj_cfg.__file__),
+            os.path.abspath(__file__),
+        ],
+    )
+    nw.newline()
 
     for lib_name, lib in project.libraries.items():
         nw.comment(f"library #{lib_name}")
@@ -308,7 +326,8 @@ def gen_ninja_build(
         nw.newline()
 
         if config.fuzzing:
-            nw.comment(f"fuzz targets for library #{lib_name}")
+            if len(lib.fuzz_targets) > 0:
+                nw.comment(f"fuzz targets for library #{lib_name}")
             for fuzz_tgt_name, fuzz_tgt in lib.fuzz_targets.items():
                 exe_name = f"{lib_name}_fuzz_{fuzz_tgt_name}"
                 exe = copy.deepcopy(fuzz_tgt)
@@ -316,7 +335,8 @@ def gen_ninja_build(
                 exe.dependencies.add(lib_name)
                 process_exe(nw, project.libraries, exe_name, exe)
         else:
-            nw.comment(f"test targets for library #{lib_name}")
+            if len(lib.test_targets) > 0:
+                nw.comment(f"test targets for library #{lib_name}")
             for test_tgt_name, test_tgt in lib.test_targets.items():
                 exe_name = f"{lib_name}_test_{test_tgt_name}"
                 exe = copy.deepcopy(test_tgt)
