@@ -6,6 +6,7 @@ generating .ninja files to build a C project.
 
 import os
 import sys
+import copy
 from dataclasses import dataclass, field
 from typing import Optional, Dict, Set, List
 
@@ -13,33 +14,25 @@ import ninja_syntax
 
 
 @dataclass
-class TestTarget:
+class Executable:
     source_files: Set[str] = field(default_factory=set)
-    private_header_files: Set[str] = field(default_factory=set)
     dependencies: Set[str] = field(default_factory=set)
 
 
 @dataclass
 class Library:
     source_files: Set[str] = field(default_factory=set)
-    public_header_files: Set[str] = field(default_factory=set)
-    private_header_files: Set[str] = field(default_factory=set)
     dependencies: Set[str] = field(default_factory=set)
-    test_targets: Dict[str, TestTarget] = field(default_factory=dict)
-    fuzz_targets: Dict[str, TestTarget] = field(default_factory=dict)
-
-
-@dataclass
-class Executable:
-    source_files: Set[str] = field(default_factory=set)
-    private_header_files: Set[str] = field(default_factory=set)
-    dependencies: Set[str] = field(default_factory=set)
+    test_targets: Dict[str, Executable] = field(default_factory=dict)
+    fuzz_targets: Dict[str, Executable] = field(default_factory=dict)
 
 
 @dataclass
 class Project:
     libraries: Dict[str, Library] = field(default_factory=dict)
     executables: Dict[str, Executable] = field(default_factory=dict)
+    src_path: str
+    include_path: str
 
 
 @dataclass
@@ -63,14 +56,25 @@ class Profile:
 
 def validate_library(libs: Dict[str, Library], lib_name: str, lib: Library) -> None:
     assert (
-        len(lib.source_files) > 0 or len(lib.public_header_files) > 0,
-        "a library has to have at least one source file or at least one public header file",
+        len(lib.source_files) > 0,
+        "a library has to have at least one source file",
     )
     for dep_name in lib.dependencies:
         assert (dep_name != lib_name, f"library {lib_name} depends on itself")
         assert (
             dep_name in libs,
             f"dep {dep_name} of library {lib_name} doesn't exist in library list",
+        )
+    for fuzz_tgt_name, fuzz_tgt in lib.fuzz_targets.items():
+        assert (
+            lib_name not in fuzz_tgt.dependencies,
+            f"fuzz target {fuzz_tgt_name} of library {lib_name} contains the library as a dependency. This is done by default and is not supposed to be defined in config.",
+        )
+
+    for test_tgt_name, test_tgt in lib.test_targets.items():
+        assert (
+            lib_name not in test_tgt.dependencies,
+            f"test target {test_tgt_name} of library {lib_name} contains the library as a dependency. This is done by default and is not supposed to be defined in config.",
         )
 
 
@@ -87,6 +91,14 @@ def validate_exe(libs: Dict[str, Library], exe_name: str, exe: Executable) -> No
 
 
 def validate_project(project: Project) -> None:
+    assert (
+        os.path.isabs(project.src_path),
+        "project.src_path has to be an absolute path",
+    )
+    assert (
+        os.path.isabs(project.include_path),
+        "project.include_path has to be an absolute path",
+    )
     for lib_name, lib in project.libraries.items():
         validate_library(project.libraries, lib_name, lib)
         assert (
@@ -102,6 +114,10 @@ def validate_profile(profile: Profile) -> None:
         profile.opt_level >= 0 and profile.opt_level <= 2,
         "profile optimization level has to be 0, 1 or 2",
     )
+
+
+def validate_config(config: Config) -> None:
+    pass
 
 
 def make_cflags(profile: Profile, config: Config) -> List[str]:
@@ -123,6 +139,7 @@ def make_cflags(profile: Profile, config: Config) -> List[str]:
         # Use pipes instead of temporary files in compilation.
         "-pipe",
         f"-O{profile.opt_level}",
+        "-I$include_path",
     ]
 
     if profile.debug_info_enabled:
@@ -150,8 +167,6 @@ def make_ldflags(build_path: str, config: Config) -> List[str]:
     ldflags = [
         # Static linking.
         "-static",
-        # Search for libraries in the build folder.
-        "-L$build_path",
     ]
 
     if config.no_libc:
@@ -167,6 +182,60 @@ def make_ldflags(build_path: str, config: Config) -> List[str]:
     return ldflags
 
 
+def c_file_to_obj_file(filename: str) -> str:
+    assert filename.endswith(".c")
+    return filename.removesuffix(".c") + ".o"
+
+
+def collect_deps_impl(
+    libraries: Dict[str, Library], deps: Set[str], collect: Set[str]
+) -> None:
+    for dep_name in deps:
+        collect_deps_impl(libraries, libraries[dep_name].dependencies, collect)
+        collect.add(dep_name)
+
+
+def collect_deps(libraries: Dict[str, Library], exe: Executable) -> Set[str]:
+    collect: Set[str] = set()
+
+    collect_deps_impl(libraries, exe.dependencies, collect)
+
+    return collect
+
+
+def process_exe(
+    nw: ninja_syntax.Writer,
+    libraries: Dict[str, Library],
+    exe_name: str,
+    exe: Executable,
+) -> None:
+    link_inputs = []
+
+    for source_file in exe.source_files:
+        obj = os.path.join(
+            "$build_path", "obj", exe_name, c_file_to_obj_file(source_file)
+        )
+        src = os.path.join("$src_path", exe_name, source_file)
+        nw.build(obj, "cc", src)
+        link_inputs.append(obj)
+
+    exe_path = os.path.join("$build_path", exe_name)
+
+    deps = collect_deps(libraries, exe)
+
+    for lib_name in deps:
+        lib_file_path = os.path.join("$build_path", f"lib{lib_name}.a")
+        link_inputs.append(lib_file_path)
+
+    nw.build(
+        exe_path,
+        "link",
+        link_inputs,
+    )
+
+    nw.newline()
+
+
 def gen_ninja_build(
     build_path: str, profile: Profile, config: Config, project: Project
 ) -> None:
@@ -178,10 +247,13 @@ def gen_ninja_build(
     cflags = make_cflags(profile, config)
     ldflags = make_ldflags(build_path, config)
 
-    # build_path is required to be absolute by validation
+    # build_path is required to be absolute (checked in validation)
     ninjapath = os.path.join(build_path, "build.ninja")
     nw = ninja_syntax.Writer(open(ninjapath, "w"))
 
+    # all of these path variables are absolute (checked in validation)
+    nw.variable("src_path", project.src_path)
+    nw.variable("include_path", project.include_path)
     nw.variable("build_path", build_path)
 
     nw.newline()
@@ -191,8 +263,8 @@ def gen_ninja_build(
 
     nw.newline()
 
-    nw.variable("cc", args.cc)
-    nw.variable("ar", args.ar)
+    nw.variable("cc", config.cc)
+    nw.variable("ar", config.ar)
 
     nw.newline()
 
@@ -206,14 +278,51 @@ def gen_ninja_build(
     nw.rule(
         "ar",
         command="rm -f $out && $ar crs $out $in",
-        description=f"AR $out",
+        description="AR $out",
     )
     nw.rule(
         "link",
-        command="$cc $ldflags -o $out $in $libs",
-        description=f"LINK $out",
+        command="$cc $ldflags -o $out $in",
+        description="LINK $out",
     )
 
     nw.newline()
+
+    test_exes = []
+
+    for lib_name, lib in project.libraries.items():
+        obj_files = []
+
+        for source_file in lib.source_files:
+            obj = os.path.join(
+                "$build_path", "obj", lib_name, c_file_to_obj_file(source_file)
+            )
+            src = os.path.join("$src_path", lib_name, source_file)
+            nw.build(obj, "cc", src)
+            obj_files.append(obj)
+
+        lib_file_path = os.path.join("$build_path", f"lib{lib_name}.a")
+
+        nw.build(lib_file_path, "ar", obj_files)
+
+        nw.newline()
+
+        if config.fuzzing:
+            for fuzz_tgt_name, fuzz_tgt in lib.fuzz_targets.items():
+                exe_name = f"{lib_name}_fuzz_{fuzz_tgt_name}"
+                exe = copy.deepcopy(fuzz_tgt)
+                exe.dependencies.add(lib_name)
+                process_exe(nw, project.libraries, exe_name, exe)
+        else:
+            for test_tgt_name, test_tgt in lib.test_targets.items():
+                exe_name = f"{lib_name}_test_{test_tgt_name}"
+                exe = copy.deepcopy(test_tgt)
+                exe.dependencies.add(lib_name)
+                process_exe(nw, project.libraries, exe_name, exe)
+                test_exes.append(exe_name)
+
+    if not config.fuzzing:
+        for exe_name, exe in project.executables.items():
+            process_exe(nw, project.libraries, exe_name, exe)
 
     nw.close()
