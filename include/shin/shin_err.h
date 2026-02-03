@@ -65,13 +65,13 @@ extern "C" {
     }                                                         \
   } while (false)
 
-shin_u32 constexpr SHIN_ERR_STACK_CAP = 1 << 10;
+shin_u32 constexpr SHIN_ERR_STACK_CAP = (shin_u32){1wbu} << 10;
 
 enum [[nodiscard]] ShinStatus : shin_u8 {
-  ShinStatus_Ok = 0,
-  ShinStatus_UnexpectedError = 1,
-  ShinStatus_AssertFail = 2,
-  ShinStatus_OutOfMemory = 3,
+  ShinStatus_Ok = 0wbu,
+  ShinStatus_UnexpectedError = 1wbu,
+  ShinStatus_AssertFail = 2wbu,
+  ShinStatus_OutOfMemory = 3wbu,
 };
 
 typedef struct ShinErrStack {
