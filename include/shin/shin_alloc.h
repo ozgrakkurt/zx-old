@@ -3,6 +3,7 @@
 
 #include <shin/shin_def.h>
 #include <shin/shin_err.h>
+#include <stddef.h>
 
 #ifdef __cplusplus
 extern "C" {
@@ -15,7 +16,7 @@ typedef struct ShinAlloc {
 } ShinAlloc;
 
 static inline ShinAlloc ShinAlloc_init(shin_u8* buf, shin_usize capacity) {
-  return ShinAlloc{
+  return (ShinAlloc){
       .capacity = capacity,
       .offset = 0,
       .buf = buf,
@@ -24,9 +25,10 @@ static inline ShinAlloc ShinAlloc_init(shin_u8* buf, shin_usize capacity) {
 
 static inline void ShinAlloc_reset(ShinAlloc* self) { self->offset = 0; }
 
-static inline Status ShinAlloc_aligned_alloc(ShinAlloc* self, shin_usize align,
-                                             shin_usize size, void** ptr,
-                                             ShinErrStack* err_stack) {
+static inline ShinStatus ShinAlloc_aligned_alloc(ShinAlloc* self,
+                                                 shin_usize align,
+                                                 shin_usize size, void** ptr,
+                                                 ShinErrStack* err_stack) {
   SHIN_ERR_ASSERT((self != nullptr), err_stack);
   SHIN_ERR_ASSERT((ptr != nullptr), err_stack);
 
@@ -52,8 +54,8 @@ static inline Status ShinAlloc_aligned_alloc(ShinAlloc* self, shin_usize align,
   return ShinStatus_Ok;
 }
 
-static inline Status ShinAlloc_alloc(ShinAlloc* self, shin_usize size,
-                                     void** ptr, ShinErrStack* err_stack) {
+static inline ShinStatus ShinAlloc_alloc(ShinAlloc* self, shin_usize size,
+                                         void** ptr, ShinErrStack* err_stack) {
   shin_usize const align = alignof(max_align_t);
   SHIN_ERR_TRY((ShinAlloc_aligned_alloc(self, align, size, ptr, err_stack)),
                err_stack);
