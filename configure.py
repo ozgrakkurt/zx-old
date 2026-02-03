@@ -370,7 +370,7 @@ def gen_ninja_build(
 
                 # Add test execution step
                 exe_path = os.path.join("$build_path", exe_name)
-                stamp_path = os.path.join("$build_path", "stamps", f"{exe_name}.passed")
+                stamp_path = os.path.join("$build_path", "stamps", f"{exe_name}.stamp")
 
                 nw.build(stamp_path, "runtest", exe_path)
                 test_stamps.append(stamp_path)

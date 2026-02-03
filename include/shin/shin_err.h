@@ -11,9 +11,9 @@ extern "C" {
 
 #define SHIN_ERR_STRINGIFY(x) #x
 #define SHIN_ERR_TO_STRING(x) SHIN_ERR_STRINGIFY(x)
-#define SHIN_ERR_INFO(expr)                                    \
-  "__file__" __FILE__ ":__func__%s:_line_" SHIN_ERR_TO_STRING( \
-      __LINE__) ":_expr_(" SHIN_ERR_TO_STRING(expr) ")"
+#define SHIN_ERR_INFO(expr)                                   \
+  "FILE=" __FILE__ ": FUNCTION=%s: LINE=" SHIN_ERR_TO_STRING( \
+      __LINE__) ": EXPR=(" SHIN_ERR_TO_STRING(expr) ")"
 
 #ifdef SHIN_DBG_ASSERT_ENABLED
 #define SHIN_DBG_ASSERT(expr)                                                 \

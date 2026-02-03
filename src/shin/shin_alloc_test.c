@@ -1,1 +1,7 @@
-int main(void) { return 0; }
+#include <shin/shin_err.h>
+
+int main(void) {
+  SHIN_DBG_ASSERT(true);
+
+  return 0;
+}
