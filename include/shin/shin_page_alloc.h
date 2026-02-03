@@ -14,7 +14,7 @@ ShinStatus shin_page_alloc_2mb(shin_usize size, void** page_ptr,
                                ShinErrStack* err_stack);
 ShinStatus shin_page_alloc_1gb(shin_usize size, void** page_ptr,
                                ShinErrStack* err_stack);
-ShinStatus shin_page_free(void* page, shin_usize size);
+ShinStatus shin_page_free(void* page, shin_usize size, ShinErrStack* err_stack);
 
 #ifdef __cplusplus
 }

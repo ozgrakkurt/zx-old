@@ -127,7 +127,9 @@ def make_cflags(profile: Profile, config: Config) -> List[str]:
         # Target arch, preferably 'native'.
         f"-march={config.march}",
         # Use c23 standard.
-        "-std=c23",
+        "--std=c23",
+        # enable feature_test_macro so linux/gnu functions don't get disabled because of std=c23 flag
+        "-D_DEFAULT_SOURCE=1"
         # Required for correctness.
         # Use 'restrict'/'register' in performance-critical code.
         "-fno-strict-aliasing",
@@ -139,8 +141,6 @@ def make_cflags(profile: Profile, config: Config) -> List[str]:
 
     if profile.enable_debug_info:
         cflags.append("-g")
-    else:
-        cflags.append("-s")
 
     if profile.enable_debug_assert:
         cflags.append("-DSHIN_DBG_ASSERT_ENABLED=1")
@@ -163,6 +163,10 @@ def make_ldflags(build_path: str, config: Config) -> List[str]:
         # Static linking.
         "-static",
     ]
+
+    if not profile.enable_debug_info:
+        # tell linker to strip debug info
+        ldflags.append("-Wl,-s")
 
     if config.no_libc:
         ldflags.append("-nostdlib")
