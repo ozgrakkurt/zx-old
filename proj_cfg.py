@@ -9,7 +9,10 @@ PROFILES: Dict[str, Profile] = {
     "opt_debug": Profile(opt_level=2, enable_debug_assert=True, enable_debug_info=True),
 }
 
-SHIN: Library = Library(source_files=set(["shin_page_alloc.c"]))
+SHIN: Library = Library(
+    source_files=set(["shin_page_alloc.c"]),
+    test_targets={"alloc_test": Executable(source_files=set(["shin_alloc_test.c"]))},
+)
 
 PROJECT: Project = Project(
     libraries={

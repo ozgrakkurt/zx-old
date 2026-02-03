@@ -162,6 +162,8 @@ def make_ldflags(build_path: str, config: Config) -> List[str]:
     ldflags = [
         # Static linking.
         "-static",
+        # use llvm linker
+        "-fuse-ld=lld",
     ]
 
     if not profile.enable_debug_info:
@@ -207,6 +209,8 @@ def process_exe(
     nw: ninja_syntax.Writer,
     libraries: Dict[str, Library],
     exe_name: str,
+    # this is separate from exe_name because we want to handle test/fuzz targets nicely
+    exe_src_name: str,
     exe: Executable,
 ) -> None:
     link_inputs = []
@@ -215,7 +219,7 @@ def process_exe(
         obj = os.path.join(
             "$build_path", "obj", exe_name, c_file_to_obj_file(source_file)
         )
-        src = os.path.join("$src_path", exe_name, source_file)
+        src = os.path.join("$src_path", exe_src_name, source_file)
         nw.build(obj, "cc", src)
         link_inputs.append(obj)
 
@@ -352,7 +356,7 @@ def gen_ninja_build(
                 exe = copy.deepcopy(fuzz_tgt)
                 # implicitly depend on parent library
                 exe.dependencies.add(lib_name)
-                process_exe(nw, project.libraries, exe_name, exe)
+                process_exe(nw, project.libraries, exe_name, lib_name, exe)
         else:
             # process test targets for this library
             if len(lib.test_targets) > 0:
@@ -362,7 +366,7 @@ def gen_ninja_build(
                 exe = copy.deepcopy(test_tgt)
                 # implicitly depend on parent library
                 exe.dependencies.add(lib_name)
-                process_exe(nw, project.libraries, exe_name, exe)
+                process_exe(nw, project.libraries, exe_name, lib_name, exe)
 
                 # Add test execution step
                 exe_path = os.path.join("$build_path", exe_name)
@@ -375,7 +379,7 @@ def gen_ninja_build(
     if not config.fuzzing:
         for exe_name, exe in project.executables.items():
             nw.comment(f"executable #{exe_name}")
-            process_exe(nw, project.libraries, exe_name, exe)
+            process_exe(nw, project.libraries, exe_name, exe_name, exe)
 
     # create phony to run all tests in parallel
     if not config.fuzzing:
