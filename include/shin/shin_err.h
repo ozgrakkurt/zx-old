@@ -18,26 +18,16 @@ extern "C" {
   "\tFILE=" __FILE__ "; LINE=" SHIN_ERR_TO_STRING( \
       __LINE__) "; EXPR=(" SHIN_ERR_TO_STRING(expr) ");\n"
 
-#define SHIN_ERR_ABORT(expr)                                     \
-  do {                                                           \
-    ShinStatus const status = (expr);                            \
-    if (status != ShinStatus_Ok) {                               \
-      fprintf(stderr, SHIN_ERR_COLOR_RED                         \
-              "Aborting because of failure at:\n" SHIN_ERR_INFO( \
-                  SHIN_ERR_ABORT(expr)) SHIN_ERR_COLOR_RESET);   \
-      abort();                                                   \
-    }                                                            \
-  } while (false)
-
-#define SHIN_ASSERT(expr)                                                     \
-  do {                                                                        \
-    bool const v = (expr);                                                    \
-    if (!v) {                                                                 \
-      fprintf(stderr,                                                         \
-              SHIN_ERR_COLOR_RED "Failed assertion at:\n" SHIN_ERR_INFO(expr) \
-                  SHIN_ERR_COLOR_RESET);                                      \
-      abort();                                                                \
-    }                                                                         \
+#define SHIN_ASSERT(expr)                                      \
+  do {                                                         \
+    bool const v = (expr);                                     \
+    if (!v) {                                                  \
+      fprintf(stderr,                                          \
+              SHIN_ERR_COLOR_RED                               \
+              "Failed assertion at:\n%s" SHIN_ERR_COLOR_RESET, \
+              SHIN_ERR_INFO(expr));                            \
+      abort();                                                 \
+    }                                                          \
   } while (false)
 
 #ifdef SHIN_DBG_ASSERT_ENABLED
@@ -55,7 +45,7 @@ extern "C" {
       constexpr char info[] = SHIN_ERR_INFO(SHIN_ERR_TRY(expr)); \
       stack->info_lengths[depth] = sizeof(info) - 1;             \
       stack->infos[depth] = info;                                \
-      if (depth + 1 < SHIN_ERR_STACK_CAP) {                      \
+      if (depth + 1 < stack->capacity) {                         \
         stack->depth = depth + 1;                                \
       }                                                          \
       return status;                                             \
@@ -86,8 +76,6 @@ extern "C" {
     }                                                               \
   } while (false)
 
-shin_u32 constexpr SHIN_ERR_STACK_CAP = 1 << 10;
-
 typedef enum [[nodiscard]] ShinStatus : char {
   ShinStatus_Ok = 0,
   ShinStatus_UnexpectedError = 1,
@@ -99,6 +87,7 @@ typedef struct ShinErrStack {
   char const** infos;
   shin_usize* info_lengths;
   shin_u32 depth;
+  shin_u32 capacity;
 } ShinErrStack;
 
 #ifdef __cplusplus

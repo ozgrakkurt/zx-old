@@ -14,5 +14,8 @@ int main(void) {
 
   (void)page;
 
+  SHIN_DBG_ASSERT(false);
+  SHIN_ASSERT(false);
+
   return 0;
 }

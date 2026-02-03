@@ -1,6 +1,6 @@
 #include <shin/shin_def.h>
-#include <shin/shin_page_alloc.h>
 #include <shin/shin_err.h>
+#include <shin/shin_page_alloc.h>
 #include <stddef.h>
 #include <sys/mman.h>
 
