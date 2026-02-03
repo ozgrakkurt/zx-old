@@ -9,27 +9,24 @@
 extern "C" {
 #endif
 
-#define SHIN_ERR_TRACE_UNWRAP(expr, stack_var)                            \
-  do {                                                                    \
-    ShinStatus const status = (expr);                                     \
-    ShinErrStack* stack = (stack_var);                                    \
-    if (status != ShinStatus_Ok) {                                        \
-      shin_u32 const depth = stack->depth;                                \
-      constexpr char info[] = SHIN_ERR_INFO(SHIN_ERR_TRACE_UNWRAP(expr)); \
-      stack->info_lengths[depth] = sizeof(info) - 1;                      \
-      stack->infos[depth] = info;                                         \
-      if (depth + 1 < SHIN_ERR_STACK_CAP) {                               \
-        stack->depth = depth + 1;                                         \
-      }                                                                   \
-      shin_stack_trace_panic(stack);                                      \
-    }                                                                     \
+#define SHIN_ERR_TRACE_ABORT(expr, stack_var)                       \
+  do {                                                              \
+    ShinStatus const status = (expr);                               \
+    ShinErrStack* const stack = (stack_var);                        \
+    if (status != ShinStatus_Ok) {                                  \
+      fprintf(stderr, SHIN_ERR_COLOR_RED                            \
+              "Aborting because of error at:\n" SHIN_ERR_INFO(      \
+                  SHIN_ERR_TRACE_ABORT(expr)) SHIN_ERR_COLOR_RESET) \
+          shin_err_trace_abort(stack);                              \
+    }                                                               \
   } while (false)
 
-[[noreturn]] void shin_err_trace_panic(ShinStatus status);
+// Outputs the trace to stderr and aborts the program
+[[noreturn]] void shin_err_trace_abort(ShinErrStack const* stack);
 
 // Outputs a string to trace and the length of the string to trace_len
 ShinStatus shin_err_trace_collect(ShinAlloc* alloc, ShinErrStack const* stack,
-                                  char const** trace, size_t* trace_len);
+                                  char const** trace, shin_usize* trace_len);
 
 #ifdef __cplusplus
 }

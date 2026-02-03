@@ -18,6 +18,17 @@ extern "C" {
   "\tFILE=" __FILE__ "; LINE=" SHIN_ERR_TO_STRING( \
       __LINE__) "; EXPR=(" SHIN_ERR_TO_STRING(expr) ");\n"
 
+#define SHIN_ERR_ABORT(expr)                                     \
+  do {                                                           \
+    ShinStatus const status = (expr);                            \
+    if (status != ShinStatus_Ok) {                               \
+      fprintf(stderr, SHIN_ERR_COLOR_RED                         \
+              "Aborting because of failure at:\n" SHIN_ERR_INFO( \
+                  SHIN_ERR_ABORT(expr)) SHIN_ERR_COLOR_RESET);   \
+      abort();                                                   \
+    }                                                            \
+  } while (false)
+
 #ifdef SHIN_DBG_ASSERT_ENABLED
 #define SHIN_DBG_ASSERT(expr)                                                  \
   do {                                                                         \

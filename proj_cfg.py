@@ -11,7 +11,7 @@ PROFILES: Dict[str, Profile] = {
 
 SHIN: Library = Library(
     source_files=set(["shin_page_alloc.c", "shin_err_trace.c"]),
-    test_targets={"alloc_test": Executable(source_files=set(["shin_alloc_test.c"]))},
+    test_targets={"alloc_test": Executable(source_files=set(["test_shin_alloc.c"]))},
 )
 
 PROJECT: Project = Project(
