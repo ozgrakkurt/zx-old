@@ -1,7 +1,6 @@
 #include <shin/shin_def.h>
 #include <shin/shin_page_alloc.h>
 #include <stddef.h>
-
 #include <sys/mman.h>
 
 static ShinStatus shin_page_mmap(shin_usize size, void** page_ptr,

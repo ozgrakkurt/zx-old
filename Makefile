@@ -3,4 +3,4 @@ py_format:
 py_check:
 	uvx ty check *.py
 c_format:
-	clang-format -i -style=file src/*/*.c src/*/*.h include/*/*.h
+	clang-format -i -style=file src/*/*.c include/*/*.h
