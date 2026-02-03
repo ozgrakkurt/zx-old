@@ -5,10 +5,14 @@
 #include <stdio.h>
 #include <stdlib.h>
 
-ShinStatus test(void) {}
+// ShinStatus test(void) {}
+
+constexpr shin_usize MEMORY_SIZE = 1 << 17;
 
 int main(void) {
-  SHIN_DBG_ASSERT(false);
+  void* const page = shin_page_alloc_4kb(MEMORY_SIZE);
+
+  (void)page;
 
   return 0;
 }

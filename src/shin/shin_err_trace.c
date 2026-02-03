@@ -2,7 +2,6 @@
 #include <shin/shin_def.h>
 #include <shin/shin_err.h>
 #include <shin/shin_err_trace.h>
-#include <shin/shin_page_alloc.h>
 #include <string.h>
 
 ShinStatus shin_err_trace(ShinAlloc* alloc, ShinErrStack const* stack,

@@ -29,17 +29,19 @@ extern "C" {
     }                                                            \
   } while (false)
 
-#ifdef SHIN_DBG_ASSERT_ENABLED
-#define SHIN_DBG_ASSERT(expr)                                                  \
-  do {                                                                         \
-    bool const v = (expr);                                                     \
-    if (!v) {                                                                  \
-      fprintf(stderr,                                                          \
-              SHIN_ERR_COLOR_RED "Failed debug assertion at:\n" SHIN_ERR_INFO( \
-                  SHIN_DBG_ASSERT(expr)) SHIN_ERR_COLOR_RESET);                \
-      abort();                                                                 \
-    }                                                                          \
+#define SHIN_ASSERT(expr)                                                     \
+  do {                                                                        \
+    bool const v = (expr);                                                    \
+    if (!v) {                                                                 \
+      fprintf(stderr,                                                         \
+              SHIN_ERR_COLOR_RED "Failed assertion at:\n" SHIN_ERR_INFO(expr) \
+                  SHIN_ERR_COLOR_RESET);                                      \
+      abort();                                                                \
+    }                                                                         \
   } while (false)
+
+#ifdef SHIN_DBG_ASSERT_ENABLED
+#define SHIN_DBG_ASSERT(expr) SHIN_ASSERT(expr)
 #else
 #define SHIN_DBG_ASSERT(expr) ((void)0)
 #endif

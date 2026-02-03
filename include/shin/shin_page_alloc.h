@@ -1,20 +1,17 @@
-#ifndef SHIN_ALLOC_H
-#define SHIN_ALLOC_H
+#ifndef SHIN_PAGE_ALLOC_H
+#define SHIN_PAGE_ALLOC_H
 
 #include <shin/shin_def.h>
-#include <shin/shin_err.h>
 
 #ifdef __cplusplus
 extern "C" {
 #endif
 
-ShinStatus shin_page_alloc_thp(shin_usize size, void** page_ptr,
-                               ShinErrStack* err_stack);
-ShinStatus shin_page_alloc_2mb(shin_usize size, void** page_ptr,
-                               ShinErrStack* err_stack);
-ShinStatus shin_page_alloc_1gb(shin_usize size, void** page_ptr,
-                               ShinErrStack* err_stack);
-ShinStatus shin_page_free(void* page, shin_usize size, ShinErrStack* err_stack);
+void* shin_page_alloc_4kb(shin_usize size);
+void* shin_page_alloc_thp_2mb(shin_usize size);
+void* shin_page_alloc_huge_2mb(shin_usize size);
+void* shin_page_alloc_huge_1gb(shin_usize size);
+void shin_page_free(void* page, shin_usize size);
 
 #ifdef __cplusplus
 }

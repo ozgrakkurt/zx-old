@@ -1,95 +1,60 @@
 #include <shin/shin_def.h>
 #include <shin/shin_page_alloc.h>
+#include <shin/shin_err.h>
 #include <stddef.h>
 #include <sys/mman.h>
 
-static ShinStatus shin_page_mmap(shin_usize size, void** page_ptr,
-                                 int huge_page_flags, ShinErrStack* err_stack) {
+static void* shin_page_mmap(shin_usize size, int huge_page_flags) {
   int const prot = PROT_READ | PROT_WRITE;
   int const flags =
       MAP_PRIVATE | MAP_ANONYMOUS | MAP_LOCKED | MAP_POPULATE | huge_page_flags;
 
-  void* const res = mmap(NULL, (size_t){size}, prot, flags, -1, 0);
-  if (res == MAP_FAILED) {
-    *page_ptr = nullptr;
-    SHIN_ERR_RETURN(ShinStatus_OutOfMemory, err_stack);
-  }
+  void* const res = mmap(nullptr, (size_t){size}, prot, flags, -1, 0);
+  SHIN_ASSERT((res != MAP_FAILED));
 
-  *page_ptr = res;
-
-  return ShinStatus_Ok;
+  return res;
 }
 
-ShinStatus shin_page_alloc(shin_usize size, void** page_ptr,
-                           ShinErrStack* err_stack) {
+void* shin_page_alloc_4kb(shin_usize size) {
   constexpr shin_usize ALIGNMENT = 1 << 12;
 
-  SHIN_ERR_ASSERT((size > 0), err_stack);
-  SHIN_ERR_ASSERT((size % ALIGNMENT == 0), err_stack);
+  SHIN_ASSERT((size > 0));
+  SHIN_ASSERT((size % ALIGNMENT == 0));
 
-  SHIN_ERR_TRY((shin_page_mmap(size, page_ptr, 0, err_stack)), err_stack);
-
-  return ShinStatus_Ok;
+  return shin_page_mmap(size, 0);
 }
 
-ShinStatus shin_page_alloc_thp(shin_usize size, void** page_ptr,
-                               ShinErrStack* err_stack) {
+void* shin_page_alloc_thp_2mb(shin_usize size) {
   constexpr shin_usize ALIGNMENT = 1 << 21;
 
-  SHIN_ERR_ASSERT((size > 0), err_stack);
-  SHIN_ERR_ASSERT((size % ALIGNMENT == 0), err_stack);
+  SHIN_ASSERT((size > 0));
+  SHIN_ASSERT((size % ALIGNMENT == 0));
 
-  SHIN_ERR_TRY((shin_page_mmap(size, page_ptr, 0, err_stack)), err_stack);
+  void* const page = shin_page_mmap(size, 0);
 
-  void* const page = *page_ptr;
+  SHIN_ASSERT((-1 != madvise(page, (size_t){size}, MADV_HUGEPAGE)));
 
-  if (-1 == madvise(page, (size_t){size}, MADV_HUGEPAGE)) {
-    if (-1 == munmap(page, (size_t){size})) {
-      // just leak memory since we can't do much about it at this point
-      // at least seperate error return here so we can see this specific path
-      // was taken in the stack trace.
-      *page_ptr = nullptr;
-      SHIN_ERR_RETURN((ShinStatus_UnexpectedError), err_stack);
-    }
-    *page_ptr = nullptr;
-    SHIN_ERR_RETURN((ShinStatus_UnexpectedError), err_stack);
-  }
-
-  return ShinStatus_Ok;
+  return page;
 }
 
-ShinStatus shin_page_alloc_2MB(shin_usize size, void** page_ptr,
-                               ShinErrStack* err_stack) {
+void* shin_page_alloc_huge_2mb(shin_usize size) {
   constexpr shin_usize ALIGNMENT = 1 << 21;
 
-  SHIN_ERR_ASSERT((size > 0), err_stack);
-  SHIN_ERR_ASSERT((size % ALIGNMENT == 0), err_stack);
+  SHIN_ASSERT((size > 0));
+  SHIN_ASSERT((size % ALIGNMENT == 0));
 
-  SHIN_ERR_TRY(
-      (shin_page_mmap(size, page_ptr, MAP_HUGETLB | MAP_HUGE_2MB, err_stack)),
-      err_stack);
-
-  return ShinStatus_Ok;
+  return shin_page_mmap(size, MAP_HUGETLB | MAP_HUGE_2MB);
 }
 
-ShinStatus shin_page_alloc_1GB(shin_usize size, void** page_ptr,
-                               ShinErrStack* err_stack) {
+void* shin_page_alloc_huge_1gb(shin_usize size) {
   constexpr shin_usize ALIGNMENT = 1 << 30;
 
-  SHIN_ERR_ASSERT((size > 0), err_stack);
-  SHIN_ERR_ASSERT((size % ALIGNMENT == 0), err_stack);
+  SHIN_ASSERT((size > 0));
+  SHIN_ASSERT((size % ALIGNMENT == 0));
 
-  SHIN_ERR_TRY(
-      (shin_page_mmap(size, page_ptr, MAP_HUGETLB | MAP_HUGE_1GB, err_stack)),
-      err_stack);
-
-  return ShinStatus_Ok;
+  return shin_page_mmap(size, MAP_HUGETLB | MAP_HUGE_1GB);
 }
 
-ShinStatus shin_page_free(void* page, shin_usize size,
-                          ShinErrStack* err_stack) {
-  if (-1 == munmap(page, (size_t){size})) {
-    SHIN_ERR_RETURN(ShinStatus_UnexpectedError, err_stack);
-  }
-  return ShinStatus_Ok;
+void shin_page_free(void* page, shin_usize size) {
+  SHIN_ASSERT((-1 != munmap(page, (size_t){size})));
 }
