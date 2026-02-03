@@ -21,14 +21,26 @@ static ShinStatus shin_page_mmap(shin_usize size, void** page_ptr,
   return ShinStatus_Ok;
 }
 
-ShinStatus shin_page_alloc_thp(shin_usize size, void** page_ptr,
-                               ShinErrStack* err_stack) {
-  size_t constexpr ALIGNMENT = 1 << 21;
+ShinStatus shin_page_alloc(shin_usize size, void** page_ptr,
+                           ShinErrStack* err_stack) {
+  constexpr size_t ALIGNMENT = 1 << 12;
 
   SHIN_ERR_ASSERT((size > 0), err_stack);
   SHIN_ERR_ASSERT((size % ALIGNMENT == 0), err_stack);
 
-  BLIB_ERR_TRY((page_mmap(size, page_ptr, 0, err_stack)), err_stack);
+  SHIN_ERR_TRY((page_mmap(size, page_ptr, 0)), err_stack);
+
+  return ShinStatus_Ok;
+}
+
+ShinStatus shin_page_alloc_thp(shin_usize size, void** page_ptr,
+                               ShinErrStack* err_stack) {
+  constexpr size_t ALIGNMENT = 1 << 21;
+
+  SHIN_ERR_ASSERT((size > 0), err_stack);
+  SHIN_ERR_ASSERT((size % ALIGNMENT == 0), err_stack);
+
+  SHIN_ERR_TRY((page_mmap(size, page_ptr, 0, err_stack)), err_stack);
 
   void* const page = *page_ptr;
 
@@ -40,32 +52,36 @@ ShinStatus shin_page_alloc_thp(shin_usize size, void** page_ptr,
       abort();
     }
     *page_ptr = nullptr;
-    BLIB_ERR_TRY((Status::UnexpectedError));
+    SHIN_ERR_RETURN((Status::UnexpectedError), err_stack);
   }
 
-  return Status::Ok;
+  return ShinStatus_Ok;
 }
 
-Status page_alloc_2MB(size_t size, void** page_ptr) {
-  size_t constexpr ALIGNMENT = 1 << 21;
+ShinStatus shin_page_alloc_2MB(shin_usize size, void** page_ptr,
+                               ShinErrStack* err_stack) {
+  constexpr size_t ALIGNMENT = 1 << 21;
 
-  BLIB_ERR_ASSERT((size > 0));
-  BLIB_ERR_ASSERT((size % ALIGNMENT == 0));
+  SHIN_ERR_ASSERT((size > 0), err_stack);
+  SHIN_ERR_ASSERT((size % ALIGNMENT == 0), err_stack);
 
-  BLIB_ERR_TRY((page_mmap(size, page_ptr, MAP_HUGETLB | MAP_HUGE_2MB)));
+  SHIN_ERR_TRY((page_mmap(size, page_ptr, MAP_HUGETLB | MAP_HUGE_2MB)),
+               err_stack);
 
-  return Status::Ok;
+  return ShinStatus_Ok;
 }
 
-Status page_alloc_1GB(size_t size, void** page_ptr) {
-  size_t constexpr ALIGNMENT = 1 << 30;
+ShinStatus shin_page_alloc_1GB(shin_usize size, void** page_ptr,
+                               ShinErrStack* err_stack) {
+  constexpr size_t ALIGNMENT = 1 << 30;
 
-  BLIB_ERR_ASSERT((size > 0));
-  BLIB_ERR_ASSERT((size % ALIGNMENT == 0));
+  BLIB_ERR_ASSERT((size > 0), err_stack);
+  BLIB_ERR_ASSERT((size % ALIGNMENT == 0), err_stack);
 
-  BLIB_ERR_TRY((page_mmap(size, page_ptr, MAP_HUGETLB | MAP_HUGE_1GB)));
+  BLIB_ERR_TRY((page_mmap(size, page_ptr, MAP_HUGETLB | MAP_HUGE_1GB)),
+               err_stack);
 
-  return Status::Ok;
+  return ShinStatus_Ok;
 }
 
 Status page_free(void* page, size_t size) {
