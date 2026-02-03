@@ -143,7 +143,7 @@ def make_cflags(profile: Profile, config: Config) -> List[str]:
         cflags.append("-s")
 
     if profile.enable_debug_assert:
-        cflags.append("-DSHIN_DBG_ASSERT=1")
+        cflags.append("-DSHIN_DBG_ASSERT_ENABLED=1")
 
     if config.no_libc:
         cflags.append("-nostdlib")
@@ -427,7 +427,7 @@ if __name__ == "__main__":
     parser.add_argument(
         "--disable-libc",
         action=argparse.BooleanOptionalAction,
-        default=True,
+        default=False,
         help="disable linking/using libc and compiler built-ins",
     )
 
