@@ -424,7 +424,8 @@ if __name__ == "__main__":
     )
     parser.add_argument(
         "--target",
-        help="LLVM target triple to use. Defaults to passing no target to clang which should target the host system.",
+        default="x86_64-linux-unknown-musl",
+        help="LLVM target triple to use.",
     )
     parser.add_argument(
         "--thin-lto",

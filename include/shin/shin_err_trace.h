@@ -30,9 +30,6 @@ ShinStatus shin_err_trace_collect(ShinAlloc* alloc, ShinErrStack const* stack,
                                   char const** trace, shin_usize* trace_len,
                                   ShinErrStack* err_stack);
 
-ShinStatus shin_err_trace_init(ShinAlloc* alloc, ShinErrStack* stack,
-                               shin_usize depth);
-
 #ifdef __cplusplus
 }
 #endif
