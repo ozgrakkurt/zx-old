@@ -5,14 +5,16 @@
 #include <stddef.h>
 #include <string.h>
 
-ShinStatus shin_err_trace(ShinAlloc* alloc, ShinErrStack const* stack,
-                          char const** trace, shin_usize* trace_len,
-                          ShinErrStack* err_stack) {
-  ShinErrStack const stack_state = *stack;
+ShinStatus shin_err_trace_collect(ShinAlloc* alloc, ShinErrStack const* stack,
+                                  char const** trace, shin_usize* trace_len,
+                                  ShinErrStack* err_stack) {
+  shin_usize const depth = stack->depth;
+  char const* const* infos = stack->infos;
+  shin_usize const* info_lengths = stack->info_lengths;
 
   shin_usize total_len = 0;
-  for (shin_u32 i = 0; i < stack_state.depth; i++) {
-    total_len += stack_state.info_lengths[i];
+  for (shin_u32 i = 0; i < depth; i++) {
+    total_len += info_lengths[i];
   }
 
   constexpr char prefix[] = "Error Trace: \n";
@@ -27,9 +29,9 @@ ShinStatus shin_err_trace(ShinAlloc* alloc, ShinErrStack const* stack,
   memcpy(buf, prefix, prefix_len);
 
   shin_usize offset = prefix_len;
-  for (shin_u32 i = 0; i < stack_state.depth; i++) {
-    shin_usize const info_len = stack_state.info_lengths[i];
-    char const* info = stack_state.infos[i];
+  for (shin_u32 i = 0; i < depth; i++) {
+    shin_usize const info_len = info_lengths[i];
+    char const* info = infos[i];
     memcpy(&buf[offset], info, info_len);
     offset += info_len;
   }

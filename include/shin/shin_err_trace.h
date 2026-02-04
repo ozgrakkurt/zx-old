@@ -27,7 +27,8 @@ extern "C" {
 
 // Outputs a string to trace and the length of the string to trace_len
 ShinStatus shin_err_trace_collect(ShinAlloc* alloc, ShinErrStack const* stack,
-                                  char const** trace, shin_usize* trace_len);
+                                  char const** trace, shin_usize* trace_len,
+                                  ShinErrStack* err_stack);
 
 ShinStatus shin_err_trace_init(ShinAlloc* alloc, ShinErrStack* stack,
                                shin_usize depth);
