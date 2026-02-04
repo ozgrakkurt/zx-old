@@ -19,6 +19,7 @@ void* shin_page_alloc_4kb(shin_usize size) {
   constexpr shin_usize ALIGNMENT = 1 << 12;
 
   SHIN_ASSERT((size > 0));
+  SHIN_ASSERT((size >= ALIGNMENT));
   SHIN_ASSERT((size % ALIGNMENT == 0));
 
   return shin_page_mmap(size, 0);
@@ -28,6 +29,7 @@ void* shin_page_alloc_thp_2mb(shin_usize size) {
   constexpr shin_usize ALIGNMENT = 1 << 21;
 
   SHIN_ASSERT((size > 0));
+  SHIN_ASSERT((size >= ALIGNMENT));
   SHIN_ASSERT((size % ALIGNMENT == 0));
 
   void* const page = shin_page_mmap(size, 0);
@@ -41,6 +43,7 @@ void* shin_page_alloc_huge_2mb(shin_usize size) {
   constexpr shin_usize ALIGNMENT = 1 << 21;
 
   SHIN_ASSERT((size > 0));
+  SHIN_ASSERT((size >= ALIGNMENT));
   SHIN_ASSERT((size % ALIGNMENT == 0));
 
   return shin_page_mmap(size, MAP_HUGETLB | MAP_HUGE_2MB);
@@ -50,6 +53,7 @@ void* shin_page_alloc_huge_1gb(shin_usize size) {
   constexpr shin_usize ALIGNMENT = 1 << 30;
 
   SHIN_ASSERT((size > 0));
+  SHIN_ASSERT((size >= ALIGNMENT));
   SHIN_ASSERT((size % ALIGNMENT == 0));
 
   return shin_page_mmap(size, MAP_HUGETLB | MAP_HUGE_1GB);

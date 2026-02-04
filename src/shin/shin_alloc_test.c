@@ -6,23 +6,16 @@
 #include <stdio.h>
 #include <stdlib.h>
 
-ShinStatus test(ShinAlloc* alloc, ShinErrStack* err_stack) {
-  (void)alloc;
-
-  SHIN_ERR_RETURN((ShinStatus_UnexpectedError), err_stack);
-
-  return ShinStatus_Ok;
-}
-
-constexpr shin_usize MEMORY_SIZE = 1 << 21;
+constexpr shin_usize MEMORY_SIZE = 1 << 16;
 
 int main(void) {
-  void* const page = shin_page_alloc_thp_2mb(MEMORY_SIZE);
+  void* const page = shin_page_alloc_4kb(MEMORY_SIZE);
 
   ShinErrStack err_stack = ShinErrStack_init();
   ShinAlloc alloc = ShinAlloc_init(page, MEMORY_SIZE);
 
-  SHIN_ERR_TRACE_ABORT((test(&alloc, &err_stack)), &err_stack);
+  (void)err_stack;
+  (void)alloc;
 
   // SHIN_DBG_ASSERT(false);
   // SHIN_ASSERT(false);

@@ -37,20 +37,20 @@ extern "C" {
 #define SHIN_DBG_ASSERT(expr) ((void)0)
 #endif
 
-#define SHIN_ERR_TRY(expr, stack_var)                       \
-  do {                                                      \
-    ShinStatus const status = (expr);                       \
-    ShinErrStack* stack = (stack_var);                      \
-    if (status != ShinStatus_Ok) {                          \
-      shin_u32 const depth = stack->depth;                  \
-      char const* info = SHIN_ERR_INFO(SHIN_ERR_TRY(expr)); \
-      stack->info_lengths[depth] = strlen(info);            \
-      stack->infos[depth] = info;                           \
-      if (depth + 1 < SHIN_ERR_STACK_CAP) {                 \
-        stack->depth = depth + 1;                           \
-      }                                                     \
-      return status;                                        \
-    }                                                       \
+#define SHIN_ERR_TRY(expr, stack_var)                                       \
+  do {                                                                      \
+    ShinStatus const status = (expr);                                       \
+    ShinErrStack* stack = (stack_var);                                      \
+    if (status != ShinStatus_Ok) {                                          \
+      shin_u32 const depth = stack->depth;                                  \
+      shin_u32 const write_idx =                                            \
+          (depth == SHIN_ERR_STACK_CAP) ? (SHIN_ERR_STACK_CAP - 1) : depth; \
+      char const* info = SHIN_ERR_INFO(SHIN_ERR_TRY(expr));                 \
+      stack->info_lengths[write_idx] = strlen(info);                        \
+      stack->infos[write_idx] = info;                                       \
+      stack->depth = write_idx + 1;                                         \
+      return status;                                                        \
+    }                                                                       \
   } while (false)
 
 #define SHIN_ERR_RETURN(expr, stack_var)                     \
@@ -84,7 +84,7 @@ typedef enum [[nodiscard]] ShinStatus : char {
   ShinStatus_OutOfMemory = 3,
 } ShinStatus;
 
-constexpr shin_u32 SHIN_ERR_STACK_CAP = 1 << 9;
+constexpr shin_u32 SHIN_ERR_STACK_CAP = 64;
 
 typedef struct ShinErrStack {
   char const* infos[SHIN_ERR_STACK_CAP];

@@ -38,7 +38,7 @@ ShinStatus shin_err_trace_collect(ShinAlloc* alloc, ShinErrStack const* stack,
 
   buf[offset] = '\0';
 
-  SHIN_DBG_ASSERT((offset + 1 == alloc_size));
+  SHIN_ASSERT((offset + 1 == alloc_size));
 
   *trace = buf;
   *trace_len = offset;
