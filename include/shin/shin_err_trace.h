@@ -1,5 +1,5 @@
-#ifndef SHIN_ALLOC_H
-#define SHIN_ALLOC_H
+#ifndef SHIN_ERR_TRACE_H
+#define SHIN_ERR_TRACE_H
 
 #include <shin/shin_alloc.h>
 #include <shin/shin_def.h>
@@ -17,8 +17,8 @@ extern "C" {
       fprintf(stderr,                                                   \
               SHIN_ERR_COLOR_RED                                        \
               "Aborting because of error at:\n%s" SHIN_ERR_COLOR_RESET, \
-              SHIN_ERR_INFO(SHIN_ERR_TRACE_ABORT(expr)))                \
-          shin_err_trace_abort(stack);                                  \
+              SHIN_ERR_INFO(SHIN_ERR_TRACE_ABORT(expr)));               \
+      shin_err_trace_abort(stack);                                      \
     }                                                                   \
   } while (false)
 
@@ -28,6 +28,9 @@ extern "C" {
 // Outputs a string to trace and the length of the string to trace_len
 ShinStatus shin_err_trace_collect(ShinAlloc* alloc, ShinErrStack const* stack,
                                   char const** trace, shin_usize* trace_len);
+
+ShinStatus shin_err_trace_init(ShinAlloc* alloc, ShinErrStack* stack,
+                               shin_usize depth);
 
 #ifdef __cplusplus
 }

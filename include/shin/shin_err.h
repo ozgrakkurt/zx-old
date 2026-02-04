@@ -4,6 +4,7 @@
 #include <shin/shin_def.h>
 #include <stdio.h>
 #include <stdlib.h>
+#include <string.h>
 
 #ifdef __cplusplus
 extern "C" {
@@ -36,44 +37,44 @@ extern "C" {
 #define SHIN_DBG_ASSERT(expr) ((void)0)
 #endif
 
-#define SHIN_ERR_TRY(expr, stack_var)                            \
-  do {                                                           \
-    ShinStatus const status = (expr);                            \
-    ShinErrStack* stack = (stack_var);                           \
-    if (status != ShinStatus_Ok) {                               \
-      shin_u32 const depth = stack->depth;                       \
-      constexpr char info[] = SHIN_ERR_INFO(SHIN_ERR_TRY(expr)); \
-      stack->info_lengths[depth] = sizeof(info) - 1;             \
-      stack->infos[depth] = info;                                \
-      if (depth + 1 < stack->capacity) {                         \
-        stack->depth = depth + 1;                                \
-      }                                                          \
-      return status;                                             \
-    }                                                            \
+#define SHIN_ERR_TRY(expr, stack_var)                       \
+  do {                                                      \
+    ShinStatus const status = (expr);                       \
+    ShinErrStack* stack = (stack_var);                      \
+    if (status != ShinStatus_Ok) {                          \
+      shin_u32 const depth = stack->depth;                  \
+      char const* info = SHIN_ERR_INFO(SHIN_ERR_TRY(expr)); \
+      stack->info_lengths[depth] = strlen(info);            \
+      stack->infos[depth] = info;                           \
+      if (depth + 1 < SHIN_ERR_STACK_CAP) {                 \
+        stack->depth = depth + 1;                           \
+      }                                                     \
+      return status;                                        \
+    }                                                       \
   } while (false)
 
-#define SHIN_ERR_RETURN(expr, stack_var)                          \
-  do {                                                            \
-    ShinStatus const status = (expr);                             \
-    ShinErrStack* stack = (stack_var);                            \
-    constexpr char info[] = SHIN_ERR_INFO(SHIN_ERR_RETURN(expr)); \
-    stack->info_lengths[0] = sizeof(info) - 1;                    \
-    stack->infos[0] = info;                                       \
-    stack->depth = 1;                                             \
-    return status;                                                \
+#define SHIN_ERR_RETURN(expr, stack_var)                     \
+  do {                                                       \
+    ShinStatus const status = (expr);                        \
+    ShinErrStack* stack = (stack_var);                       \
+    char const* info = SHIN_ERR_INFO(SHIN_ERR_RETURN(expr)); \
+    stack->info_lengths[0] = strlen(info);                   \
+    stack->infos[0] = info;                                  \
+    stack->depth = 1;                                        \
+    return status;                                           \
   } while (false)
 
-#define SHIN_ERR_ASSERT(expr, stack_var)                            \
-  do {                                                              \
-    bool const v = (expr);                                          \
-    if (!v) {                                                       \
-      ShinErrStack* stack = (stack_var);                            \
-      constexpr char info[] = SHIN_ERR_INFO(SHIN_ERR_ASSERT(expr)); \
-      stack->info_lengths[0] = sizeof(info) - 1;                    \
-      stack->infos[0] = info;                                       \
-      stack->depth = 1;                                             \
-      return ShinStatus_AssertFail;                                 \
-    }                                                               \
+#define SHIN_ERR_ASSERT(expr, stack_var)                       \
+  do {                                                         \
+    bool const v = (expr);                                     \
+    if (!v) {                                                  \
+      ShinErrStack* stack = (stack_var);                       \
+      char const* info = SHIN_ERR_INFO(SHIN_ERR_ASSERT(expr)); \
+      stack->info_lengths[0] = strlen(info);                   \
+      stack->infos[0] = info;                                  \
+      stack->depth = 1;                                        \
+      return ShinStatus_AssertFail;                            \
+    }                                                          \
   } while (false)
 
 typedef enum [[nodiscard]] ShinStatus : char {
@@ -83,12 +84,21 @@ typedef enum [[nodiscard]] ShinStatus : char {
   ShinStatus_OutOfMemory = 3,
 } ShinStatus;
 
+constexpr shin_u32 SHIN_ERR_STACK_CAP = 1 << 9;
+
 typedef struct ShinErrStack {
-  char const** infos;
-  shin_usize* info_lengths;
+  char const* infos[SHIN_ERR_STACK_CAP];
+  shin_usize info_lengths[SHIN_ERR_STACK_CAP];
   shin_u32 depth;
-  shin_u32 capacity;
 } ShinErrStack;
+
+static inline ShinErrStack ShinErrStack_init() {
+  return (ShinErrStack){
+      .infos = {0},
+      .info_lengths = {0},
+      .depth = 0wbu,
+  };
+}
 
 #ifdef __cplusplus
 }

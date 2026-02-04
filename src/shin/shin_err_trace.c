@@ -2,6 +2,7 @@
 #include <shin/shin_def.h>
 #include <shin/shin_err.h>
 #include <shin/shin_err_trace.h>
+#include <stddef.h>
 #include <string.h>
 
 ShinStatus shin_err_trace(ShinAlloc* alloc, ShinErrStack const* stack,
@@ -45,15 +46,14 @@ ShinStatus shin_err_trace(ShinAlloc* alloc, ShinErrStack const* stack,
 
 // Outputs the trace to stderr and aborts the program
 [[noreturn]] void shin_err_trace_abort(ShinErrStack const* stack) {
-  ShinErrStack const stack_state = *stack;
+  SHIN_ASSERT((stack != nullptr));
 
-  if (0 > fprintf(stderr, SHIN_ERR_COLOR_RED
-                  "Aborting with stack trace:" SHIN_ERR_COLOR_RESET "\n")) {
+  if (0 > fprintf(stderr, "Aborting with stack trace:\n")) {
     abort();
   }
 
-  for (shin_u32 i = 0; i < stack_state.depth; i++) {
-    if (0 > fprintf(stderr, "%s", stack_state.infos[i])) {
+  for (shin_u32 i = 0; i < stack->depth; i++) {
+    if (0 > fprintf(stderr, "%s", stack->infos[i])) {
       abort();
     }
   }

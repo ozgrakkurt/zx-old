@@ -55,6 +55,7 @@ void* shin_page_alloc_huge_1gb(shin_usize size) {
   return shin_page_mmap(size, MAP_HUGETLB | MAP_HUGE_1GB);
 }
 
-void shin_page_free(void* page, shin_usize size) {
+void shin_page_alloc_free(void* page, shin_usize size) {
+  SHIN_ASSERT((page != nullptr));
   SHIN_ASSERT((-1 != munmap(page, (size_t){size})));
 }
