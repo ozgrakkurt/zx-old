@@ -19,6 +19,7 @@ from typing import Optional, Dict, Set, List
 import ninja_syntax
 import proj_cfg
 import definition
+import platform
 from definition import Executable, Library, Project, Profile
 
 
@@ -424,8 +425,8 @@ if __name__ == "__main__":
     )
     parser.add_argument(
         "--target",
-        default="x86_64-linux-unknown-musl",
-        help="LLVM target triple to use.",
+        default=f"{platform.machine()}-unknown-linux-musl",
+        help="LLVM target triple to use. We always use static linking so using glibc doesn't make sense in any case.",
     )
     parser.add_argument(
         "--thin-lto",
