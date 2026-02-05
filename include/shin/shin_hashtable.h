@@ -2,6 +2,7 @@
 #define SHIN_HASHTABLE_H
 
 #include <immintrin.h>
+#include <limits.h>
 #include <shin/shin_def.h>
 #include <shin/shin_err.h>
 
@@ -23,11 +24,32 @@ extern "C" {
 #error "Only little-endian targets are supported"
 #endif
 
-typedef shin_u16 ShinHashtableBitMaskWord;
-
 constexpr shin_usize SHIN_HASHTABLE_BIT_MASK_STRIDE = 1;
-constexpr ShinHashtableBitMaskWord SHIN_HASHTABLE_BIT_MASK_ITER_MASK =
-    ~((ShinHashtableBitMaskWord){1wbu});
+
+typedef shin_u16 ShinHashtableBitMask;
+
+static inline ShinHashtableBitMask ShinHashtableBitMask_remove_lowest_bit(ShinHashtableBitmask mask) {
+  return (mask & (mask - 1))
+}
+
+static inline bool ShinHashtableBitMask_any_bit_set(ShinHashtableBitmask mask) {
+  return mask != 0;
+}
+
+// check that we can return bit positions as shin_u8
+_Static_assert((sizeof(ShinHastableBitMask) * 8) <= UBITINT_MAX(shin_u8));
+
+static inline shin_u8 ShinHashtableBitMask_lowest_set_bit(ShinHashtableBitMask mask) {
+  return 
+}
+
+static inline shin_u8 ShinHashtableBitMask_nonzero_trailing_zeroes(ShinHashtableBitMask mask) {
+  SHIN_DBG_ASSERT((mask != 0));
+  
+}
+
+constexpr ShinHashtableBitMask SHIN_HASHTABLE_BIT_MASK_ITER_MASK =
+    ~((ShinHashtableBitMask){1wbu});
 
 typedef shin_u8 ShinHashtableTag;
 static constexpr ShinHashtableTag SHIN_HASHTABLE_TAG_EMPTY = 0b11111111wbu;
@@ -91,24 +113,24 @@ static inline void ShinHastableGroup_store_aligned(ShinHashtableGroup group,
   _mm_store_si128((ShinHashtableGroup *)ptr, group);
 }
 
-static inline ShinHashtableBitMaskWord
+static inline ShinHashtableBitMask
 ShinHashtableGroup_match_tag(ShinHashtableGroup group, ShinHashtableTag tag) {
   ShinHashtableGroup const cmp =
       _mm_cmpeq_epi8(group, _mm_set1_epi8((shin_i8){tag}));
-  return (ShinHashtableBitMaskWord)_mm_movemask_epi8(cmp);
+  return (ShinHashtableBitMask)_mm_movemask_epi8(cmp);
 }
 
-static inline ShinHashtableBitMaskWord
+static inline ShinHashtableBitMask
 ShinHashtableGroup_match_empty(ShinHashtableGroup group) {
   return ShinHashtableGroup_match_tag(group, SHIN_HASHTABLE_TAG_EMPTY);
 }
 
-static inline ShinHashtableBitMaskWord
+static inline ShinHashtableBitMask
 ShinHashtableGroup_match_empty_or_deleted(ShinHashtableGroup group) {
-  return (ShinHashtableBitMaskWord)_mm_movemask_epi8(group);
+  return (ShinHashtableBitMask)_mm_movemask_epi8(group);
 }
 
-static inline ShinHashtableBitMaskWord
+static inline ShinHashtableBitMask
 ShinHashtableGroup_match_full(ShinHashtableGroup group) {
   return ~(ShinHashtableGroup_match_empty_or_deleted(group));
 }
