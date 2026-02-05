@@ -6,7 +6,7 @@
 #include <stdio.h>
 #include <stdlib.h>
 
-ShinStatus err_func(shin_usize depth, ShinErrStack* err_stack) {
+ShinStatus err_func(shin_usize depth, ShinErrStack *err_stack) {
   if (depth > 128) {
     SHIN_ERR_RETURN((ShinStatus_UnexpectedError), err_stack);
   }
@@ -22,7 +22,7 @@ ShinStatus err_func(shin_usize depth, ShinErrStack* err_stack) {
   return ShinStatus_Ok;
 }
 
-ShinStatus test(ShinAlloc* alloc, ShinErrStack* err_stack) {
+ShinStatus test(ShinAlloc *alloc, ShinErrStack *err_stack) {
   (void)alloc;
 
   SHIN_ERR_TRY((err_func(1, err_stack)), err_stack);
@@ -33,7 +33,7 @@ ShinStatus test(ShinAlloc* alloc, ShinErrStack* err_stack) {
 constexpr shin_usize MEMORY_SIZE = 1 << 16;
 
 int main(void) {
-  void* const page = shin_page_alloc_4kb(MEMORY_SIZE);
+  void *const page = shin_page_alloc_4kb(MEMORY_SIZE);
 
   ShinErrStack err_stack = ShinErrStack_init();
   ShinAlloc alloc = ShinAlloc_init(page, MEMORY_SIZE);
@@ -41,7 +41,7 @@ int main(void) {
   ShinStatus const status = test(&alloc, &err_stack);
 
   if (status != ShinStatus_Ok) {
-    char const* trace = nullptr;
+    char const *trace = nullptr;
     shin_usize trace_size = 0;
 
     // secondary error stack for tracking errors happening while collecting the

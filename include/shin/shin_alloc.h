@@ -9,13 +9,17 @@
 extern "C" {
 #endif
 
+static constexpr shin_usize SHIN_ALLOC_MIN_ALIGN = 64;
+_Static_assert(SHIN_ALLOC_MIN_ALIGN >= alignof(max_align_t));
+_Static_assert(SHIN_ALLOC_MIN_ALIGN >= alignof(shin_u256));
+
 typedef struct ShinAlloc {
   shin_usize const capacity;
   shin_usize offset;
-  shin_u8* const buf;
+  shin_u8 *const buf;
 } ShinAlloc;
 
-static inline ShinAlloc ShinAlloc_init(shin_u8* buf, shin_usize capacity) {
+static inline ShinAlloc ShinAlloc_init(shin_u8 *buf, shin_usize capacity) {
   SHIN_ASSERT((buf != nullptr));
   return (ShinAlloc){
       .capacity = capacity,
@@ -24,18 +28,18 @@ static inline ShinAlloc ShinAlloc_init(shin_u8* buf, shin_usize capacity) {
   };
 }
 
-static inline ShinStatus ShinAlloc_reset(ShinAlloc* self,
-                                         ShinErrStack* err_stack) {
+static inline ShinStatus ShinAlloc_reset(ShinAlloc *self,
+                                         ShinErrStack *err_stack) {
   SHIN_ASSERT((err_stack != nullptr));
   SHIN_ERR_ASSERT((self != nullptr), err_stack);
   self->offset = 0;
   return ShinStatus_Ok;
 }
 
-static inline ShinStatus ShinAlloc_aligned_alloc(ShinAlloc* self,
+static inline ShinStatus ShinAlloc_aligned_alloc(ShinAlloc *self,
                                                  shin_usize align,
-                                                 shin_usize size, void** ptr,
-                                                 ShinErrStack* err_stack) {
+                                                 shin_usize size, void **ptr,
+                                                 ShinErrStack *err_stack) {
   SHIN_ASSERT((err_stack != nullptr));
   SHIN_ERR_ASSERT((self != nullptr), err_stack);
   SHIN_ERR_ASSERT((ptr != nullptr), err_stack);
@@ -48,7 +52,7 @@ static inline ShinStatus ShinAlloc_aligned_alloc(ShinAlloc* self,
   SHIN_ERR_ASSERT(((align & (align - 1)) == 0), err_stack);
 
   shin_usize const alloc_align =
-      align > alignof(max_align_t) ? align : alignof(max_align_t);
+      align > SHIN_ALLOC_MIN_ALIGN ? align : SHIN_ALLOC_MIN_ALIGN;
 
   ShinAlloc const state = *self;
 
@@ -64,16 +68,16 @@ static inline ShinStatus ShinAlloc_aligned_alloc(ShinAlloc* self,
   SHIN_ASSERT((aligned_addr % alloc_align == 0));
   SHIN_ASSERT((aligned_addr % align == 0));
 
-  *ptr = (void*)aligned_addr;
+  *ptr = (void *)aligned_addr;
   self->offset += padding + size;
 
   return ShinStatus_Ok;
 }
 
-static inline ShinStatus ShinAlloc_alloc(ShinAlloc* self, shin_usize size,
-                                         void** ptr, ShinErrStack* err_stack) {
-  shin_usize const align = alignof(max_align_t);
-  SHIN_ERR_TRY((ShinAlloc_aligned_alloc(self, align, size, ptr, err_stack)),
+static inline ShinStatus ShinAlloc_alloc(ShinAlloc *self, shin_usize size,
+                                         void **ptr, ShinErrStack *err_stack) {
+  SHIN_ERR_TRY((ShinAlloc_aligned_alloc(self, SHIN_ALLOC_MIN_ALIGN, size, ptr,
+                                        err_stack)),
                err_stack);
   return ShinStatus_Ok;
 }
