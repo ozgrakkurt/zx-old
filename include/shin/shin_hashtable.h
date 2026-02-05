@@ -9,6 +9,8 @@
 extern "C" {
 #endif
 
+// This code is mostly ported from Rust crate hashbrown
+
 #ifndef __x86_64__
 #error "only x86_64 targets are supported"
 #endif
@@ -93,12 +95,34 @@ static inline ShinHashtableBitMaskWord
 ShinHashtableGroup_match_tag(ShinHashtableGroup group, ShinHashtableTag tag) {
   ShinHashtableGroup const cmp =
       _mm_cmpeq_epi8(group, _mm_set1_epi8((shin_i8){tag}));
-  return (shin_u16)_mm_movemask_epi8(cmp);
+  return (ShinHashtableBitMaskWord)_mm_movemask_epi8(cmp);
 }
 
 static inline ShinHashtableBitMaskWord
 ShinHashtableGroup_match_empty(ShinHashtableGroup group) {
   return ShinHashtableGroup_match_tag(group, SHIN_HASHTABLE_TAG_EMPTY);
+}
+
+static inline ShinHashtableBitMaskWord
+ShinHashtableGroup_match_empty_or_deleted(ShinHashtableGroup group) {
+  return (ShinHashtableBitMaskWord)_mm_movemask_epi8(group);
+}
+
+static inline ShinHashtableBitMaskWord
+ShinHashtableGroup_match_full(ShinHashtableGroup group) {
+  return ~(ShinHashtableGroup_match_empty_or_deleted(group));
+}
+
+// - `EMPTY => EMPTY`
+// - `DELETED => EMPTY`
+// - `FULL => DELETED`
+static inline ShinHashtableGroup
+ShinHashtableGroup_convert_special_to_empty_and_full_to_deleted(
+    ShinHashtableGroup group) {
+  ShinHashtableGroup const zero = _mm_setzero_si128();
+  ShinHashtableGroup const special = _mm_cmpgt_epi8(zero, group);
+  return _mm_or_si128(special,
+                      _mm_set1_epi8((shin_i8)SHIN_HASHTABLE_TAG_DELETED));
 }
 
 #ifdef __cplusplus
