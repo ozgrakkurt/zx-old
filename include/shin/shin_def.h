@@ -72,6 +72,16 @@ _Static_assert(sizeof(shin_f16) == 2);
 _Static_assert(sizeof(shin_f32) == 4);
 _Static_assert(sizeof(shin_f64) == 8);
 
+static inline shin_u32 shin_fastmod32(shin_u32 num, shin_u32 mod) {
+  shin_u64 const mul = (shin_u64){num} * (shin_u64){mod};
+  return (shin_u32)(mul >> 32);
+}
+
+static inline shin_u64 shin_fastmod64(shin_u64 num, shin_u64 mod) {
+  shin_u128 const mul = (shin_u128){num} * (shin_u128){mod};
+  return (shin_u64)(mul >> 64);
+}
+
 #ifdef __cplusplus
 }
 #endif
