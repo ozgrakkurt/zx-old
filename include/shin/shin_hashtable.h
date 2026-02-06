@@ -104,6 +104,11 @@ static inline shin_u16 ShinHashtable_match_tag_(__m128i const group,
   return (shin_u16)_mm_movemask_epi8(cmp);
 }
 
+static inline shin_u16
+ShinHashtable_match_empty_or_deleted_(__m128i const group) {
+  return (shin_u16)_mm_movemask_epi8(group);
+}
+
 // function for checking if keys of two entries are equal
 typedef bool key_eqfn(void const *ctx, void const *entry_a,
                       void const *entry_b) shin_hashtable_key_eqfn;
@@ -122,10 +127,64 @@ ShinHashtable_insert(ShinHashtable *const table, shin_u64 const hash,
   __m128i *restrict const groups = (__m128i *)table->metadata;
   while (true) {
     __m128i const group = groups[group_idx];
-    shin_u16 const match = ShinHashtable_match_tag_(group, tag);
+    shin_u16 const tag_match = ShinHashtable_match_tag_(group, tag);
 
-    while (match != 0) {
+    while (tag_match != 0) {
+      // check if position has eq key
+      // if(key_eqfn()) {
+      //   set_metadata_ to tag;
+      //   memcpy(slot, entry, entry_size);
+      //   return true;
+      // }
     }
+
+    shin_u16 const empty_match = ShinHashtable_match_empty_or_deleted_(group);
+
+    // if (empty_match != 0) {
+    //   ASSERT((capacity_left > 0));
+    //   capacity_left -= 1;
+    //   set_metadata_ to tag;
+    //   memcpy(slot, entry, entrysize);
+    //   return false;
+    // }
+
+    group_idx = (group_idx + probe) & group_idx_mask;
+    probe += 1;
+  }
+}
+
+static inline bool
+ShinHashtable_remove(ShinHashtable *const table, shin_u64 const hash,
+                     void const *const entry, void const *const ctx,
+                     shin_hashtable_key_eqfn const key_eqfn) {
+  shin_u32 const group_idx_mask = table->group_idx_mask;
+  shin_u32 probe = 1;
+
+  shin_u8 const tag = (shin_u8)(hash >> 57);
+  shin_u32 group_idx = group_idx_mask & ((shin_u32)(hash));
+
+  __m128i *restrict const groups = (__m128i *)table->metadata;
+  while (true) {
+    __m128i const group = groups[group_idx];
+    shin_u16 const tag_match = ShinHashtable_match_tag_(group, tag);
+
+    while (tag_match != 0) {
+      // check if position has eq key
+      // if(key_eqfn()) {
+      //    set metadata to empty
+      //   return true;
+      // }
+    }
+
+    // maybe different
+    shin_u16 const empty_match = ShinHashtable_match_empty_or_deleted_(group);
+
+    // if (empty_match != 0) {
+    //   ASSERT((capacity_left > 0));
+    //   capacity_left -= 1;
+    //   memcpy(slot, entry, entrysize);
+    //   return false;
+    // }
 
     group_idx = (group_idx + probe) & group_idx_mask;
     probe += 1;
