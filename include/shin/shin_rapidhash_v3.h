@@ -136,7 +136,8 @@ static inline shin_u64 shin_rapidhash_v3_long(shin_u8 const *key, shin_u32 len,
     }
   }
 
-  a = shin_rapidhash_v3_read64(&p[i - 16]) ^ i;
+  _Static_assert(sizeof(i) == sizeof(shin_u64));
+  a = shin_rapidhash_v3_read64(&p[i - 16]) ^ ((shin_u64)i);
   b = shin_rapidhash_v3_read64(&p[i - 8]);
 
   _Static_assert((sizeof(shin_u64) == sizeof(shin_isize)));

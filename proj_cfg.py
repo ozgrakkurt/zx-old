@@ -14,6 +14,8 @@ SHIN: Library = Library(
     test_targets={
         "err_trace_test": Executable(source_files=set(["shin_err_trace_test.c"])),
         "alloc_test": Executable(source_files=set(["shin_alloc_test.c"])),
+        "rapidhash_v3_test": Executable(source_files=set(["shin_rapidhash_v3_test.c"])),
+        "hashtable_test": Executable(source_files=set(["shin_hashtable_test.c"])),
     },
 )
 
