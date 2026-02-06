@@ -14,6 +14,16 @@ extern "C" {
 #define SHIN_INT_MAX(T) ((T){((~((T){0wb})) >> 1)})
 #define SHIN_INT_MIN(T) (~SHIN_INT_MAX(T))
 
+#define SHIN_NEXT_MULTIPLE_OF(A, B)                                            \
+  ({                                                                           \
+    auto const a = (A);                                                        \
+    auto const b = (B);                                                        \
+                                                                               \
+    SHIN_ASSERT_SAME_TYPE(a, b);                                               \
+                                                                               \
+    ((a + b - 1) / b) * b;                                                     \
+  })
+
 #define SHIN_MIN(A, B)                                                         \
   ({                                                                           \
     auto const a = (A);                                                        \
