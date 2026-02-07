@@ -36,6 +36,8 @@ class Config:
     no_libc: bool
     # Enable fuzz targets and disable tests/executables
     fuzzing: bool
+    # Have to be supplied path to hfuzz binary if fuzzing is true
+    hfuzz: Optional[str]
 
 
 def validate_library(libs: Dict[str, Library], lib_name: str, lib: Library) -> None:
@@ -274,6 +276,12 @@ def gen_ninja_build(
     nw.variable("cc", config.cc)
     nw.variable("ar", config.ar)
 
+    if config.fuzzing:
+        assert config.hfuzz is not None, (
+            "have to supply config.hfuzz if config.fuzz is set to true"
+        )
+        nw.variable("hfuzz", config.hfuzz)
+
     nw.newline()
 
     nw.comment("rules")
@@ -316,15 +324,29 @@ def gen_ninja_build(
     )
     nw.newline()
 
-    nw.comment(
-        "Run a test executable. On success, create a stamp file to not re-run unless needed."
-    )
-    nw.rule(
-        "runtest",
-        command="$in && touch $out",
-        description="RUNTEST $in",
-    )
-    nw.newline()
+    if not config.fuzzing:
+        nw.comment(
+            "Run a test executable. On success, create a stamp file to not re-run unless needed."
+        )
+        nw.rule(
+            "runtest",
+            command="$in && touch $out",
+            description="RUNTEST $in",
+        )
+        nw.newline()
+
+    if config.fuzzing:
+        nw.comment("Run a fuzz executable using honggfuzz in persistent mode.")
+        nw.rule(
+            "hfuzz",
+            command=(
+                "mkdir -p $fuzz_input_path $fuzz_output_path && $hfuzz -Q"
+                " -W $fuzz_output_path --input $fuzz_input_path -- $in"
+            ),
+            description="HONGGFUZZ $in",
+            pool="console",
+        )
+        nw.newline()
 
     test_stamps = []
 
@@ -353,11 +375,28 @@ def gen_ninja_build(
             if len(lib.fuzz_targets) > 0:
                 nw.comment(f"fuzz targets for library #{lib_name}")
             for fuzz_tgt_name, fuzz_tgt in lib.fuzz_targets.items():
-                exe_name = f"{lib_name}_fuzz_{fuzz_tgt_name}"
+                target_label = f"{lib_name}_fuzz_{fuzz_tgt_name}"
+
+                exe_name = f"{target_label}_exe"
                 exe = copy.deepcopy(fuzz_tgt)
                 # implicitly depend on parent library
                 exe.dependencies.add(lib_name)
                 process_exe(nw, project.libraries, exe_name, lib_name, exe)
+
+                exe_path = os.path.join("$build_path", exe_name)
+                fuzz_in_path = os.path.join("$build_path", "fuzz_input", exe_name)
+                fuzz_out_path = os.path.join("$build_path", "fuzz_output", exe_name)
+                nw.build(
+                    target_label,
+                    "hfuzz",
+                    exe_path,
+                    variables={
+                        "fuzz_input_path": fuzz_in_path,
+                        "fuzz_output_path": fuzz_out_path,
+                    },
+                )
+
+                nw.newline()
         else:
             # process test targets for this library
             if len(lib.test_targets) > 0:
@@ -376,16 +415,22 @@ def gen_ninja_build(
                 nw.build(stamp_path, "runtest", exe_path)
                 test_stamps.append(stamp_path)
 
+                nw.newline()
+
     # process executables
     if not config.fuzzing:
         for exe_name, exe in project.executables.items():
             nw.comment(f"executable #{exe_name}")
             process_exe(nw, project.libraries, exe_name, exe_name, exe)
 
+        nw.newline()
+
     # create phony to run all tests in parallel
     if not config.fuzzing:
         nw.comment("Run all tests in parallel")
         nw.build("test", "phony", test_stamps)
+
+        nw.newline()
 
     nw.close()
 
@@ -458,6 +503,7 @@ if __name__ == "__main__":
         thin_lto=args.thin_lto,
         no_libc=args.disable_libc,
         fuzzing=False,
+        hfuzz=None,
     )
 
     for profile_name, profile in proj_cfg.PROFILES.items():
@@ -476,6 +522,7 @@ if __name__ == "__main__":
             fuzz_cfg = copy.deepcopy(cfg)
             fuzz_cfg.cc = os.path.join(args.honggfuzz_path, "hfuzz_cc", "hfuzz-cc")
             fuzz_cfg.fuzzing = True
+            fuzz_cfg.hfuzz = os.path.join(args.honggfuzz_path, "honggfuzz")
 
             if not os.path.exists(fuzz_build_path):
                 os.makedirs(fuzz_build_path)

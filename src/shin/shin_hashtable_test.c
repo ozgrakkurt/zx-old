@@ -17,13 +17,13 @@ static inline bool keys_eql(void const *ctx, void const *a, void const *b) {
   return *ap == *bp;
 }
 
-static inline ShinStatus run_test(ShinAlloc *alloc, ShinErrStack *err_stack) {
+static inline ShinStatus smoke_test(ShinAlloc *alloc, ShinErrStack *err_stack) {
   ShinHashtable table;
   SHIN_ERR_TRY((ShinHashtable_init(alloc, CAP, alignof(key_type),
                                    sizeof(key_type), &table, err_stack)),
                err_stack);
 
-  for (shin_usize i = 0; i < CAP; i++) {
+  for (shin_usize i = 0; i < CAP / 2; i++) {
     key_type const key = i;
     shin_u64 const hash =
         shin_rapidhash_v3((shin_u8 const *)&key, sizeof(key_type), 0);
@@ -33,7 +33,7 @@ static inline ShinStatus run_test(ShinAlloc *alloc, ShinErrStack *err_stack) {
                     err_stack);
   }
 
-  for (shin_usize i = 0; i < CAP; i++) {
+  for (shin_usize i = 0; i < CAP / 2; i++) {
     key_type const key = i;
     shin_u64 const hash =
         shin_rapidhash_v3((shin_u8 const *)&key, sizeof(key_type), 0);
@@ -46,6 +46,56 @@ static inline ShinStatus run_test(ShinAlloc *alloc, ShinErrStack *err_stack) {
     SHIN_ERR_ASSERT(((*entry_key_ptr) == key), err_stack);
   }
 
+  for (shin_usize i = CAP / 2; i < CAP; i++) {
+    key_type const key = i;
+    shin_u64 const hash =
+        shin_rapidhash_v3((shin_u8 const *)&key, sizeof(key_type), 0);
+
+    void const *entry = ShinHashtable_get(&table, hash, &key, sizeof(key_type),
+                                          nullptr, keys_eql);
+    SHIN_ERR_ASSERT((entry == nullptr), err_stack);
+  }
+
+  for (shin_usize i = 0; i < CAP / 2; i++) {
+    key_type const key = i;
+    shin_u64 const hash =
+        shin_rapidhash_v3((shin_u8 const *)&key, sizeof(key_type), 0);
+
+    void const *entry = ShinHashtable_get_or_insert(
+        &table, hash, &key, sizeof(key_type), nullptr, keys_eql);
+    SHIN_ERR_ASSERT((ShinHashtable_capacity_left(&table) == (CAP - CAP / 2)),
+                    err_stack);
+    SHIN_ERR_ASSERT((entry != nullptr), err_stack);
+
+    key_type const *entry_key_ptr = (key_type const *)entry;
+    SHIN_ERR_ASSERT(((*entry_key_ptr) == key), err_stack);
+  }
+
+  for (shin_usize i = CAP / 2; i < CAP; i++) {
+    key_type const key = i;
+    shin_u64 const hash =
+        shin_rapidhash_v3((shin_u8 const *)&key, sizeof(key_type), 0);
+
+    void const *entry = ShinHashtable_get_or_insert(
+        &table, hash, &key, sizeof(key_type), nullptr, keys_eql);
+    SHIN_ERR_ASSERT((ShinHashtable_capacity_left(&table) == (CAP - i - 1)),
+                    err_stack);
+    SHIN_ERR_ASSERT((entry != nullptr), err_stack);
+
+    key_type const *entry_key_ptr = (key_type const *)entry;
+    SHIN_ERR_ASSERT(((*entry_key_ptr) == key), err_stack);
+  }
+
+  return ShinStatus_Ok;
+}
+
+static inline ShinStatus zero_size_test(ShinAlloc *alloc,
+                                        ShinErrStack *err_stack) {
+  ShinHashtable table;
+  SHIN_ERR_TRY((ShinHashtable_init(alloc, 0, alignof(key_type),
+                                   sizeof(key_type), &table, err_stack)),
+               err_stack);
+
   return ShinStatus_Ok;
 }
 
@@ -55,7 +105,10 @@ int main(void) {
   ShinErrStack err_stack = ShinErrStack_init();
   ShinAlloc alloc = ShinAlloc_init(page, MEMORY_SIZE);
 
-  SHIN_ERR_TRACE_ABORT((run_test(&alloc, &err_stack)), &err_stack);
+  SHIN_ERR_TRACE_ABORT((smoke_test(&alloc, &err_stack)), &err_stack);
+  SHIN_ERR_TRACE_ABORT((ShinAlloc_reset(&alloc, &err_stack)), &err_stack);
+
+  SHIN_ERR_TRACE_ABORT((zero_size_test(&alloc, &err_stack)), &err_stack);
 
   shin_page_alloc_free(page, MEMORY_SIZE);
   return 0;

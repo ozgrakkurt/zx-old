@@ -17,6 +17,9 @@ SHIN: Library = Library(
         "rapidhash_v3_test": Executable(source_files=set(["shin_rapidhash_v3_test.c"])),
         "hashtable_test": Executable(source_files=set(["shin_hashtable_test.c"])),
     },
+    fuzz_targets={
+        "hashtable_fuzz": Executable(source_files=set(["shin_hashtable_fuzz.c"])),
+    },
 )
 
 PROJECT: Project = Project(
