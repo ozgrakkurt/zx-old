@@ -44,9 +44,7 @@ static inline ShinStatus ShinHashtable_init(ShinAlloc *alloc, shin_u32 capacity,
                                             ShinErrStack *err_stack) {
   shin_u32 cap =
       stdc_bit_ceil(capacity * (shin_u32){100wbu} / (shin_u32){80wbu});
-  cap = SHIN_MAX(
-      (shin_u32){8wbu},
-      cap); // use minimum 8 capacity because this is what zig hashmap uses.
+  cap = SHIN_MAX((shin_u32){sizeof(__m128i)}, cap);
   SHIN_ASSERT((cap >= capacity));
   SHIN_ASSERT((cap > 0));
   // check it is a power of two
@@ -101,6 +99,12 @@ static inline shin_u16 ShinHashtable_remove_lowest_set_bit_(shin_u16 bitmask) {
   return bitmask & (bitmask - 1);
 }
 
+static inline shin_u32 ShinHashtable_maybe_mirror_index_(shin_u32 cap_mask,
+                                                         shin_u32 index) {
+  constexpr shin_u32 GROUP_SIZE = sizeof(__m128i);
+  return ((index - GROUP_SIZE) & cap_mask) + GROUP_SIZE;
+}
+
 // function for checking if keys of two entries are equal
 typedef bool shin_hashtable_key_eqfn(void const *ctx, void const *entry_a,
                                      void const *entry_b);
@@ -125,14 +129,15 @@ ShinHashtable_insert(ShinHashtable *const table, shin_u64 const hash,
       while (tag_match != 0) {
         shin_u32 const tag_pos = stdc_trailing_zeros(tag_match);
 
-        shin_u32 const maybe_padding_idx = meta_idx + tag_pos;
-        shin_u32 const idx = maybe_padding_idx & cap_mask;
+        shin_u32 const idx = (meta_idx + tag_pos) & cap_mask;
+        shin_u32 const maybe_mirror_idx =
+            ShinHashtable_maybe_mirror_index_(cap_mask, meta_idx + tag_pos);
 
         shin_u8 *const entries = (shin_u8 *)table->entries;
         void *const entry_ptr = &entries[entry_size * idx];
         if (key_eqfn(ctx, entry_ptr, entry)) {
           meta[idx] = tag;
-          meta[maybe_padding_idx] = tag;
+          meta[maybe_mirror_idx] = tag;
           memcpy(entry_ptr, entry, entry_size);
           return true;
         } else {
@@ -150,11 +155,12 @@ ShinHashtable_insert(ShinHashtable *const table, shin_u64 const hash,
 
         shin_u32 const tag_pos = stdc_trailing_zeros(empty_match);
 
-        shin_u32 const maybe_padding_idx = meta_idx + tag_pos;
-        shin_u32 const idx = maybe_padding_idx & cap_mask;
+        shin_u32 const idx = (meta_idx + tag_pos) & cap_mask;
+        shin_u32 const maybe_mirror_idx =
+            ShinHashtable_maybe_mirror_index_(cap_mask, meta_idx + tag_pos);
 
         meta[idx] = tag;
-        meta[maybe_padding_idx] = tag;
+        meta[maybe_mirror_idx] = tag;
 
         shin_u8 *entries = (shin_u8 *)table->entries;
         void *const entry_ptr = &entries[entry_size * idx];
