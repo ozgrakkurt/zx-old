@@ -137,7 +137,7 @@ ShinHashtable_find_idx_(ShinHashtable const *const table, shin_u64 const hash,
 
         shin_u8 const *const entries = (shin_u8 const *)table->entries;
 
-        shin_u32 const idx = meta_idx + tag_pos;
+        shin_u32 const idx = (meta_idx + tag_pos) & cap_mask;
 
         void const *const entry_ptr = &entries[entry_size * idx];
         if (key_eqfn(ctx, entry_ptr, entry)) {
@@ -157,7 +157,7 @@ ShinHashtable_find_idx_(ShinHashtable const *const table, shin_u64 const hash,
       if (empty_match != 0) {
         shin_u32 const tag_pos = stdc_trailing_zeros(empty_match);
         return (ShinHashtableFindIdx){
-            .idx = meta_idx + tag_pos,
+            .idx = (meta_idx + tag_pos) & cap_mask,
             .occupied = false,
         };
       }
@@ -190,20 +190,15 @@ ShinHashtable_insert(ShinHashtable *const table, shin_u64 const hash,
   shin_u8 *const entries = (shin_u8 *)table->entries;
   void *const entry_ptr = &entries[entry_size * idx];
 
-  if (find.occupied) {
-    meta[idx] = tag;
-    meta[maybe_mirror_idx] = tag;
-    memcpy(entry_ptr, entry, entry_size);
+  meta[idx] = tag;
+  meta[maybe_mirror_idx] = tag;
+  memcpy(entry_ptr, entry, entry_size);
 
+  if (find.occupied) {
     return true;
   } else {
     SHIN_ASSERT((table->capacity_left > 0));
     table->capacity_left -= 1;
-
-    meta[idx] = tag;
-    meta[maybe_mirror_idx] = tag;
-    memcpy(entry_ptr, entry, entry_size);
-
     return false;
   }
 }
