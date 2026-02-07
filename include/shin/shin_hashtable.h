@@ -171,6 +171,8 @@ ShinHashtable_find_idx_(ShinHashtable const *const table, shin_u64 const hash,
   }
 }
 
+// Returns true if a matching entry existed before and was overwritten.
+// Returns false otherwise.
 static inline bool
 ShinHashtable_insert(ShinHashtable *const table, shin_u64 const hash,
                      void const *const entry, shin_u32 const entry_size,
@@ -206,6 +208,12 @@ ShinHashtable_insert(ShinHashtable *const table, shin_u64 const hash,
   }
 }
 
+// Returns a pointer to the pre-existing entry if a matching entry is found.
+// Inserts the new entry and returns a pointer to that if a matching entry isn't
+// found.
+//
+// In any case the returned pointer will point into the table allocation and not
+// the provided entry pointer.
 static inline void const *
 ShinHashtable_get_or_insert(ShinHashtable *const table, shin_u64 const hash,
                             void const *const entry, shin_u32 const entry_size,
@@ -238,6 +246,8 @@ ShinHashtable_get_or_insert(ShinHashtable *const table, shin_u64 const hash,
   }
 }
 
+// returns a pointer to the entry if it is found in the table.
+// returns nullptr if a matching entry isn't found.
 static inline void const *
 ShinHashtable_get(ShinHashtable const *const table, shin_u64 const hash,
                   void const *const entry, shin_u32 const entry_size,
