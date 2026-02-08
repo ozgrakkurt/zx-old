@@ -111,7 +111,7 @@ static ShinStatus test_one(ShinAlloc *alloc, InputEntry const *inputs,
 
   for (shin_usize i = 0; i < capacity; i++) {
     SHIN_ERR_ASSERT(
-        ((CAPACITY - ShinHashtable_capacity_left(&hashtable)) == ref_data_len),
+        ((capacity - ShinHashtable_capacity_left(&hashtable)) == ref_data_len),
         err_stack);
 
     InputEntry const in = inputs[i];
@@ -133,10 +133,10 @@ static ShinStatus test_one(ShinAlloc *alloc, InputEntry const *inputs,
       void const *entry = ShinHashtable_get_or_insert(
           &hashtable, hash, &in.kv, sizeof(KeyVal), nullptr, keys_eql);
       shin_u32 const after_cap_left = ShinHashtable_capacity_left(&hashtable);
-      bool const did_exist = initial_cap_left == after_cap_left + 1;
+      bool const did_exist = initial_cap_left == after_cap_left;
 
       // has to either exist before ot operation did nothing.
-      SHIN_ERR_ASSERT((did_exist || (initial_cap_left == after_cap_left)),
+      SHIN_ERR_ASSERT((did_exist || (initial_cap_left == after_cap_left + 1)),
                       err_stack);
 
       // should always point to a valid entry inside hashtable.
