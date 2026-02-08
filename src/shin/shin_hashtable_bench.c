@@ -9,8 +9,8 @@
 #include <stdint.h>
 #include <stdio.h>
 
-constexpr shin_usize MEMORY_SIZE = 1 << 20;
-constexpr shin_usize CAP = 3169;
+constexpr shin_usize MEMORY_SIZE = 1 << 30;
+constexpr shin_usize CAP = 10000;
 
 typedef shin_u256 key_type;
 
@@ -27,26 +27,42 @@ static inline ShinStatus do_inserts(ShinAlloc *alloc, ShinErrStack *err_stack) {
                                    sizeof(key_type), &table, err_stack)),
                err_stack);
 
-  ShinTimer timer = ShinTimer_now();
+  shin_u64 *hashes = nullptr;
+  SHIN_ERR_TRY((ShinAlloc_alloc(alloc, sizeof(shin_u64) * CAP, (void **)&hashes,
+                                err_stack)),
+               err_stack);
+  SHIN_ASSERT((hashes != nullptr));
 
-  for (shin_usize i = 0; i < CAP / 2; i++) {
-    key_type const key = i;
-    shin_u64 const hash =
-        shin_rapidhash_v3((shin_u8 const *)&key, sizeof(key_type), 0);
+  for (shin_usize x = 0; x < 5; x++) {
+    ShinTimer timer = ShinTimer_now();
 
-    SHIN_ERR_ASSERT((ShinHashtable_insert(&table, hash, &key, sizeof(key_type),
-                                          nullptr, keys_eql) == false),
-                    err_stack);
+    for (shin_usize i = 0; i < CAP; i++) {
+      key_type const key = i;
+      shin_u64 const hash =
+          shin_rapidhash_v3((shin_u8 const *)&key, sizeof(key_type), 0);
+      hashes[i] = hash;
+    }
+
+    shin_f64 const hash_ns_per_elem =
+        (shin_f64)ShinTimer_lap(&timer) / (shin_f64)CAP;
+    printf("Hashing: %.3fns per element\n", (double){hash_ns_per_elem});
+
+    for (shin_usize i = 0; i < CAP; i++) {
+      key_type const key = i;
+      ShinHashtable_insert(&table, hashes[i], &key, sizeof(key_type), nullptr,
+                           keys_eql);
+    }
+
+    shin_f64 const insert_ns_per_elem =
+        (shin_f64)ShinTimer_lap(&timer) / (shin_f64)CAP;
+    printf("Insert: %.3fns per element\n", (double){insert_ns_per_elem});
   }
-
-  shin_u64 const elapsed_nanos = ShinTimer_lap(&timer);
-  printf("Elapsed %" PRIu64 "ns\n", (uint64_t){elapsed_nanos});
 
   return ShinStatus_Ok;
 }
 
 int main(void) {
-  void *const page = shin_page_alloc_4kb(MEMORY_SIZE);
+  void *const page = shin_page_alloc_thp_2mb(MEMORY_SIZE);
 
   ShinErrStack err_stack = ShinErrStack_init();
   ShinAlloc alloc = ShinAlloc_init(page, MEMORY_SIZE);
