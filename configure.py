@@ -5,8 +5,7 @@
 - Define the project structure in proj_cfg.py in the project root like it is done in this project.
 - Run ./configure.py with desired flags to generate ninja build directories per profile.
     Can use ./configure.py --help to see the available flags.
-- Run 'ninja -C build/<profile_name>' to run source build with desired profile.
-- Run 'ninja -C build/<profile_name> test' to run all tests with desired profile.
+- As an example, run 'ninja -C build/<profile_name> test' to run all tests with desired profile.
 """
 
 import argparse
@@ -191,11 +190,6 @@ def c_file_to_obj_file(filename: str) -> str:
     return filename.removesuffix(".c") + ".o"
 
 
-def c_file_to_asm_file(filename: str) -> str:
-    assert filename.endswith(".c")
-    return filename.removesuffix(".c") + ".asm"
-
-
 def collect_deps_impl(
     libraries: Dict[str, Library], deps: Set[str], collect: Set[str]
 ) -> None:
@@ -292,14 +286,6 @@ def gen_ninja_build(
     nw.comment("rules")
 
     nw.rule(
-        "default_placeholder",
-        command="echo 'Default Ninja target is disabled. Please specify an actual target like `test`.'",
-        description="DEFAULT_PLACEHOLDER",
-    )
-
-    nw.newline()
-
-    nw.rule(
         "cc",
         command="$cc -MMD -MT $out -MF $out.d $cflags -c $in -o $out",
         depfile="$out.d",
@@ -367,16 +353,9 @@ def gen_ninja_build(
             "Rule for generating assembly output. Is used to generate targets per benchmark."
         )
         nw.rule(
-            "cc_asm",
-            command="$cc -MMD -MT $out -MF $out.d $cflags -S -fverbose-asm $in -o $out",
-            depfile="$out.d",
-            deps="gcc",
-            description="CC_ASM $in",
-        )
-        nw.rule(
-            "cat_asm",
-            command="cat $in",
-            description="CAT_ASM $in",
+            "objdump",
+            command="objdump -d -S -M intel --visualize-jumps $in > $out",
+            description="OBJDUMP $in",
         )
 
         nw.newline()
@@ -395,6 +374,7 @@ def gen_ninja_build(
         nw.newline()
 
     test_stamps = []
+    asm_outputs = []
 
     # process libraries
     for lib_name, lib in project.libraries.items():
@@ -475,26 +455,22 @@ def gen_ninja_build(
                 exe.dependencies.add(lib_name)
                 process_exe(nw, project.libraries, exe_name, lib_name, exe)
 
-                # generate assembly output per source file
-                for source_file in bench_tgt.source_files:
-                    asm_out = os.path.join(
-                        "$build_path",
-                        "asm",
-                        target_label,
-                        c_file_to_asm_file(source_file),
-                    )
-                    # Use lib_name as the subfolder for source lookup
-                    src_file = os.path.join("$src_path", lib_name, source_file)
-                    nw.build(asm_out, "cc_asm", src_file)
-                    nw.build(
-                        f"bench_asm_{lib_name}_{bench_tgt_name}", "cat_asm", asm_out
-                    )
-
                 # Add bench execution step
+                nw.comment("bencmark execution")
                 exe_path = os.path.join("$build_path", exe_name)
-
                 nw.build(target_label, "runbench", exe_path)
 
+                nw.newline()
+
+                # generate assembly output
+                nw.comment("assembly generation")
+                asm_out = os.path.join(
+                    "$build_path",
+                    "asm",
+                    f"{target_label}.asm",
+                )
+                nw.build(asm_out, "objdump", exe_path)
+                asm_outputs.append(asm_out)
                 nw.newline()
 
     # process executables
@@ -512,8 +488,8 @@ def gen_ninja_build(
 
         nw.newline()
 
-    nw.build("default_placeholder", "default_placeholder")
-    nw.default("default_placeholder")
+        nw.comment("Generate all assembly output in parallel")
+        nw.build("asm", "phony", asm_outputs)
 
     nw.close()
 
