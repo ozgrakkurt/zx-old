@@ -191,6 +191,11 @@ def c_file_to_obj_file(filename: str) -> str:
     return filename.removesuffix(".c") + ".o"
 
 
+def c_file_to_asm_file(filename: str) -> str:
+    assert filename.endswith(".c")
+    return filename.removesuffix(".c") + ".asm"
+
+
 def collect_deps_impl(
     libraries: Dict[str, Library], deps: Set[str], collect: Set[str]
 ) -> None:
@@ -285,6 +290,15 @@ def gen_ninja_build(
     nw.newline()
 
     nw.comment("rules")
+
+    nw.rule(
+        "default_placeholder",
+        command="echo 'Default Ninja target is disabled. Please specify an actual target like `test`.'",
+        description="DEFAULT_PLACEHOLDER",
+    )
+
+    nw.newline()
+
     nw.rule(
         "cc",
         command="$cc -MMD -MT $out -MF $out.d $cflags -c $in -o $out",
@@ -346,6 +360,26 @@ def gen_ninja_build(
             # This is fine since we don't have a "run all benchmarks at once" kind of command like we have for tests.
             pool="console",
         )
+
+        nw.newline()
+
+        nw.comment(
+            "Rule for generating assembly output. Is used to generate targets per benchmark."
+        )
+        nw.rule(
+            "cc_asm",
+            command="$cc -MMD -MT $out -MF $out.d $cflags -S -fverbose-asm $in -o $out",
+            depfile="$out.d",
+            deps="gcc",
+            description="CC_ASM $in",
+        )
+        nw.rule(
+            "cat_asm",
+            command="cat $in",
+            description="CAT_ASM $in",
+        )
+
+        nw.newline()
 
     if config.fuzzing:
         nw.comment("Run a fuzz executable using honggfuzz in persistent mode.")
@@ -441,6 +475,21 @@ def gen_ninja_build(
                 exe.dependencies.add(lib_name)
                 process_exe(nw, project.libraries, exe_name, lib_name, exe)
 
+                # generate assembly output per source file
+                for source_file in bench_tgt.source_files:
+                    asm_out = os.path.join(
+                        "$build_path",
+                        "asm",
+                        target_label,
+                        c_file_to_asm_file(source_file),
+                    )
+                    # Use lib_name as the subfolder for source lookup
+                    src_file = os.path.join("$src_path", lib_name, source_file)
+                    nw.build(asm_out, "cc_asm", src_file)
+                    nw.build(
+                        f"bench_asm_{lib_name}_{bench_tgt_name}", "cat_asm", asm_out
+                    )
+
                 # Add bench execution step
                 exe_path = os.path.join("$build_path", exe_name)
 
@@ -462,6 +511,9 @@ def gen_ninja_build(
         nw.build("test", "phony", test_stamps)
 
         nw.newline()
+
+    nw.build("default_placeholder", "default_placeholder")
+    nw.default("default_placeholder")
 
     nw.close()
 
