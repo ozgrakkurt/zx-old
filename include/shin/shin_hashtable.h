@@ -120,7 +120,7 @@ ShinHashtable_find_idx_(ShinHashtable const *const table, shin_u64 const hash,
                         void const *const ctx,
                         shin_hashtable_key_eqfn key_eqfn) {
   shin_u32 const cap_mask = table->cap_mask;
-  shin_u32 stride = sizeof(__m128i);
+  shin_u32 stride = 0;
 
   shin_u8 const tag = (shin_u8)(hash >> 57);
   shin_u32 meta_idx = cap_mask & ((shin_u32)(hash));
@@ -163,11 +163,11 @@ ShinHashtable_find_idx_(ShinHashtable const *const table, shin_u64 const hash,
       }
     }
 
-    meta_idx = (meta_idx + stride) & cap_mask;
-    stride += sizeof(__m128i);
-
     // Should have found an empty slot by now
     SHIN_ASSERT((stride <= cap_mask));
+
+    stride += sizeof(__m128i);
+    meta_idx = (meta_idx + stride) & cap_mask;
   }
 }
 

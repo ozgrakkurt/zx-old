@@ -25,7 +25,7 @@ extern "C" {
     if (!v) {                                                                  \
       fprintf(stderr,                                                          \
               SHIN_ERR_COLOR_RED                                               \
-              "Failed assertion at:\n%s" SHIN_ERR_COLOR_RESET,                 \
+              "Failed assertion at:\n%s" SHIN_ERR_COLOR_RESET "\n",            \
               SHIN_ERR_INFO(expr));                                            \
       abort();                                                                 \
     }                                                                          \

@@ -16,7 +16,7 @@ extern "C" {
     if (status != ShinStatus_Ok) {                                             \
       fprintf(stderr,                                                          \
               SHIN_ERR_COLOR_RED                                               \
-              "Aborting because of error at:\n%s" SHIN_ERR_COLOR_RESET,        \
+              "Aborting because of error at:\n%s" SHIN_ERR_COLOR_RESET "\n",   \
               SHIN_ERR_INFO(SHIN_ERR_TRACE_ABORT(expr)));                      \
       shin_err_trace_abort(stack);                                             \
     }                                                                          \
