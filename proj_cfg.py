@@ -20,6 +20,9 @@ SHIN: Library = Library(
     fuzz_targets={
         "hashtable_fuzz": Executable(source_files=set(["shin_hashtable_fuzz.c"])),
     },
+    bench_targets={
+        "hashtable_bench": Executable(source_files=set(["shin_hashtable_bench.c"])),
+    },
 )
 
 PROJECT: Project = Project(

@@ -335,6 +335,18 @@ def gen_ninja_build(
         )
         nw.newline()
 
+        nw.comment(
+            "Run a benchmark executable. Don't create a stamp file so it is run every time."
+        )
+        nw.rule(
+            "runbench",
+            command="$in",
+            description="RUNBENCH $in",
+            # print to console as the command is running since benchmarks can be very long running.
+            # This is fine since we don't have a "run all benchmarks at once" kind of command like we have for tests.
+            pool="console",
+        )
+
     if config.fuzzing:
         nw.comment("Run a fuzz executable using honggfuzz in persistent mode.")
         nw.rule(
@@ -414,6 +426,25 @@ def gen_ninja_build(
 
                 nw.build(stamp_path, "runtest", exe_path)
                 test_stamps.append(stamp_path)
+
+                nw.newline()
+
+            # process the benchmark targets for this library
+            if len(lib.bench_targets) > 0:
+                nw.comment(f"benchmark targets for library #{lib_name}")
+            for bench_tgt_name, bench_tgt in lib.bench_targets.items():
+                target_label = f"{lib_name}_bench_{bench_tgt_name}"
+
+                exe_name = f"{target_label}_exe"
+                exe = copy.deepcopy(bench_tgt)
+                # implicitly depend on parent library
+                exe.dependencies.add(lib_name)
+                process_exe(nw, project.libraries, exe_name, lib_name, exe)
+
+                # Add bench execution step
+                exe_path = os.path.join("$build_path", exe_name)
+
+                nw.build(target_label, "runbench", exe_path)
 
                 nw.newline()
 

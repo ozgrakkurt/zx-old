@@ -17,6 +17,7 @@ class Library:
     dependencies: Set[str] = field(default_factory=set)
     test_targets: Dict[str, Executable] = field(default_factory=dict)
     fuzz_targets: Dict[str, Executable] = field(default_factory=dict)
+    bench_targets: Dict[str, Executable] = field(default_factory=dict)
 
 
 @dataclass
