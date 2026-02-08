@@ -29,6 +29,7 @@ ROOTPATH = os.path.dirname(os.path.abspath(__file__))
 class Config:
     cc: str
     ar: str
+    objdump: str
     march: str
     target: Optional[str]
     thin_lto: bool
@@ -274,6 +275,7 @@ def gen_ninja_build(
     nw.comment("tools")
     nw.variable("cc", config.cc)
     nw.variable("ar", config.ar)
+    nw.variable("objdump", config.objdump)
 
     if config.fuzzing:
         assert config.hfuzz is not None, (
@@ -301,6 +303,11 @@ def gen_ninja_build(
         "link",
         command="$cc $ldflags -o $out $in",
         description="LINK $out",
+    )
+    nw.rule(
+        "objdump",
+        command="$objdump -d -S -M intel --visualize-jumps $in > $out",
+        description="OBJDUMP $in",
     )
 
     nw.newline()
@@ -345,17 +352,6 @@ def gen_ninja_build(
             # print to console as the command is running since benchmarks can be very long running.
             # This is fine since we don't have a "run all benchmarks at once" kind of command like we have for tests.
             pool="console",
-        )
-
-        nw.newline()
-
-        nw.comment(
-            "Rule for generating assembly output. Is used to generate targets per benchmark."
-        )
-        nw.rule(
-            "objdump",
-            command="objdump -d -S -M intel --visualize-jumps $in > $out",
-            description="OBJDUMP $in",
         )
 
         nw.newline()
@@ -523,6 +519,12 @@ if __name__ == "__main__":
         metavar="EXE",
     )
     parser.add_argument(
+        "--objdump",
+        default="objdump",
+        help="objdump executable to use for creating assembly from executable by disassembling.",
+        metavar="EXE",
+    )
+    parser.add_argument(
         "--march",
         default="native",
         help="target CPU architecture to be passed into the compiler",
@@ -557,6 +559,7 @@ if __name__ == "__main__":
     cfg = Config(
         cc=args.cc,
         ar=args.ar,
+        objdump=args.objdump,
         march=args.march,
         target=args.target,
         thin_lto=args.thin_lto,
