@@ -1,6 +1,18 @@
 #ifndef SHIN_HASHTABLE_H
 #define SHIN_HASHTABLE_H
 
+#ifndef __x86_64__
+#error "only x86_64 targets are supported"
+#endif
+
+#ifndef __SSE2__
+#error "sse2 support is required"
+#endif
+
+#ifndef __LITTLE_ENDIAN__
+#error "Only little-endian targets are supported"
+#endif
+
 #include <immintrin.h>
 #include <shin/shin_alloc.h>
 #include <shin/shin_def.h>
@@ -13,18 +25,6 @@ extern "C" {
 #endif
 
 // This code is mostly ported from Rust crate hashbrown
-
-#ifndef __x86_64__
-#error "only x86_64 targets are supported"
-#endif
-
-#ifndef __SSE2__
-#error "sse2 support is required"
-#endif
-
-#ifndef __LITTLE_ENDIAN__
-#error "Only little-endian targets are supported"
-#endif
 
 typedef struct ShinHashtable {
   void *entries;
