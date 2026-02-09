@@ -34,6 +34,7 @@ class Config:
     target: Optional[str]
     thin_lto: bool
     no_libc: bool
+    static_link: bool
     # Enable fuzz targets and disable tests/executables
     fuzzing: bool
     # Have to be supplied path to hfuzz binary if fuzzing is true
@@ -163,11 +164,12 @@ def make_cflags(profile: Profile, config: Config) -> List[str]:
 
 def make_ldflags(build_path: str, config: Config) -> List[str]:
     ldflags = [
-        # Static linking.
-        "-static",
         # use llvm linker
         "-fuse-ld=lld",
     ]
+
+    if config.static_link:
+        ldflags.append("-static")
 
     if not profile.enable_debug_info:
         # tell linker to strip debug info
@@ -182,6 +184,9 @@ def make_ldflags(build_path: str, config: Config) -> List[str]:
 
         # Enable incremental ThinLTO by giving a cache path.
         ldflags.append(f"-Wl,--thinlto-cache-dir=$build_path/thinlto-cache")
+
+    if config.target is not None:
+        ldflags.append(f"--target={config.target}")
 
     return ldflags
 
@@ -531,7 +536,6 @@ if __name__ == "__main__":
     )
     parser.add_argument(
         "--target",
-        default=f"{platform.machine()}-unknown-linux-musl",
         help="LLVM target triple to use. We always use static linking so using glibc doesn't make sense in any case.",
     )
     parser.add_argument(
@@ -545,6 +549,12 @@ if __name__ == "__main__":
         action=argparse.BooleanOptionalAction,
         default=False,
         help="disable linking/using libc and compiler built-ins",
+    )
+    parser.add_argument(
+        "--static-link",
+        action=argparse.BooleanOptionalAction,
+        default=False,
+        help="Toggle static linking",
     )
 
     args = parser.parse_args()
@@ -564,6 +574,7 @@ if __name__ == "__main__":
         target=args.target,
         thin_lto=args.thin_lto,
         no_libc=args.disable_libc,
+        static_link=args.static_link,
         fuzzing=False,
         hfuzz=None,
     )
