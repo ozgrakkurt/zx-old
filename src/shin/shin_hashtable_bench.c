@@ -1,4 +1,3 @@
-#include <inttypes.h>
 #include <shin/shin_alloc.h>
 #include <shin/shin_err.h>
 #include <shin/shin_err_trace.h>
@@ -10,7 +9,7 @@
 #include <stdio.h>
 
 constexpr shin_usize MEMORY_SIZE = 1 << 30;
-constexpr shin_usize CAP = 10000;
+constexpr shin_usize CAP = 40000;
 
 typedef shin_u256 key_type;
 
@@ -56,12 +55,25 @@ static inline ShinStatus do_inserts(ShinAlloc *alloc, ShinErrStack *err_stack) {
     shin_f64 const insert_ns_per_elem =
         (shin_f64)ShinTimer_lap(&timer) / (shin_f64)CAP;
     printf("Insert: %.3fns per element\n", (double){insert_ns_per_elem});
+
+    for (shin_usize i = 0; i < CAP; i++) {
+      key_type const key = i;
+      SHIN_ASSERT(
+          (nullptr != ShinHashtable_get(&table, hashes[i], &key,
+                                        sizeof(key_type), nullptr, keys_eql)));
+    }
+
+    shin_f64 const get_ns_per_elem =
+        (shin_f64)ShinTimer_lap(&timer) / (shin_f64)CAP;
+    printf("Get: %.3fns per element\n", (double){get_ns_per_elem});
   }
 
   return ShinStatus_Ok;
 }
 
 int main(void) {
+  shin_page_alloc_memlock_all();
+
   void *const page = shin_page_alloc_thp_2mb(MEMORY_SIZE);
 
   ShinErrStack err_stack = ShinErrStack_init();
