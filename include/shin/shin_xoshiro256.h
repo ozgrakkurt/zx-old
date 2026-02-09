@@ -2,6 +2,7 @@
 #define SHIN_XOSHIRO256_H
 
 #include <shin/shin_def.h>
+#include <shin/shin_err.h>
 #include <string.h>
 
 #ifdef __cplusplus
@@ -11,31 +12,29 @@ extern "C" {
 // this file implements Xoshiro256++ algorithm for random number generation. It
 // is taken from rust/zig stdlib implementations.
 
-static inline shin_u64 shin_xoshiro256_splitmix64(shin_u64 *state) {
-  *state += 0x9e3779b97f4a7c15wbu;
-
-  shin_u64 z = *state;
-  z = (z ^ (z >> 30)) * 0xbf58476d1ce4e5b9wbu;
-  z = (z ^ (z >> 27)) * 0x94d049bb133111ebwbu;
-  return z ^ (z >> 31);
-}
-
 typedef struct ShinXoshiro256 {
   shin_u64 s[4];
 } ShinXoshiro256;
 
 static inline ShinXoshiro256 ShinXoshiro256_init(shin_u64 seed) {
-  shin_u64 splitmixstate = seed;
+  constexpr shin_u64 PHI = 0x9e3779b97f4a7c15wbu;
 
-  return (ShinXoshiro256){
-      .s =
-          {
-              shin_xoshiro256_splitmix64(&splitmixstate),
-              shin_xoshiro256_splitmix64(&splitmixstate),
-              shin_xoshiro256_splitmix64(&splitmixstate),
-              shin_xoshiro256_splitmix64(&splitmixstate),
-          },
-  };
+  shin_u64 state = seed;
+  ShinXoshiro256 rand;
+
+  for (shin_usize i = 0; i < 4; i++) {
+    state += PHI;
+    shin_u64 z = state;
+    z = (z ^ (z >> 30)) * 0xbf58476d1ce4e5bawbu,
+    z = (z ^ (z >> 27)) * 0x94d049bb133111ebwbu;
+    z = z ^ (z >> 31);
+    rand.s[i] = z;
+  }
+
+  SHIN_DBG_ASSERT(((rand->s[0] != 0) || (rand->s[1] != 0) ||
+                   (rand->s[2] != 0) || (rand->s[3] != 0)));
+
+  return rand;
 }
 
 static inline shin_u64 ShinXoshiro256_next(ShinXoshiro256 *restrict rand) {
