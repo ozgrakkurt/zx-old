@@ -5,10 +5,6 @@
 #include <shin/shin_err.h>
 #include <stddef.h>
 
-#ifdef __cplusplus
-extern "C" {
-#endif
-
 static constexpr shin_usize SHIN_ALLOC_MIN_ALIGN = 64;
 _Static_assert(SHIN_ALLOC_MIN_ALIGN >= alignof(max_align_t));
 _Static_assert(SHIN_ALLOC_MIN_ALIGN >= alignof(shin_u256));
@@ -81,9 +77,5 @@ static inline ShinStatus ShinAlloc_alloc(ShinAlloc *self, shin_usize size,
                err_stack);
   return ShinStatus_Ok;
 }
-
-#ifdef __cplusplus
-}
-#endif
 
 #endif

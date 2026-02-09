@@ -4,10 +4,6 @@
 #include <shin/shin_err.h>
 #include <time.h>
 
-#ifdef __cplusplus
-extern "C" {
-#endif
-
 typedef struct ShinTimer {
   shin_u64 nanos;
 } ShinTimer;
@@ -29,9 +25,5 @@ static inline shin_u64 ShinTimer_lap(ShinTimer *timer) {
   timer->nanos = now.nanos;
   return now.nanos - start;
 }
-
-#ifdef __cplusplus
-}
-#endif
 
 #endif

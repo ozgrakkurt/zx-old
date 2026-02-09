@@ -5,10 +5,6 @@
 #include <shin/shin_def.h>
 #include <shin/shin_err.h>
 
-#ifdef __cplusplus
-extern "C" {
-#endif
-
 #define SHIN_ERR_TRACE_ABORT(expr, stack_var)                                  \
   do {                                                                         \
     ShinStatus const status = (expr);                                          \
@@ -29,9 +25,5 @@ extern "C" {
 ShinStatus shin_err_trace_collect(ShinAlloc *alloc, ShinErrStack const *stack,
                                   char const **trace, shin_usize *trace_len,
                                   ShinErrStack *err_stack);
-
-#ifdef __cplusplus
-}
-#endif
 
 #endif

@@ -25,8 +25,13 @@ SHIN: Library = Library(
     },
 )
 
+STREAMVBYTE: Library = Library(
+    source_files=set(["streamvbyte_0124_encode.c", "streamvbyte_0124_decode.c"]),
+)
+
 PROJECT: Project = Project(
     libraries={
         "shin": SHIN,
+        "streamvbyte": STREAMVBYTE,
     },
 )

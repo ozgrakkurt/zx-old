@@ -5,10 +5,6 @@
 #include <shin/shin_err.h>
 #include <string.h>
 
-#ifdef __cplusplus
-extern "C" {
-#endif
-
 // this file implements Xoshiro256++ algorithm for random number generation. It
 // is taken from rust/zig stdlib implementations.
 
@@ -68,9 +64,5 @@ static inline void ShinXoshiro256_fill(ShinXoshiro256 *restrict rand,
     memcpy(&out[blocks_end], &next, len - blocks_end);
   }
 }
-
-#ifdef __cplusplus
-}
-#endif
 
 #endif

@@ -6,10 +6,6 @@
 #include <stdlib.h>
 #include <string.h>
 
-#ifdef __cplusplus
-extern "C" {
-#endif
-
 #define SHIN_ERR_COLOR_RED "\x1B[31m"
 #define SHIN_ERR_COLOR_RESET "\x1B[0m"
 
@@ -97,9 +93,5 @@ static inline ShinErrStack ShinErrStack_init() {
       .depth = 0wbu,
   };
 }
-
-#ifdef __cplusplus
-}
-#endif
 
 #endif

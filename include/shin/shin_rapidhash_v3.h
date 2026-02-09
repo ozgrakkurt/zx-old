@@ -5,10 +5,6 @@
 #include <shin/shin_err.h>
 #include <string.h>
 
-#ifdef __cplusplus
-extern "C" {
-#endif
-
 // THIS CODE IS PORTED FROM
 // https://github.com/Nicoshev/rapidhash/blob/rapidhash_v3/rapidhash.h
 // Specifically the "Nano" version, which is optimized for code size and small
@@ -152,9 +148,5 @@ static inline shin_u64 shin_rapidhash_v3(shin_u8 const *key, shin_u32 len,
     return shin_rapidhash_v3_long(key, len, seed);
   }
 }
-
-#ifdef __cplusplus
-}
-#endif
 
 #endif

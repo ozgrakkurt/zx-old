@@ -1,10 +1,6 @@
 #ifndef SHIN_DEF_H
 #define SHIN_DEF_H
 
-#ifdef __cplusplus
-extern "C" {
-#endif
-
 #define SHIN_ASSERT_SAME_TYPE(a, b)                                            \
   _Static_assert(_Generic((a), typeof_unqual(b): 1, default: 0),               \
                  "Types do not "                                               \
@@ -81,9 +77,5 @@ static inline shin_u64 shin_fastmod64(shin_u64 num, shin_u64 mod) {
   shin_u128 const mul = (shin_u128){num} * (shin_u128){mod};
   return (shin_u64)(mul >> 64);
 }
-
-#ifdef __cplusplus
-}
-#endif
 
 #endif

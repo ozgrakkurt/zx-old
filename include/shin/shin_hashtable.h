@@ -5,8 +5,8 @@
 #error "only x86_64 targets are supported"
 #endif
 
-#ifndef __SSE2__
-#error "sse2 support is required"
+#ifndef __SSE3__
+#error "sse3 support is required"
 #endif
 
 #ifndef __LITTLE_ENDIAN__
@@ -19,10 +19,6 @@
 #include <shin/shin_err.h>
 #include <stdbit.h>
 #include <string.h>
-
-#ifdef __cplusplus
-extern "C" {
-#endif
 
 // This code is mostly ported from Rust crate hashbrown
 
@@ -260,9 +256,5 @@ ShinHashtable_get(ShinHashtable const *const table, shin_u64 const hash,
     return nullptr;
   }
 }
-
-#ifdef __cplusplus
-}
-#endif
 
 #endif
