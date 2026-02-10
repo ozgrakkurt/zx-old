@@ -51,6 +51,10 @@ def validate_library(libs: Dict[str, Library], lib_name: str, lib: Library) -> N
         )
 
     for fuzz_tgt_name, fuzz_tgt in lib.fuzz_targets.items():
+        assert fuzz_tgt_name.endswith("_fuzz"), (
+            f"fuzz target names have to end in _fuzz, a fuzz target violates this convention: {fuzz_tgt_name}"
+        )
+
         assert lib_name not in fuzz_tgt.dependencies, (
             f"fuzz target {fuzz_tgt_name} of library {lib_name} contains the library as a dependency. This is done by default and is not supposed to be defined in config."
         )
@@ -60,12 +64,29 @@ def validate_library(libs: Dict[str, Library], lib_name: str, lib: Library) -> N
         )
 
     for test_tgt_name, test_tgt in lib.test_targets.items():
+        assert test_tgt_name.endswith("_test"), (
+            f"test target names have to end in _test, a test target violates this convention: {test_tgt_name}"
+        )
+
         assert lib_name not in test_tgt.dependencies, (
             f"test target {test_tgt_name} of library {lib_name} contains the library as a dependency. This is done by default and is not supposed to be defined in config."
         )
 
         assert "shin" not in test_tgt.dependencies, (
             "test target can't explicitly depend on shin. It is implicitly included."
+        )
+
+    for bench_tgt_name, bench_tgt in lib.bench_targets.items():
+        assert bench_tgt_name.endswith("_bench"), (
+            f"bench target names have to end in _bench, a bench target violates this convention: {bench_tgt_name}"
+        )
+
+        assert lib_name not in bench_tgt.dependencies, (
+            f"bench target {bench_tgt_name} of library {lib_name} contains the library as a dependency. This is done by default and is not supposed to be defined in config."
+        )
+
+        assert "shin" not in bench_tgt.dependencies, (
+            "bench target can't explicitly depend on shin. It is implicitly included."
         )
 
     assert "shin" not in lib.dependencies, (
@@ -311,7 +332,7 @@ def gen_ninja_build(
     )
     nw.rule(
         "objdump",
-        command="$objdump -d -S -M intel --visualize-jumps $in > $out",
+        command="$objdump -d -S -M intel $in > $out",
         description="OBJDUMP $in",
     )
 
@@ -375,7 +396,12 @@ def gen_ninja_build(
         nw.newline()
 
     test_stamps = []
+    lib_files = []
+    test_exes = []
+    bench_exes = []
+    fuzz_exes = []
     asm_outputs = []
+    executables = []
 
     # process libraries
     for lib_name, lib in project.libraries.items():
@@ -394,7 +420,7 @@ def gen_ninja_build(
         lib_file_path = os.path.join("$build_path", f"lib{lib_name}.a")
 
         nw.build(lib_file_path, "ar", obj_files)
-
+        lib_files.append(lib_file_path)
         nw.newline()
 
         if config.fuzzing:
@@ -411,6 +437,8 @@ def gen_ninja_build(
                 process_exe(nw, project.libraries, exe_name, lib_name, exe)
 
                 exe_path = os.path.join("$build_path", exe_name)
+                fuzz_exes.append(exe_path)
+
                 fuzz_in_path = os.path.join("$build_path", "fuzz_input", exe_name)
                 fuzz_out_path = os.path.join("$build_path", "fuzz_output", exe_name)
                 nw.build(
@@ -437,6 +465,8 @@ def gen_ninja_build(
 
                 # Add test execution step
                 exe_path = os.path.join("$build_path", exe_name)
+                test_exes.append(exe_path)
+
                 stamp_path = os.path.join("$build_path", "stamps", f"{exe_name}.stamp")
 
                 nw.build(stamp_path, "runtest", exe_path)
@@ -459,6 +489,7 @@ def gen_ninja_build(
                 # Add bench execution step
                 nw.comment("bencmark execution")
                 exe_path = os.path.join("$build_path", exe_name)
+                bench_exes.append(exe_path)
                 nw.build(target_label, "runbench", exe_path)
 
                 nw.newline()
@@ -474,23 +505,53 @@ def gen_ninja_build(
                 asm_outputs.append(asm_out)
                 nw.newline()
 
-    # process executables
     if not config.fuzzing:
+        # process executables
         for exe_name, exe in project.executables.items():
             nw.comment(f"executable #{exe_name}")
             process_exe(nw, project.libraries, exe_name, exe_name, exe)
+            exe_path = os.path.join("$build_path", exe_name)
+            executables.append(exe_path)
 
         nw.newline()
 
-    # create phony to run all tests in parallel
-    if not config.fuzzing:
-        nw.comment("Run all tests in parallel")
+        nw.comment("Build all libraries")
+        nw.build("build_libs", "phony", lib_files)
+
+        nw.comment("Build all tests")
+        nw.build("build_tests", "phony", test_exes)
+
+        nw.comment("Build all benchmarks")
+        nw.build("build_benches", "phony", bench_exes)
+
+        nw.comment("Build all benchmark assembly output")
+        nw.build("build_bench_asm", "phony", asm_outputs)
+
+        nw.comment("Build all exes")
+        nw.build("build_exes", "phony", executables)
+
+        nw.comment("Run all tests")
         nw.build("test", "phony", test_stamps)
 
         nw.newline()
 
-        nw.comment("Generate all assembly output in parallel")
-        nw.build("asm", "phony", asm_outputs)
+        nw.default(
+            [
+                "build_libs",
+                "build_tests",
+                "build_benches",
+                "build_exes",
+            ]
+        )
+    else:
+        nw.comment("Build all fuzzers")
+        nw.build("build_fuzzers", "phony", fuzz_exes)
+
+        nw.newline()
+
+        nw.default(["build_fuzzers"])
+
+    nw.newline()
 
     nw.close()
 
@@ -525,7 +586,7 @@ if __name__ == "__main__":
     )
     parser.add_argument(
         "--objdump",
-        default="objdump",
+        default="llvm-objdump",
         help="objdump executable to use for creating assembly from executable by disassembling.",
         metavar="EXE",
     )
