@@ -1,29 +1,31 @@
 #ifndef SHIN_TIME_H
 #define SHIN_TIME_H
 
-#include <shin/shin_err.h>
-#include <time.h>
+#ifndef __x86_64__
+#error "only x86_64 targets are supported"
+#endif
 
 typedef struct ShinTimer {
-  shin_u64 nanos;
+  shin_u64 ticker;
 } ShinTimer;
 
 static inline ShinTimer ShinTimer_now() {
-  struct timespec now;
-  SHIN_ASSERT((0 == clock_gettime(CLOCK_MONOTONIC, &now)));
+  unsigned int aux;
+  shin_u64 const ticker = __builtin_ia32_rdtscp(&aux);
+  (void)aux;
 
-  constexpr shin_u64 NANOS_PER_SEC = 1000000000;
   return (ShinTimer){
-      .nanos = ((shin_u64)now.tv_sec) * NANOS_PER_SEC + ((shin_u64)now.tv_nsec),
+      .ticker = ticker,
   };
 }
 
 // returns elapsed time in nanoseconds
 static inline shin_u64 ShinTimer_lap(ShinTimer *timer) {
-  shin_u64 const start = timer->nanos;
   ShinTimer const now = ShinTimer_now();
-  timer->nanos = now.nanos;
-  return now.nanos - start;
+  shin_u64 const diff = now.ticker - timer->ticker;
+  *timer = now;
+
+  return diff;
 }
 
 #endif

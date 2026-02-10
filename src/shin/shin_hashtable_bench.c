@@ -42,9 +42,9 @@ static inline ShinStatus do_inserts(ShinAlloc *alloc, ShinErrStack *err_stack) {
       hashes[i] = hash;
     }
 
-    shin_f64 const hash_ns_per_elem =
+    shin_f64 const hash_ticks_per_elem =
         (shin_f64)ShinTimer_lap(&timer) / (shin_f64)CAP;
-    printf("Hashing: %.3fns per element\n", (double){hash_ns_per_elem});
+    printf("Hashing: %.3f ticks per element\n", (double){hash_ticks_per_elem});
 
     for (shin_usize i = 0; i < CAP; i++) {
       key_type const key = i;
@@ -52,9 +52,9 @@ static inline ShinStatus do_inserts(ShinAlloc *alloc, ShinErrStack *err_stack) {
                            keys_eql);
     }
 
-    shin_f64 const insert_ns_per_elem =
+    shin_f64 const insert_ticks_per_elem =
         (shin_f64)ShinTimer_lap(&timer) / (shin_f64)CAP;
-    printf("Insert: %.3fns per element\n", (double){insert_ns_per_elem});
+    printf("Insert: %.3f ticks per element\n", (double){insert_ticks_per_elem});
 
     for (shin_usize i = 0; i < CAP; i++) {
       key_type const key = i;
@@ -63,9 +63,9 @@ static inline ShinStatus do_inserts(ShinAlloc *alloc, ShinErrStack *err_stack) {
                                         sizeof(key_type), nullptr, keys_eql)));
     }
 
-    shin_f64 const get_ns_per_elem =
+    shin_f64 const get_ticks_per_elem =
         (shin_f64)ShinTimer_lap(&timer) / (shin_f64)CAP;
-    printf("Get: %.3fns per element\n", (double){get_ns_per_elem});
+    printf("Get: %.3f ticks per element\n", (double){get_ticks_per_elem});
   }
 
   return ShinStatus_Ok;
