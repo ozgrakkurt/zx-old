@@ -390,11 +390,12 @@ def gen_ninja_build(
             "Run a benchmark executable. Don't create a stamp file so it is run every time."
         )
         nw.rule(
-            "runbench",
+            "runexe",
             command="$in",
-            description="RUNBENCH $in",
-            # print to console as the command is running since benchmarks can be very long running.
-            # This is fine since we don't have a "run all benchmarks at once" kind of command like we have for tests.
+            description="RUNEXE $in",
+            # print to console as the command is running since some commands can be very long running.
+            # This is fine since we don't have a "run all executables/benchmarks at once"
+            #   kind of command like we have for tests.
             pool="console",
         )
 
@@ -507,7 +508,7 @@ def gen_ninja_build(
                 nw.comment("bencmark execution")
                 exe_path = os.path.join("$build_path", bench_tgt_name)
                 bench_exes.append(exe_path)
-                nw.build(bench_tgt_name, "runbench", exe_path)
+                nw.build(bench_tgt_name, "runexe", exe_path)
 
                 nw.newline()
 
@@ -529,6 +530,9 @@ def gen_ninja_build(
             process_exe(nw, project.libraries, exe_name, exe)
             exe_path = os.path.join("$build_path", exe_name)
             executables.append(exe_path)
+            nw.comment("execution")
+            nw.build(exe_name, "runexe", exe_path)
+            nw.newline()
 
         nw.newline()
 
