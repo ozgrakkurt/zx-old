@@ -41,6 +41,24 @@ class Config:
     hfuzz: Optional[str]
 
 
+def validate_lib_sub_pattern(lib_name: str, sub_name: str, postfix: str):
+    assert sub_name.endswith(postfix), f"expected {sub_name} to have postfix {postfix}"
+
+    prefix = lib_name + "_"
+
+    assert sub_name.startswith(prefix), f"expected {sub_name} to have prefix {prefix}"
+
+
+def validate_lib_sub_implicit_deps(lib_name: str, sub_name: str, deps: Set[str]):
+    assert lib_name not in deps, (
+        f"sub target {sub_name} of library {lib_name} contains the library as a dependency. This is done by default and is not supposed to be defined in config."
+    )
+
+    assert "shin" not in deps, (
+        f"sub target {sub_name} of library {lib_name} can't explicitly depend on shin. It is implicitly included."
+    )
+
+
 def validate_library(libs: Dict[str, Library], lib_name: str, lib: Library) -> None:
     assert len(lib.source_files) > 0, "a library has to have at least one source file"
 
@@ -49,49 +67,21 @@ def validate_library(libs: Dict[str, Library], lib_name: str, lib: Library) -> N
         assert dep_name in libs, (
             f"dep {dep_name} of library {lib_name} doesn't exist in library list"
         )
-
-    for fuzz_tgt_name, fuzz_tgt in lib.fuzz_targets.items():
-        assert fuzz_tgt_name.endswith("_fuzz"), (
-            f"fuzz target names have to end in _fuzz, a fuzz target violates this convention: {fuzz_tgt_name}"
+        assert dep_name != "shin", (
+            f"library {lib_name} explicitly depends on shin, this in not allowed as it is implicit."
         )
 
-        assert lib_name not in fuzz_tgt.dependencies, (
-            f"fuzz target {fuzz_tgt_name} of library {lib_name} contains the library as a dependency. This is done by default and is not supposed to be defined in config."
-        )
+    for fuzz_tgt_name, deps in lib.fuzz_targets.items():
+        validate_lib_sub_pattern(lib_name, fuzz_tgt_name, "_fuzz")
+        validate_lib_sub_implicit_deps(lib_name, fuzz_tgt_name, deps)
 
-        assert "shin" not in fuzz_tgt.dependencies, (
-            "fuzz target can't explicitly depend on shin. It is implicitly included."
-        )
+    for test_tgt_name, deps in lib.test_targets.items():
+        validate_lib_sub_pattern(lib_name, test_tgt_name, "_test")
+        validate_lib_sub_implicit_deps(lib_name, test_tgt_name, deps)
 
-    for test_tgt_name, test_tgt in lib.test_targets.items():
-        assert test_tgt_name.endswith("_test"), (
-            f"test target names have to end in _test, a test target violates this convention: {test_tgt_name}"
-        )
-
-        assert lib_name not in test_tgt.dependencies, (
-            f"test target {test_tgt_name} of library {lib_name} contains the library as a dependency. This is done by default and is not supposed to be defined in config."
-        )
-
-        assert "shin" not in test_tgt.dependencies, (
-            "test target can't explicitly depend on shin. It is implicitly included."
-        )
-
-    for bench_tgt_name, bench_tgt in lib.bench_targets.items():
-        assert bench_tgt_name.endswith("_bench"), (
-            f"bench target names have to end in _bench, a bench target violates this convention: {bench_tgt_name}"
-        )
-
-        assert lib_name not in bench_tgt.dependencies, (
-            f"bench target {bench_tgt_name} of library {lib_name} contains the library as a dependency. This is done by default and is not supposed to be defined in config."
-        )
-
-        assert "shin" not in bench_tgt.dependencies, (
-            "bench target can't explicitly depend on shin. It is implicitly included."
-        )
-
-    assert "shin" not in lib.dependencies, (
-        "library can't explicitly depend on shin. It is implicitly included."
-    )
+    for bench_tgt_name, deps in lib.bench_targets.items():
+        validate_lib_sub_pattern(lib_name, bench_tgt_name, "_bench")
+        validate_lib_sub_implicit_deps(lib_name, bench_tgt_name, deps)
 
 
 def validate_exe(libs: Dict[str, Library], exe_name: str, exe: Executable) -> None:
@@ -103,10 +93,9 @@ def validate_exe(libs: Dict[str, Library], exe_name: str, exe: Executable) -> No
         assert dep_name in libs, (
             f"dep {dep_name} of exe {exe_name} doesn't exist in library list"
         )
-
-    assert "shin" not in exe.dependencies, (
-        "executable can't explicitly depend on shin. It is implicitly included."
-    )
+        assert dep_name != "shin", (
+            f"exe {exe_name} explicitly depends on shin, this in not allowed as it is implicit."
+        )
 
 
 def validate_project(project: Project) -> None:
@@ -225,21 +214,50 @@ def collect_deps_impl(
         collect.add(dep_name)
 
 
-def collect_deps(libraries: Dict[str, Library], exe: Executable) -> Set[str]:
+def collect_deps(libraries: Dict[str, Library], deps: Set[str]) -> Set[str]:
     # always implicitly depend on shin
     collect: Set[str] = set(["shin"])
 
-    collect_deps_impl(libraries, exe.dependencies, collect)
+    collect_deps_impl(libraries, deps, collect)
 
     return collect
+
+
+def process_sub_target(
+    nw: ninja_syntax.Writer,
+    libraries: Dict[str, Library],
+    lib_name: str,
+    tgt_name: str,
+    deps: Set[str],
+) -> None:
+    link_inputs = []
+
+    obj = os.path.join("$build_path", "obj", tgt_name, tgt_name + ".o")
+    src = os.path.join("$src_path", lib_name, tgt_name + ".c")
+    nw.build(obj, "cc", src)
+    link_inputs.append(obj)
+
+    exe_path = os.path.join("$build_path", tgt_name)
+
+    deps = collect_deps(libraries, deps)
+
+    for lib_name in deps:
+        lib_file_path = os.path.join("$build_path", f"lib{lib_name}.a")
+        link_inputs.append(lib_file_path)
+
+    nw.build(
+        exe_path,
+        "link",
+        link_inputs,
+    )
+
+    nw.newline()
 
 
 def process_exe(
     nw: ninja_syntax.Writer,
     libraries: Dict[str, Library],
     exe_name: str,
-    # this is separate from exe_name because we want to handle test/fuzz targets nicely
-    exe_src_name: str,
     exe: Executable,
 ) -> None:
     link_inputs = []
@@ -248,13 +266,13 @@ def process_exe(
         obj = os.path.join(
             "$build_path", "obj", exe_name, c_file_to_obj_file(source_file)
         )
-        src = os.path.join("$src_path", exe_src_name, source_file)
+        src = os.path.join("$src_path", exe_name, source_file)
         nw.build(obj, "cc", src)
         link_inputs.append(obj)
 
     exe_path = os.path.join("$build_path", exe_name)
 
-    deps = collect_deps(libraries, exe)
+    deps = collect_deps(libraries, exe.dependencies)
 
     for lib_name in deps:
         lib_file_path = os.path.join("$build_path", f"lib{lib_name}.a")
@@ -427,22 +445,21 @@ def gen_ninja_build(
             # process fuzz targets for this library
             if len(lib.fuzz_targets) > 0:
                 nw.comment(f"fuzz targets for library #{lib_name}")
-            for fuzz_tgt_name, fuzz_tgt in lib.fuzz_targets.items():
-                target_label = f"{lib_name}_fuzz_{fuzz_tgt_name}"
-
-                exe_name = f"{target_label}_exe"
-                exe = copy.deepcopy(fuzz_tgt)
+            for fuzz_tgt_name, fuzz_tgt_deps in lib.fuzz_targets.items():
+                deps = copy.deepcopy(fuzz_tgt_deps)
                 # implicitly depend on parent library
-                exe.dependencies.add(lib_name)
-                process_exe(nw, project.libraries, exe_name, lib_name, exe)
+                deps.add(lib_name)
+                process_sub_target(nw, project.libraries, lib_name, fuzz_tgt_name, deps)
 
-                exe_path = os.path.join("$build_path", exe_name)
+                exe_path = os.path.join("$build_path", fuzz_tgt_name)
                 fuzz_exes.append(exe_path)
 
-                fuzz_in_path = os.path.join("$build_path", "fuzz_input", exe_name)
-                fuzz_out_path = os.path.join("$build_path", "fuzz_output", exe_name)
+                fuzz_in_path = os.path.join("$build_path", "fuzz_input", fuzz_tgt_name)
+                fuzz_out_path = os.path.join(
+                    "$build_path", "fuzz_output", fuzz_tgt_name
+                )
                 nw.build(
-                    target_label,
+                    fuzz_tgt_name,
                     "hfuzz",
                     exe_path,
                     variables={
@@ -456,18 +473,19 @@ def gen_ninja_build(
             # process test targets for this library
             if len(lib.test_targets) > 0:
                 nw.comment(f"test targets for library #{lib_name}")
-            for test_tgt_name, test_tgt in lib.test_targets.items():
-                exe_name = f"{lib_name}_test_{test_tgt_name}"
-                exe = copy.deepcopy(test_tgt)
+            for test_tgt_name, test_tgt_deps in lib.test_targets.items():
+                deps = copy.deepcopy(test_tgt_deps)
                 # implicitly depend on parent library
-                exe.dependencies.add(lib_name)
-                process_exe(nw, project.libraries, exe_name, lib_name, exe)
+                deps.add(lib_name)
+                process_sub_target(nw, project.libraries, lib_name, test_tgt_name, deps)
 
                 # Add test execution step
-                exe_path = os.path.join("$build_path", exe_name)
+                exe_path = os.path.join("$build_path", test_tgt_name)
                 test_exes.append(exe_path)
 
-                stamp_path = os.path.join("$build_path", "stamps", f"{exe_name}.stamp")
+                stamp_path = os.path.join(
+                    "$build_path", "stamps", f"{test_tgt_name}.stamp"
+                )
 
                 nw.build(stamp_path, "runtest", exe_path)
                 test_stamps.append(stamp_path)
@@ -477,20 +495,19 @@ def gen_ninja_build(
             # process the benchmark targets for this library
             if len(lib.bench_targets) > 0:
                 nw.comment(f"benchmark targets for library #{lib_name}")
-            for bench_tgt_name, bench_tgt in lib.bench_targets.items():
-                target_label = f"{lib_name}_bench_{bench_tgt_name}"
-
-                exe_name = f"{target_label}_exe"
-                exe = copy.deepcopy(bench_tgt)
+            for bench_tgt_name, bench_tgt_deps in lib.bench_targets.items():
+                deps = copy.deepcopy(bench_tgt_deps)
                 # implicitly depend on parent library
-                exe.dependencies.add(lib_name)
-                process_exe(nw, project.libraries, exe_name, lib_name, exe)
+                deps.add(lib_name)
+                process_sub_target(
+                    nw, project.libraries, lib_name, bench_tgt_name, deps
+                )
 
                 # Add bench execution step
                 nw.comment("bencmark execution")
-                exe_path = os.path.join("$build_path", exe_name)
+                exe_path = os.path.join("$build_path", bench_tgt_name)
                 bench_exes.append(exe_path)
-                nw.build(target_label, "runbench", exe_path)
+                nw.build(bench_tgt_name, "runbench", exe_path)
 
                 nw.newline()
 
@@ -499,7 +516,7 @@ def gen_ninja_build(
                 asm_out = os.path.join(
                     "$build_path",
                     "asm",
-                    f"{target_label}.asm",
+                    f"{bench_tgt_name}.asm",
                 )
                 nw.build(asm_out, "objdump", exe_path)
                 asm_outputs.append(asm_out)
@@ -509,7 +526,7 @@ def gen_ninja_build(
         # process executables
         for exe_name, exe in project.executables.items():
             nw.comment(f"executable #{exe_name}")
-            process_exe(nw, project.libraries, exe_name, exe_name, exe)
+            process_exe(nw, project.libraries, exe_name, exe)
             exe_path = os.path.join("$build_path", exe_name)
             executables.append(exe_path)
 
@@ -525,7 +542,7 @@ def gen_ninja_build(
         nw.build("build_benches", "phony", bench_exes)
 
         nw.comment("Build all benchmark assembly output")
-        nw.build("build_bench_asm", "phony", asm_outputs)
+        nw.build("asm", "phony", asm_outputs)
 
         nw.comment("Build all exes")
         nw.build("build_exes", "phony", executables)
