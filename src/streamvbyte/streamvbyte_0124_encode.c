@@ -65,13 +65,14 @@ ShinStatus streamvbyte_0124_encode(shin_u32 const *restrict input,
 
       shin_u8 const length =
           STREAMVBYTE_SHUFFLE_TABLES_0124_ENCODE_LENGTH_TABLE[code];
+      SHIN_DBG_ASSERT((length <= 16));
 
       __m128i const shuffle = _mm_loadu_si128(
           (__m128i const
-               *)&STREAMVBYTE_SHUFFLE_TABLES_0124_ENCODE_SHUFFLE_TABLE[code *
-                                                                       16]);
+               *)&STREAMVBYTE_SHUFFLE_TABLES_0124_ENCODE_SHUFFLE_TABLE[code]);
+
       __m128i const out = _mm_shuffle_epi8(in, shuffle);
-      _mm_storeu_si128((__m128i *)&output[out_offset], out);
+      _mm_storeu_si128((__m128i *)(&output[out_offset]), out);
       out_offset += length;
     }
   }

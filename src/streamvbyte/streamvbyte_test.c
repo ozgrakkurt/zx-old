@@ -4,6 +4,7 @@
 #include <shin/shin_err_trace.h>
 #include <shin/shin_page_alloc.h>
 #include <shin/shin_xoshiro256.h>
+#include <stdint.h>
 #include <stdio.h>
 #include <stdlib.h>
 #include <streamvbyte/streamvbyte.h>
@@ -31,6 +32,16 @@ ShinStatus do_test(shin_u32 const *restrict input, shin_u8 *restrict compressed,
 
   SHIN_ERR_ASSERT((compressed_size <= compress_bound), err_stack);
 
+  shin_u32 n_read = 0;
+  SHIN_ERR_TRY((streamvbyte_0124_decode(compressed, compress_bound, output, len,
+                                        &n_read, err_stack)),
+               err_stack);
+
+  SHIN_ERR_ASSERT((n_read <= compressed_size), err_stack);
+
+  SHIN_ERR_ASSERT((memcmp(input, output, sizeof(shin_u32) * len) == 0),
+                  err_stack);
+
   return ShinStatus_Ok;
 }
 
@@ -49,13 +60,23 @@ ShinStatus roundtrip(ShinAlloc *alloc, ShinErrStack *err_stack) {
   SHIN_ERR_TRY(
       (ShinAlloc_alloc(alloc, compress_bound, (void **)&compressed, err_stack)),
       err_stack);
-  memset(compressed, 0, compress_bound);
 
   shin_u32 *output = nullptr;
   SHIN_ERR_TRY((ShinAlloc_alloc(alloc, sizeof(shin_u32) * MAX_N,
                                 (void **)&output, err_stack)),
                err_stack);
-  memset(output, 0, sizeof(shin_u32) * MAX_N);
+
+  constexpr shin_u32 LENGTHS[] = {0, 1, 69, 1033, 1024, 2009, 2048};
+  constexpr shin_usize N_LENGTHS = sizeof(LENGTHS) / sizeof(LENGTHS[0]);
+
+  for (shin_usize i = 0; i < N_LENGTHS; i++) {
+    memset(compressed, 0, compress_bound);
+    memset(output, 0, sizeof(shin_u32) * MAX_N);
+
+    SHIN_ASSERT((MAX_N >= LENGTHS[i]));
+    SHIN_ERR_TRY((do_test(input, compressed, output, LENGTHS[i], err_stack)),
+                 err_stack);
+  }
 
   return ShinStatus_Ok;
 }

@@ -4,8 +4,9 @@
 #include <shin/shin_def.h>
 #include <shin/shin_err.h>
 
-static inline ShinStatus streamvbyte_compress_bound(shin_u32 input_len, shin_u32 *n_bytes,
-                                      ShinErrStack *err_stack) {
+static inline ShinStatus streamvbyte_compress_bound(shin_u32 input_len,
+                                                    shin_u32 *n_bytes,
+                                                    ShinErrStack *err_stack) {
   constexpr shin_u8 PADDING = 16;
 
   shin_u64 const header_size = ((shin_u64){input_len} + 3) / 4;

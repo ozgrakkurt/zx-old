@@ -43,8 +43,7 @@ static inline ShinStatus
 streamvbyte_0124_decode_validate(shin_u8 const *restrict input,
                                  shin_u32 input_size, shin_u32 output_len,
                                  ShinErrStack *err_stack) {
-  if (input_size == 0) {
-    SHIN_ERR_ASSERT((output_len == 0), err_stack);
+  if (output_len == 0) {
     return ShinStatus_Ok;
   }
   SHIN_ERR_ASSERT((output_len > 0), err_stack);
