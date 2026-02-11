@@ -76,7 +76,8 @@ streamvbyte_decode_0124_validate(shin_u8 const *restrict input,
     }
   }
 
-  SHIN_ERR_ASSERT((data_size + header_size <= input_size), err_stack);
+  SHIN_ERR_ASSERT((data_size + header_size + STREAMVBYTE_PADDING <= input_size),
+                  err_stack);
 
   return ShinStatus_Ok;
 }
@@ -128,6 +129,7 @@ ShinStatus streamvbyte_decode_0124(shin_u8 const *restrict input,
       switch (code) {
       case 0: {
         out = 0;
+        in_offset += 0;
         break;
       }
       case 1: {
