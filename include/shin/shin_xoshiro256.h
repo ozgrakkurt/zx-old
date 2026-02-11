@@ -27,13 +27,15 @@ static inline ShinXoshiro256 ShinXoshiro256_init(shin_u64 seed) {
     rand.s[i] = z;
   }
 
-  SHIN_DBG_ASSERT(((rand->s[0] != 0) || (rand->s[1] != 0) ||
-                   (rand->s[2] != 0) || (rand->s[3] != 0)));
+  SHIN_DBG_ASSERT(((rand.s[0] != 0) || (rand.s[1] != 0) || (rand.s[2] != 0) ||
+                   (rand.s[3] != 0)));
 
   return rand;
 }
 
 static inline shin_u64 ShinXoshiro256_next(ShinXoshiro256 *restrict rand) {
+  SHIN_DBG_ASSERT((rand != nullptr));
+
   shin_u64 const r =
       __builtin_rotateleft64(rand->s[0] + rand->s[3], 23) + rand->s[0];
   shin_u64 const t = rand->s[1] << 17;
@@ -51,6 +53,9 @@ static inline shin_u64 ShinXoshiro256_next(ShinXoshiro256 *restrict rand) {
 
 static inline void ShinXoshiro256_fill(ShinXoshiro256 *restrict rand,
                                        shin_u8 *restrict out, shin_usize len) {
+  SHIN_ASSERT((rand != nullptr));
+  SHIN_ASSERT((out != nullptr));
+
   shin_usize const n_blocks = len / sizeof(shin_u64);
 
   for (shin_usize i = 0; i < n_blocks; i++) {

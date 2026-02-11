@@ -87,6 +87,10 @@ ShinStatus streamvbyte_0124_decode(shin_u8 const *restrict input,
                                    shin_u32 *restrict output,
                                    shin_u32 output_len, shin_u32 *n_bytes_read,
                                    ShinErrStack *err_stack) {
+  SHIN_ASSERT((input != nullptr));
+  SHIN_ASSERT((output != nullptr));
+  SHIN_ASSERT((n_bytes_read != nullptr));
+
   SHIN_ERR_TRY((streamvbyte_0124_decode_validate(input, input_size, output_len,
                                                  err_stack)),
                err_stack);

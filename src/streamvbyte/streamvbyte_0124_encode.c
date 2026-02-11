@@ -23,6 +23,10 @@ ShinStatus streamvbyte_0124_encode(shin_u32 const *restrict input,
                                    shin_u32 output_size,
                                    shin_u32 *n_bytes_written,
                                    ShinErrStack *err_stack) {
+  SHIN_ASSERT((input != nullptr));
+  SHIN_ASSERT((output != nullptr));
+  SHIN_ASSERT((n_bytes_written != nullptr));
+
   shin_u32 bound = 0;
   SHIN_ERR_TRY((streamvbyte_compress_bound(input_len, &bound, err_stack)),
                err_stack);
