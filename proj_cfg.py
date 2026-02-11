@@ -31,6 +31,9 @@ STREAMVBYTE: Library = Library(
     test_targets={
         "streamvbyte_test": set([]),
     },
+    fuzz_targets={
+        "streamvbyte_roundtrip_fuzz": set([]),
+    },
 )
 
 PROJECT: Project = Project(

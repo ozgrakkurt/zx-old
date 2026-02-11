@@ -25,13 +25,13 @@ typedef struct InputEntry {
 constexpr shin_usize MEM_SIZE = ((shin_usize){1wbu} << 23);
 constexpr shin_usize CAPACITY = 319wbu;
 
-_Thread_local void *mem;
+_Thread_local void *MEM;
 
 int LLVMFuzzerInitialize(int *argc, char ***argv) {
   (void)argc;
   (void)argv;
 
-  mem = shin_page_alloc_thp_2mb(MEM_SIZE);
+  MEM = shin_page_alloc_thp_2mb(MEM_SIZE);
 
   return 0;
 }
@@ -184,7 +184,7 @@ int LLVMFuzzerTestOneInput(uint8_t const *fuzz_input, size_t fuzz_input_len) {
   shin_usize const capacity =
       SHIN_MIN(CAPACITY, ((shin_usize){fuzz_input_len} / RATIO));
 
-  ShinAlloc alloc = ShinAlloc_init(mem, MEM_SIZE);
+  ShinAlloc alloc = ShinAlloc_init(MEM, MEM_SIZE);
   ShinErrStack err_stack = ShinErrStack_init();
 
   SHIN_ASSERT(((shin_usize){SHIN_UINT_MAX(shin_u32)} >= capacity));
