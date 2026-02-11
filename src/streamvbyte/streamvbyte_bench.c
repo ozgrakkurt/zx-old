@@ -114,17 +114,15 @@ ShinStatus roundtrip(ShinAlloc *alloc, ShinErrStack *err_stack) {
                                 err_stack)),
                err_stack);
 
-  for (shin_usize rep = 0; rep < 10; rep++) {
-    memset(compressed, 0, compress_bound);
-    memset(output, 0, sizeof(datatype) * LEN);
+  memset(compressed, 0, compress_bound);
+  memset(output, 0, sizeof(datatype) * LEN);
 
-    SHIN_ERR_TRY((do_memcpy((shin_u32 const *)input, compressed,
-                            (shin_u32 *)output, LEN * RATIO, err_stack)),
-                 err_stack);
-    SHIN_ERR_TRY((do_bench((shin_u32 const *)input, compressed,
-                           (shin_u32 *)output, LEN * RATIO, err_stack)),
-                 err_stack);
-  }
+  SHIN_ERR_TRY((do_memcpy((shin_u32 const *)input, compressed,
+                          (shin_u32 *)output, LEN * RATIO, err_stack)),
+               err_stack);
+  SHIN_ERR_TRY((do_bench((shin_u32 const *)input, compressed,
+                         (shin_u32 *)output, LEN * RATIO, err_stack)),
+               err_stack);
 
   return ShinStatus_Ok;
 }

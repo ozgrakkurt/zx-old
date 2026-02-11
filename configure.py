@@ -454,9 +454,10 @@ def gen_ninja_build(
                 deps = copy.deepcopy(fuzz_tgt_deps)
                 # implicitly depend on parent library
                 deps.add(lib_name)
-                process_sub_target(nw, project.libraries, lib_name, fuzz_tgt_name, deps)
+                exe_path = process_sub_target(
+                    nw, project.libraries, lib_name, fuzz_tgt_name, deps
+                )
 
-                exe_path = os.path.join("$build_path", fuzz_tgt_name)
                 fuzz_exes.append(exe_path)
 
                 fuzz_in_path = os.path.join("$build_path", "fuzz_input", fuzz_tgt_name)
@@ -482,7 +483,9 @@ def gen_ninja_build(
                 deps = copy.deepcopy(test_tgt_deps)
                 # implicitly depend on parent library
                 deps.add(lib_name)
-                exe_path = process_sub_target(nw, project.libraries, lib_name, test_tgt_name, deps)
+                exe_path = process_sub_target(
+                    nw, project.libraries, lib_name, test_tgt_name, deps
+                )
 
                 # Add test execution step
                 test_exes.append(exe_path)
