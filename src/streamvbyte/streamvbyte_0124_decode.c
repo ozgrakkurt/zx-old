@@ -18,7 +18,7 @@
 
 #include "./streamvbyte_shuffle_tables_0124_decode.h"
 
-static inline shin_u8 streamvbyte_decode_0124_code_to_input_size(shin_u8 code) {
+static inline shin_u8 streamvbyte_0124_decode_code_to_input_size(shin_u8 code) {
   switch (code) {
   case 0: {
     return 0;
@@ -40,7 +40,7 @@ static inline shin_u8 streamvbyte_decode_0124_code_to_input_size(shin_u8 code) {
 }
 
 static inline ShinStatus
-streamvbyte_decode_0124_validate(shin_u8 const *restrict input,
+streamvbyte_0124_decode_validate(shin_u8 const *restrict input,
                                  shin_u32 input_size, shin_u32 output_len,
                                  ShinErrStack *err_stack) {
   if (input_size == 0) {
@@ -60,7 +60,7 @@ streamvbyte_decode_0124_validate(shin_u8 const *restrict input,
     shin_u8 const key = input[i];
     for (shin_u8 shift = 0; shift < 8; shift += 2) {
       shin_u8 const code = (key >> shift) & 0x3wbu;
-      data_size += streamvbyte_decode_0124_code_to_input_size(code);
+      data_size += streamvbyte_0124_decode_code_to_input_size(code);
     }
   }
 
@@ -71,23 +71,23 @@ streamvbyte_decode_0124_validate(shin_u8 const *restrict input,
     for (shin_u32 i = 0; i < remainder_len; i++) {
       SHIN_ASSERT((shift < 8));
       shin_u8 const code = (key >> shift) & 0x3wbu;
-      data_size += streamvbyte_decode_0124_code_to_input_size(code);
+      data_size += streamvbyte_0124_decode_code_to_input_size(code);
       shift += 2;
     }
   }
 
-  SHIN_ERR_ASSERT((data_size + header_size + STREAMVBYTE_PADDING <= input_size),
-                  err_stack);
+  constexpr shin_u8 PADDING = 16;
+  SHIN_ERR_ASSERT((data_size + header_size + PADDING <= input_size), err_stack);
 
   return ShinStatus_Ok;
 }
 
-ShinStatus streamvbyte_decode_0124(shin_u8 const *restrict input,
+ShinStatus streamvbyte_0124_decode(shin_u8 const *restrict input,
                                    shin_u32 input_size,
                                    shin_u32 *restrict output,
                                    shin_u32 output_len, shin_u32 *n_bytes_read,
                                    ShinErrStack *err_stack) {
-  SHIN_ERR_TRY((streamvbyte_decode_0124_validate(input, input_size, output_len,
+  SHIN_ERR_TRY((streamvbyte_0124_decode_validate(input, input_size, output_len,
                                                  err_stack)),
                err_stack);
 
@@ -96,9 +96,8 @@ ShinStatus streamvbyte_decode_0124(shin_u8 const *restrict input,
     return ShinStatus_Ok;
   }
 
-  // 2 bits per key, 8bits (one byte) per 4 keys.
-  // rounded up for remainder.
-  shin_u32 const header_size = (output_len + 3wbu) / 4wbu;
+  shin_u32 const header_size =
+      (shin_u32)(((shin_u64){output_len} + 3wbu) / 4wbu);
 
   shin_u32 const n_whole = output_len / 4wbu;
   shin_u32 const n_remainder = output_len % 4wbu;

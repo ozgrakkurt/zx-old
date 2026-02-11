@@ -516,7 +516,6 @@ def gen_ninja_build(
                 nw.comment("assembly generation")
                 asm_out = os.path.join(
                     "$build_path",
-                    "asm",
                     f"{bench_tgt_name}.asm",
                 )
                 nw.build(asm_out, "objdump", exe_path)
