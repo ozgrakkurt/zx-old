@@ -229,7 +229,7 @@ def process_sub_target(
     lib_name: str,
     tgt_name: str,
     deps: Set[str],
-) -> None:
+) -> str:
     link_inputs = []
 
     obj = os.path.join("$build_path", "obj", tgt_name, tgt_name + ".o")
@@ -237,7 +237,7 @@ def process_sub_target(
     nw.build(obj, "cc", src)
     link_inputs.append(obj)
 
-    exe_path = os.path.join("$build_path", tgt_name)
+    exe_path = os.path.join("$build_path", lib_name, tgt_name)
 
     deps = collect_deps(libraries, deps)
 
@@ -253,13 +253,15 @@ def process_sub_target(
 
     nw.newline()
 
+    return exe_path
+
 
 def process_exe(
     nw: ninja_syntax.Writer,
     libraries: Dict[str, Library],
     exe_name: str,
     exe: Executable,
-) -> None:
+) -> str:
     link_inputs = []
 
     for source_file in exe.source_files:
@@ -285,6 +287,8 @@ def process_exe(
     )
 
     nw.newline()
+
+    return exe_path
 
 
 def gen_ninja_build(
@@ -478,10 +482,9 @@ def gen_ninja_build(
                 deps = copy.deepcopy(test_tgt_deps)
                 # implicitly depend on parent library
                 deps.add(lib_name)
-                process_sub_target(nw, project.libraries, lib_name, test_tgt_name, deps)
+                exe_path = process_sub_target(nw, project.libraries, lib_name, test_tgt_name, deps)
 
                 # Add test execution step
-                exe_path = os.path.join("$build_path", test_tgt_name)
                 test_exes.append(exe_path)
 
                 stamp_path = os.path.join(
@@ -500,13 +503,12 @@ def gen_ninja_build(
                 deps = copy.deepcopy(bench_tgt_deps)
                 # implicitly depend on parent library
                 deps.add(lib_name)
-                process_sub_target(
+                exe_path = process_sub_target(
                     nw, project.libraries, lib_name, bench_tgt_name, deps
                 )
 
                 # Add bench execution step
                 nw.comment("bencmark execution")
-                exe_path = os.path.join("$build_path", bench_tgt_name)
                 bench_exes.append(exe_path)
                 nw.build(bench_tgt_name, "runexe", exe_path)
 
@@ -526,8 +528,7 @@ def gen_ninja_build(
         # process executables
         for exe_name, exe in project.executables.items():
             nw.comment(f"executable #{exe_name}")
-            process_exe(nw, project.libraries, exe_name, exe)
-            exe_path = os.path.join("$build_path", exe_name)
+            exe_path = process_exe(nw, project.libraries, exe_name, exe)
             executables.append(exe_path)
             nw.comment("execution")
             nw.build(exe_name, "runexe", exe_path)
