@@ -33,6 +33,7 @@ STREAMVBYTE: Library = Library(
     },
     fuzz_targets={
         "streamvbyte_roundtrip_fuzz": set([]),
+        "streamvbyte_decode_fuzz": set([]),
     },
 )
 
