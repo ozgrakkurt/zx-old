@@ -9,9 +9,8 @@ typedef struct XorfHeader {
   shin_u64 seed;
   shin_u32 segment_length;
   shin_u32 segment_count_length;
+  shin_u32 array_length;
 } XorfHeader;
-
-_Static_assert(sizeof(XorfHeader) == sizeof(shin_u64) * 2);
 
 typedef struct XorfSubHashes_ {
   shin_u32 h[3];
@@ -56,14 +55,14 @@ static inline bool xorf_check(XorfHeader const *header,
   XorfSubHashes_ const subhashes = xorf_make_subhashes_(header, h);
   shin_u16 f = xorf_make_fingerprint_(h);
   for (shin_u8 i = 0; i < 3; i++) {
-    f ^= subhashes.h[i];
+    f ^= fingerprints[subhashes.h[i]];
   }
   return f == 0;
 }
 
 ShinStatus xorf_construct(ShinAlloc *alloc, ShinAlloc *scratch_alloc,
-                          shin_u32 const *restrict keys,
-                          shin_u32 const num_keys, XorfHeader **header,
-                          shin_u16 **fingerprints, ShinErrStack *err_stack);
+                          shin_u64 const *restrict keys,
+                          shin_u32 const num_keys, XorfHeader *header_p,
+                          shin_u16 **fingerprints_p, ShinErrStack *err_stack);
 
 #endif
