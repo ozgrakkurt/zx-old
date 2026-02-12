@@ -40,9 +40,14 @@ STREAMVBYTE: Library = Library(
     },
 )
 
+XORF: Library = Library(
+    source_files=set(["xorf.c"]),
+)
+
 PROJECT: Project = Project(
     libraries={
         "shin": SHIN,
         "streamvbyte": STREAMVBYTE,
+        "xorf": XORF,
     },
 )
