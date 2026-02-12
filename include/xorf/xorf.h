@@ -4,6 +4,7 @@
 #include <shin/shin_alloc.h>
 #include <shin/shin_def.h>
 #include <shin/shin_err.h>
+#include <shin/shin_rapidhash_v3.h>
 
 typedef struct XorfHeader {
   shin_u64 seed;
@@ -17,7 +18,7 @@ typedef struct XorfSubHashes_ {
 } XorfSubHashes_;
 
 static inline shin_u64 xorf_apply_seed_(shin_u64 hash, shin_u64 seed) {
-  return hash ^ seed;
+  return shin_rapidhash_v3((shin_u8 const *)&hash, sizeof(shin_u64), seed);
 }
 
 static inline shin_u16 xorf_make_fingerprint_(shin_u64 hash) {

@@ -85,12 +85,17 @@ int LLVMFuzzerTestOneInput(uint8_t const *fuzz_input, size_t fuzz_input_len) {
 
   shin_u32 len = 0;
   memcpy(&len, fuzz_input, sizeof(shin_u32));
-  len %= SHIN_MIN(max_input_len, MAX_N);
+
+  if (max_input_len > 0) {
+    len %= SHIN_MIN(max_input_len, MAX_N);
+  } else {
+    len = 0;
+  }
 
   shin_u32 const num_keys = len;
 
   ShinErrStack err_stack = ShinErrStack_init();
-  ShinAlloc alloc = ShinAlloc_init(MEM, MEM_SIZE / 2);
+  ShinAlloc alloc = ShinAlloc_init(MEM, MEM_SIZE);
 
   shin_u256 *keys = nullptr;
   SHIN_ERR_TRACE_ABORT((ShinAlloc_alloc(&alloc, sizeof(shin_u256) * num_keys,
