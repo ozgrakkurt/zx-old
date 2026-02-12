@@ -5,6 +5,7 @@
 #include <shin/shin_page_alloc.h>
 #include <shin/shin_rapidhash_v3.h>
 #include <shin/shin_time.h>
+#include <shin/shin_xoshiro256.h>
 #include <stdint.h>
 #include <stdio.h>
 
@@ -35,8 +36,11 @@ static inline ShinStatus do_inserts(ShinAlloc *alloc, ShinErrStack *err_stack) {
   for (shin_usize x = 0; x < 5; x++) {
     ShinTimer timer = ShinTimer_now();
 
+    ShinXoshiro256 rand = ShinXoshiro256_init(0);
     for (shin_usize i = 0; i < CAP; i++) {
-      key_type const key = i;
+      key_type key = 0;
+      ShinXoshiro256_fill(&rand, (shin_u8 *)&key, sizeof(key_type));
+
       shin_u64 const hash =
           shin_rapidhash_v3((shin_u8 const *)&key, sizeof(key_type), 0);
       hashes[i] = hash;
