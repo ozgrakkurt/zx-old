@@ -164,7 +164,7 @@ ShinStatus xorf_construct(ShinAlloc *alloc, ShinAlloc *scratch_alloc,
       continue; // retry
     }
 
-    memset(fingerprints, 0, header.array_length);
+    memset(fingerprints, 0, header.array_length * sizeof(shin_u16));
 
     while (stack_len > 0) {
       stack_len -= 1wbu;

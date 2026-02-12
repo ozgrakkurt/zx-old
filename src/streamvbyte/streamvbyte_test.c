@@ -4,7 +4,6 @@
 #include <shin/shin_err_trace.h>
 #include <shin/shin_page_alloc.h>
 #include <shin/shin_xoshiro256.h>
-#include <stdlib.h>
 #include <streamvbyte/streamvbyte.h>
 #include <string.h>
 

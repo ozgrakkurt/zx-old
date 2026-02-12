@@ -41,7 +41,7 @@ static inline XorfSubHashes_ xorf_make_subhashes_(XorfHeader const *header,
   for (shin_u8 i = 0; i < 3; i++) {
     shin_u32 const rotated = (shin_u32)__builtin_rotateleft64(h, rot);
     subhashes.h[i] = (hl + i * header->segment_length) ^
-                     (rotated ^ (header->segment_length - 1));
+                     (rotated & (header->segment_length - 1));
     rot += 64 / 3;
   }
 

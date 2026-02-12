@@ -42,6 +42,9 @@ STREAMVBYTE: Library = Library(
 
 XORF: Library = Library(
     source_files=set(["xorf.c"]),
+    test_targets={
+        "xorf_test": set([]),
+    },
 )
 
 PROJECT: Project = Project(

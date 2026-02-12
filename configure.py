@@ -174,6 +174,7 @@ def make_cflags(profile: Profile, config: Config) -> List[str]:
 
 def make_ldflags(build_path: str, config: Config) -> List[str]:
     ldflags = [
+        "-lm",
         # use llvm linker
         "-fuse-ld=lld",
     ]
