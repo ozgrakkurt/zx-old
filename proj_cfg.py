@@ -45,6 +45,9 @@ XORF: Library = Library(
     test_targets={
         "xorf_test": set([]),
     },
+    fuzz_targets={
+        "xorf_fuzz": set([]),
+    },
 )
 
 PROJECT: Project = Project(
