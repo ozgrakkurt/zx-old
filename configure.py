@@ -136,6 +136,8 @@ def make_cflags(profile: Profile, config: Config) -> List[str]:
         "-Wextra",
         "-Wconversion",
         "-Wsign-conversion",
+        # make sure switch on enum is exhaustive
+        "-Wswitch-enum",
         # Treat warnings as errors.
         "-Werror",
         # Target arch, preferably 'native'.

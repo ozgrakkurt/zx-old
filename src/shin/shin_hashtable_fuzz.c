@@ -16,10 +16,16 @@ typedef struct KeyVal {
   val_type val;
 } KeyVal;
 
+typedef enum Op : unsigned char {
+  OP_INSERT = 0,
+  OP_GET_OR_INSERT,
+  OP_GET,
+} Op;
+
 typedef struct InputEntry {
+  KeyVal kv;
   // kind of operation to do
   shin_u8 op;
-  KeyVal kv;
 } InputEntry;
 
 constexpr shin_usize MEM_SIZE = ((shin_usize){1wbu} << 23);
@@ -117,8 +123,10 @@ static ShinStatus test_one(ShinAlloc *alloc, InputEntry const *inputs,
     InputEntry const in = inputs[i];
     shin_u64 const hash = shin_rapidhash_v3(&in.kv.key, sizeof(key_type), 0);
 
-    switch (in.op % 3) {
-    case 0: {
+    Op const op = (Op)(in.op % 3wbu);
+
+    switch (op) {
+    case OP_INSERT: {
       bool const did_exist = ShinHashtable_insert(
           &hashtable, hash, &in.kv, sizeof(KeyVal), nullptr, keys_eql);
 
@@ -128,7 +136,7 @@ static ShinStatus test_one(ShinAlloc *alloc, InputEntry const *inputs,
 
       break;
     }
-    case 1: {
+    case OP_GET_OR_INSERT: {
       shin_u32 const initial_cap_left = ShinHashtable_capacity_left(&hashtable);
       void const *entry = ShinHashtable_get_or_insert(
           &hashtable, hash, &in.kv, sizeof(KeyVal), nullptr, keys_eql);
@@ -148,7 +156,7 @@ static ShinStatus test_one(ShinAlloc *alloc, InputEntry const *inputs,
 
       break;
     }
-    case 2: {
+    case OP_GET: {
       void const *entry = ShinHashtable_get(&hashtable, hash, &in.kv,
                                             sizeof(KeyVal), nullptr, keys_eql);
 
@@ -163,10 +171,6 @@ static ShinStatus test_one(ShinAlloc *alloc, InputEntry const *inputs,
                         err_stack);
       }
 
-      break;
-    }
-    default: {
-      SHIN_ASSERT(false);
       break;
     }
     }

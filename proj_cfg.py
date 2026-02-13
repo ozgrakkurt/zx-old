@@ -53,10 +53,15 @@ XORF: Library = Library(
     },
 )
 
+ARO: Library = Library(
+    source_files=set(["aro_ffi.c"]),
+)
+
 PROJECT: Project = Project(
     libraries={
         "shin": SHIN,
         "streamvbyte": STREAMVBYTE,
         "xorf": XORF,
+        "aro": ARO,
     },
 )

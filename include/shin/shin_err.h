@@ -71,11 +71,11 @@
     }                                                                          \
   } while (false)
 
-typedef enum [[nodiscard]] ShinStatus : char {
+typedef enum [[nodiscard]] ShinStatus : unsigned char {
   ShinStatus_Ok = 0,
-  ShinStatus_UnexpectedError = 1,
-  ShinStatus_AssertFail = 2,
-  ShinStatus_OutOfMemory = 3,
+  ShinStatus_UnexpectedError,
+  ShinStatus_AssertFail,
+  ShinStatus_OutOfMemory,
 } ShinStatus;
 
 constexpr shin_u32 SHIN_ERR_STACK_CAP = 64;
