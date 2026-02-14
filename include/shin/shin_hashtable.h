@@ -15,9 +15,9 @@
 
 #include <immintrin.h>
 #include <shin/shin_alloc.h>
+#include <shin/shin_bit.h>
 #include <shin/shin_def.h>
 #include <shin/shin_err.h>
-#include <stdbit.h>
 #include <string.h>
 
 // This code is mostly ported from Rust crate hashbrown
@@ -42,13 +42,13 @@ static inline ShinStatus ShinHashtable_init(ShinAlloc *alloc, shin_u32 capacity,
                                             shin_u32 entry_size,
                                             ShinHashtable *table,
                                             ShinErrStack *err_stack) {
-  shin_u32 cap =
-      stdc_bit_ceil(capacity * (shin_u32){100wbu} / (shin_u32){80wbu});
-  cap = SHIN_MAX((shin_u32){sizeof(__m128i)}, cap);
-  SHIN_ASSERT((cap > capacity));
+  shin_u32 cap = SHIN_NEXT_POWER_OF_TWO(
+      (capacity * (shin_u32){100wbu} / (shin_u32){80wbu}));
+  cap = SHIN_MAX(((shin_u32){sizeof(__m128i)}), cap);
+  SHIN_ASSERT((cap >= capacity));
   SHIN_ASSERT((cap > 0));
   // check it is a power of two
-  SHIN_ASSERT((stdc_has_single_bit(cap)));
+  SHIN_ASSERT((SHIN_IS_POWER_OF_TWO(cap)));
   shin_u32 const cap_mask = cap - 1;
 
   // align to cachline because why not?
@@ -129,7 +129,7 @@ ShinHashtable_find_idx_(ShinHashtable const *const table, shin_u64 const hash,
       shin_u16 tag_match = ShinHashtable_match_tag_(group, tag);
 
       while (tag_match != 0) {
-        shin_u32 const tag_pos = stdc_trailing_zeros(tag_match);
+        shin_u32 const tag_pos = SHIN_CTZ(tag_match);
 
         shin_u8 const *const entries = (shin_u8 const *)table->entries;
 
@@ -151,7 +151,7 @@ ShinHashtable_find_idx_(ShinHashtable const *const table, shin_u64 const hash,
       shin_u16 const empty_match = ShinHashtable_match_empty_(group);
 
       if (empty_match != 0) {
-        shin_u32 const tag_pos = stdc_trailing_zeros(empty_match);
+        shin_u32 const tag_pos = SHIN_CTZ(empty_match);
         return (ShinHashtableFindIdx){
             .idx = (meta_idx + tag_pos) & cap_mask,
             .occupied = false,

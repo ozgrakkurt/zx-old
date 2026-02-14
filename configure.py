@@ -145,7 +145,7 @@ def make_cflags(profile: Profile, config: Config) -> List[str]:
         # Use c23 standard.
         "--std=c23",
         # enable feature_test_macro so linux/gnu functions don't get disabled because of std=c23 flag
-        "-D_DEFAULT_SOURCE=1"
+        "-D_DEFAULT_SOURCE=1",
         # Required for correctness.
         # Use 'restrict'/'register' in performance-critical code.
         "-fno-strict-aliasing",
@@ -590,12 +590,12 @@ if __name__ == "__main__":
     )
 
     parser.add_argument(
-        "--build_dir",
+        "--build-dir",
         default="build",
         help="Relative path to build directory to store the build.ninja file. Relative to 'configure.py' location.",
     )
     parser.add_argument(
-        "--honggfuzz_path",
+        "--honggfuzz-path",
         help="Absolute path to honggfuzz folder, which can be created by cloning honggfuzz repo and running a build. Fuzz setup generated only when this argument is provided.",
         metavar="PATH",
     )
@@ -647,11 +647,11 @@ if __name__ == "__main__":
 
     args = parser.parse_args()
 
-    assert not os.path.isabs(args.build_dir), "build_dir can't be an absolute path"
+    assert not os.path.isabs(args.build_dir), "build-dir can't be an absolute path"
 
     if args.honggfuzz_path is not None:
         assert os.path.isabs(args.honggfuzz_path), (
-            "honggfuzz_path has to be an absolute path"
+            "honggfuzz-path has to be an absolute path"
         )
 
     cfg = Config(
