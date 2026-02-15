@@ -53,8 +53,8 @@ XORF: Library = Library(
     },
 )
 
-ARO: Library = Library(
-    source_files=set(["aro_ffi.c"]),
+KG: Library = Library(
+    source_files=set(["kg_array.c"]),
 )
 
 PROJECT: Project = Project(
@@ -62,6 +62,6 @@ PROJECT: Project = Project(
         "shin": SHIN,
         "streamvbyte": STREAMVBYTE,
         "xorf": XORF,
-        "aro": ARO,
+        "kg": KG,
     },
 )
