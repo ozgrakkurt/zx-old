@@ -42,7 +42,7 @@ static ShinStatus benchy(ShinAlloc *alloc, ShinErrStack *err_stack) {
                                 (void **)&hashes, err_stack)),
                err_stack);
 
-  ShinTimer timer = ShinTimer_now();
+  ShinTimer timer = ShinTimer_init();
 
   shin_u32 num_hashes = 0;
   for (shin_u32 i = 0; i < num_keys; i++) {

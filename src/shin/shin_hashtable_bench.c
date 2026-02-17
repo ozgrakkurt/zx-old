@@ -34,7 +34,7 @@ static inline ShinStatus do_inserts(ShinAlloc *alloc, ShinErrStack *err_stack) {
   SHIN_ASSERT((hashes != nullptr));
 
   for (shin_usize x = 0; x < 5; x++) {
-    ShinTimer timer = ShinTimer_now();
+    ShinTimer timer = ShinTimer_init();
 
     ShinXoshiro256 rand = ShinXoshiro256_init(0);
     for (shin_usize i = 0; i < CAP; i++) {

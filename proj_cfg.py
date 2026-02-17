@@ -53,6 +53,10 @@ XORF: Library = Library(
     },
 )
 
+FIBER: Library = Library(
+    source_files=set(["fiber.c"]),
+)
+
 KG: Library = Library(
     source_files=set(["kg_array.c"]),
 )
@@ -62,6 +66,7 @@ PROJECT: Project = Project(
         "shin": SHIN,
         "streamvbyte": STREAMVBYTE,
         "xorf": XORF,
+        "fiber": FIBER,
         "kg": KG,
     },
 )

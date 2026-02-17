@@ -4,6 +4,7 @@
 #include <shin/shin_def.h>
 
 // Align and pad all array data to this number of bytes.
+// padding should always be set to zero.
 constexpr shin_u32 KG_ARRAY_ALIGN = 64;
 
 typedef enum KgArrayTag : unsigned char {
@@ -37,9 +38,6 @@ _Static_assert(sizeof(KgArrayTag) == 1);
 
 // forward declare for recursion
 typedef struct KgArray KgArray;
-
-typedef struct KgArrayNull {
-} KgArrayNull;
 
 typedef struct KgArrayPrimitive {
   void const *values;
@@ -100,7 +98,8 @@ typedef struct KgArrayRee {
 } KgArrayRee;
 
 typedef union KgArrayData {
-  KgArrayNull null;
+  struct {
+  } null;
   KgArrayPrimitive primitive;
   KgArrayFsBin fs_bin;
   KgArrayBin bin;

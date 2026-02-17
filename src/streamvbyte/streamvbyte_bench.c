@@ -26,7 +26,7 @@ ShinStatus do_memcpy(shin_u32 const *restrict input,
   SHIN_ASSERT((compressed != nullptr));
   SHIN_ASSERT((output != nullptr));
 
-  ShinTimer timer = ShinTimer_now();
+  ShinTimer timer = ShinTimer_init();
 
   memcpy(compressed, input, len * sizeof(shin_u32));
 
@@ -55,7 +55,7 @@ ShinStatus do_bench(shin_u32 const *restrict input,
   SHIN_ERR_TRY((streamvbyte_compress_bound(len, &compress_bound, err_stack)),
                err_stack);
 
-  ShinTimer timer = ShinTimer_now();
+  ShinTimer timer = ShinTimer_init();
 
   shin_u32 compressed_size = 0;
   SHIN_ERR_TRY((streamvbyte_0124_encode(input, len, compressed, compress_bound,

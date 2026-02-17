@@ -5,26 +5,33 @@
 #error "only x86_64 targets are supported"
 #endif
 
+#include <shin/shin_def.h>
+
 typedef struct ShinTimer {
-  shin_u64 ticker;
+  shin_u64 start;
 } ShinTimer;
 
-static inline ShinTimer ShinTimer_now() {
+static inline shin_u64 shin_timer_now_(void) {
   unsigned int aux;
   shin_u64 const ticker = __builtin_ia32_rdtscp(&aux);
   (void)aux;
 
+  return ticker;
+}
+
+static inline ShinTimer ShinTimer_init(void) {
+  shin_u64 const start = shin_timer_now_();
+
   return (ShinTimer){
-      .ticker = ticker,
+      .start = start,
   };
 }
 
-// returns elapsed time in nanoseconds
+// returns the number of clock cycles elapsed
 static inline shin_u64 ShinTimer_lap(ShinTimer *timer) {
-  ShinTimer const now = ShinTimer_now();
-  shin_u64 const diff = now.ticker - timer->ticker;
-  *timer = now;
-
+  shin_u64 const now = shin_timer_now_();
+  shin_u64 const diff = now - timer->start;
+  timer->start = now;
   return diff;
 }
 
