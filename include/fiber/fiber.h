@@ -23,6 +23,9 @@ typedef struct FiberCtx {
 } FiberCtx;
 _Static_assert(sizeof(FiberCtx) == 64);
 
+constexpr shin_usize FIBER_STACK_RED_ZONE_SIZE = 128;
+constexpr shin_usize FIBER_STACK_ALIGN = 16;
+
 typedef void fiber_startfn(FiberCtx const *prev, void *usr_ctx);
 void fiber_start(FiberCtx *prev, void *usr_ctx,
                  __attribute__((__noreturn__)) fiber_startfn startfn,
