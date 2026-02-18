@@ -7,7 +7,8 @@ ROOTPATH = os.path.dirname(os.path.abspath(__file__))
 
 @dataclass
 class Library:
-    source_files: Set[str]
+    source_files: Set[str] = field(default_factory=set)
+    asm_files: Set[str] = field(default_factory=set)
     dependencies: Set[str] = field(default_factory=set)
     test_targets: Dict[str, Set[str]] = field(default_factory=dict)
     fuzz_targets: Dict[str, Set[str]] = field(default_factory=dict)

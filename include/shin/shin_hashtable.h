@@ -123,7 +123,7 @@ ShinHashtable_find_idx_(ShinHashtable const *const table, shin_u64 const hash,
 
   shin_u8 const *const meta = table->metadata;
   while (true) {
-    __m128i const group = _mm_loadu_epi8(&meta[meta_idx]);
+    __m128i const group = _mm_loadu_si128((__m128i const *)&meta[meta_idx]);
 
     {
       shin_u16 tag_match = ShinHashtable_match_tag_(group, tag);

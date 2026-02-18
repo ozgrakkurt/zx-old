@@ -53,8 +53,8 @@ XORF: Library = Library(
     },
 )
 
-FIBER_CTX: Library = Library(
-    source_files=set(["fiber_ctx.c"]),
+FIBER: Library = Library(
+    asm_files=set(["fiber.s"]),
 )
 
 KG: Library = Library(
@@ -66,7 +66,7 @@ PROJECT: Project = Project(
         "shin": SHIN,
         "streamvbyte": STREAMVBYTE,
         "xorf": XORF,
-        "fiber_ctx": FIBER_CTX,
+        "fiber": FIBER,
         "kg": KG,
     },
 )

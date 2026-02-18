@@ -60,7 +60,9 @@ def validate_lib_sub_implicit_deps(lib_name: str, sub_name: str, deps: Set[str])
 
 
 def validate_library(libs: Dict[str, Library], lib_name: str, lib: Library) -> None:
-    assert len(lib.source_files) > 0, "a library has to have at least one source file"
+    assert (len(lib.source_files) > 0) or (len(lib.asm_files) > 0), (
+        "a library has to have at least one source file or one assembly file"
+    )
 
     for dep_name in lib.dependencies:
         assert dep_name != lib_name, f"library {lib_name} depends on itself"
@@ -127,6 +129,15 @@ def validate_profile(profile: Profile) -> None:
 
 def validate_config(config: Config) -> None:
     pass
+
+
+def make_asflags(profile: Profile, config: Config) -> List[str]:
+    asflags = [
+        # Target arch, preferably 'native'.
+        f"-march={config.march}",
+    ]
+
+    return asflags
 
 
 def make_cflags(profile: Profile, config: Config) -> List[str]:
@@ -207,6 +218,11 @@ def make_ldflags(build_path: str, config: Config) -> List[str]:
 def c_file_to_obj_file(filename: str) -> str:
     assert filename.endswith(".c")
     return filename.removesuffix(".c") + ".o"
+
+
+def asm_file_to_obj_file(filename: str) -> str:
+    assert filename.endswith(".s")
+    return filename.removesuffix(".s") + ".o"
 
 
 def collect_deps_impl(
@@ -303,6 +319,7 @@ def gen_ninja_build(
     validate_project(project)
 
     cflags = make_cflags(profile, config)
+    asflags = make_asflags(profile, config)
     ldflags = make_ldflags(build_path, config)
 
     # build_path is required to be absolute (checked in validation)
@@ -319,6 +336,7 @@ def gen_ninja_build(
 
     nw.comment("build flags")
     nw.variable("cflags", " ".join(cflags))
+    nw.variable("asflags", " ".join(asflags))
     nw.variable("ldflags", " ".join(ldflags))
 
     nw.newline()
@@ -344,6 +362,11 @@ def gen_ninja_build(
         depfile="$out.d",
         deps="gcc",
         description="CC $out",
+    )
+    nw.rule(
+        "as",
+        command="$cc $asflags -c $in -o $out",
+        description="AS $out",
     )
     nw.rule(
         "ar",
@@ -441,6 +464,14 @@ def gen_ninja_build(
             )
             src = os.path.join("$src_path", lib_name, source_file)
             nw.build(obj, "cc", src)
+            obj_files.append(obj)
+
+        for asm_file in lib.asm_files:
+            obj = os.path.join(
+                "$build_path", "obj-asm", lib_name, asm_file_to_obj_file(asm_file)
+            )
+            src = os.path.join("$src_path", lib_name, asm_file)
+            nw.build(obj, "as", src)
             obj_files.append(obj)
 
         lib_file_path = os.path.join("$build_path", f"lib{lib_name}.a")
