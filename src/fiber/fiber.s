@@ -3,6 +3,7 @@
 fiber_start:
 // save instruction pointer to label '0' so it jumps back to the ret instruction
   leaq 0f(%rip), %rax
+
 // save current state to prev
   movq %rbx, 0*8(%rdi)
   movq %r12, 1*8(%rdi)
@@ -16,7 +17,7 @@ fiber_start:
 // jump to startfn. function arguments (rdi and rsi) are already set correctly.
 // we only set the stack pointer
   movq %rcx, %rsp
-  jmpq *%rdx
+  callq *%rdx
 
 0:
   ret
@@ -45,6 +46,7 @@ fiber_switch:
   movq 4*8(%rsi), %r15
   movq 5*8(%rsi), %rsp
   movq 6*8(%rsi), %rbp
+
 // jump to fiber
   jmpq *7*8(%rsi)
 

@@ -1,3 +1,7 @@
+.PHONY: all py_format py_check c_format
+
+all: py_format py_check c_format
+
 py_format:
 	uvx ruff format *.py
 py_check:

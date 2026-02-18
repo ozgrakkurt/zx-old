@@ -30,9 +30,9 @@ typedef struct Ctx {
 static void __attribute__((noreturn)) myfib(FiberCtx const *prev,
                                             void *usr_ctx) {
   Ctx *ctxp = (Ctx *)usr_ctx;
-  Ctx const ctx = *ctxp;
 
   while (true) {
+    Ctx const ctx = *ctxp;
     ShinXoshiro256 rand = ShinXoshiro256_init(ctx.iter_no);
 
     for (shin_usize i = 0; i < STEP; i++) {
@@ -63,19 +63,24 @@ constexpr shin_usize STACK_SIZE = 512 * 1024;
 constexpr shin_usize NUM_ITER = STEP * 69;
 
 ShinStatus dotest(ShinAlloc *alloc, ShinErrStack *err_stack) {
-  void *fiber_stack = nullptr;
-  SHIN_ERR_TRY((ShinAlloc_aligned_alloc(alloc, FIBER_STACK_ALIGN,
-                                        FIBER_STACK_RED_ZONE_SIZE + STACK_SIZE,
-                                        (void **)&fiber_stack, err_stack)),
-               err_stack);
+  void *fiber_stack_alloc = nullptr;
+  SHIN_ERR_TRY(
+      (ShinAlloc_aligned_alloc(alloc, FIBER_STACK_ALIGN,
+                               FIBER_STACK_RED_ZONE_SIZE + STACK_SIZE,
+                               (void **)&fiber_stack_alloc, err_stack)),
+      err_stack);
+
+  void *fiber_stack = &fiber_stack_alloc[STACK_SIZE];
 
   ShinHashtable htable;
   SHIN_ERR_TRY((ShinHashtable_init(alloc, NUM_ITER, alignof(shin_u64),
                                    sizeof(shin_u64), &htable, err_stack)),
                err_stack);
 
-  // will be filled by fiber_start call below
+  // these will be filled by fiber_start call below
+  FiberCtx parent_ctx = {0};
   FiberCtx fib_ctx = {0};
+
   Ctx ctx = {
       .htable = &htable,
       .iter_no = 0,
@@ -84,7 +89,11 @@ ShinStatus dotest(ShinAlloc *alloc, ShinErrStack *err_stack) {
 
   for (shin_usize iter_no = 0; iter_no < NUM_ITER; iter_no += STEP) {
     ctx.iter_no = iter_no;
-    fiber_start(ctx.fib_ctx, (void *)&ctx, myfib, fiber_stack);
+    if (iter_no == 0) {
+      fiber_start(&parent_ctx, (void *)&ctx, myfib, fiber_stack);
+    } else {
+      fiber_switch(&parent_ctx, ctx.fib_ctx);
+    }
     // fiber did the step yielded
 
     ShinXoshiro256 rand = ShinXoshiro256_init(iter_no);
