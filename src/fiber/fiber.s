@@ -1,4 +1,3 @@
-//void fiber_start(FiberCtx *prev, void* ctx, fiber_startfn startfn, void* rsp, void* rbp);
 .type fiber_start, @function
 .global fiber_start
 fiber_start:
@@ -15,16 +14,13 @@ fiber_start:
   movq %rax, 7*8(%rdi)
 
 // jump to startfn. function arguments (rdi and rsi) are already set correctly.
-// we only set the stack and frame pointers
+// we only set the stack pointer
   movq %rcx, %rsp
-  movq %r8, %rbp
   jmpq *%rdx
 
 0:
   ret
 
-// fill prev with current data and transition into next
-//void fiber_switch(FiberCtx *prev, FiberCtx const *next);
 .type fiber_switch, @function
 .global fiber_switch
 fiber_switch:

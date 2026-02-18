@@ -54,8 +54,10 @@ XORF: Library = Library(
 )
 
 FIBER: Library = Library(
-    source_files=set(["fiber.c"]),
     asm_files=set(["fiber.s"]),
+    test_targets={
+        "fiber_test": set([]),
+    },
 )
 
 KG: Library = Library(
