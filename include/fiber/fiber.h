@@ -10,24 +10,20 @@
 #endif
 
 #include <shin/shin_def.h>
+#include <shin/shin_err.h>
 
 typedef struct FiberCtx {
-  shin_u64 rbx;
-  shin_u64 r12;
-  shin_u64 r13;
-  shin_u64 r14;
-  shin_u64 r15;
   shin_u64 rsp;
   shin_u64 rbp;
   shin_u64 rip;
 } FiberCtx;
-_Static_assert(sizeof(FiberCtx) == 64);
+_Static_assert(sizeof(FiberCtx) == 24);
 
-typedef bool fiber_startfn(FiberCtx *prev, void *ctx);
+typedef ShinStatus fiber_startfn(FiberCtx *prev, void *ctx,
+                                 ShinErrStack *err_stack);
 
-void fiber_start(FiberCtx *prev, void *ctx,
-                 __attribute__((__noreturn__)) fiber_startfn startfn, void *rsp,
-                 void *rbp);
-void fiber_switch(FiberCtx *prev, FiberCtx const *next);
+ShinStatus fiber_start(FiberCtx *prev, void *ctx, ShinErrStack *err_stack,
+                       fiber_startfn startfn, void *fiber_stack);
+ShinStatus fiber_switch(FiberCtx *prev, FiberCtx const *next);
 
 #endif

@@ -132,10 +132,51 @@ def validate_config(config: Config) -> None:
 
 
 def make_asflags(profile: Profile, config: Config) -> List[str]:
+    # this is a copy of cflags.
+    # Only difference is some flags are commented out here becasue they make the compilation fail.
+
     asflags = [
+        # Warnings.
+        "-Wall",
+        "-Wextra",
+        "-Wconversion",
+        "-Wsign-conversion",
+        # make sure switch on enum is exhaustive
+        "-Wswitch-enum",
+        # Treat warnings as errors.
+        "-Werror",
         # Target arch, preferably 'native'.
         f"-march={config.march}",
+        # Use c23 standard.
+        "--std=c23",
+        # enable feature_test_macro so linux/gnu functions don't get disabled because of std=c23 flag
+        # "-D_DEFAULT_SOURCE=1",
+        # Required for correctness.
+        # Use 'restrict'/'register' in performance-critical code.
+        # "-fno-strict-aliasing",
+        # Use pipes instead of temporary files in compilation.
+        "-pipe",
+        # f"-O{profile.opt_level}",
+        "-I$include_path",
+        # always omit frame pointer. This is used in assembly functions so don't change it.
+        # "-fomit-frame-pointer",
     ]
+
+    if profile.enable_debug_info:
+        asflags.append("-g")
+
+    # if profile.enable_debug_assert:
+    #     asflags.append("-DSHIN_DBG_ASSERT_ENABLED=1")
+
+    if config.no_libc:
+        asflags.append("-nostdlib")
+        asflags.append("-fno-builtin")
+
+    if config.thin_lto:
+        asflags.append("-flto=thin")
+
+    if config.target is not None:
+        asflags.append(f"--target={config.target}")
 
     return asflags
 
@@ -164,6 +205,8 @@ def make_cflags(profile: Profile, config: Config) -> List[str]:
         "-pipe",
         f"-O{profile.opt_level}",
         "-I$include_path",
+        # always omit frame pointer. This is used in assembly functions so don't change it.
+        "-fomit-frame-pointer",
     ]
 
     if profile.enable_debug_info:
@@ -187,9 +230,12 @@ def make_cflags(profile: Profile, config: Config) -> List[str]:
 
 def make_ldflags(build_path: str, config: Config) -> List[str]:
     ldflags = [
+        # link math.h functions
         "-lm",
         # use llvm linker
         "-fuse-ld=lld",
+        # always omit frame pointer. This is used in assembly functions so don't change it.
+        "-fomit-frame-pointer",
     ]
 
     if config.static_link:
