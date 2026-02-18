@@ -14,10 +14,10 @@ fiber_start:
   movq %rbp, 6*8(%rdi)
   movq %rax, 7*8(%rdi)
 
-// jump to startfn. function arguments (rdi and rsi) are already set correctly.
+// jump to startfn. function arguments (rdi, rsi and rdx) are already set correctly.
 // we only set the stack pointer
-  movq %rcx, %rsp
-  callq *%rdx
+  movq %r8, %rsp
+  callq *%rcx
 
 0:
   ret

@@ -24,11 +24,10 @@ static inline shin_u64 make_hash(shin_u64 key) {
 typedef struct Ctx {
   ShinHashtable *htable;
   shin_usize iter_no;
-  FiberCtx *fib_ctx;
 } Ctx;
 
-static void __attribute__((noreturn)) myfib(FiberCtx const *prev,
-                                            void *usr_ctx) {
+static void __attribute__((noreturn))
+myfib(FiberCtx const *parent_ctx, FiberCtx *fiber_ctx, void *usr_ctx) {
   Ctx *ctxp = (Ctx *)usr_ctx;
 
   while (true) {
@@ -51,7 +50,7 @@ static void __attribute__((noreturn)) myfib(FiberCtx const *prev,
     }
 
     // yield to parent
-    fiber_switch(ctx.fib_ctx, prev);
+    fiber_switch(fiber_ctx, parent_ctx);
   }
 
   // don't implicitly return from this function
@@ -84,15 +83,14 @@ ShinStatus dotest(ShinAlloc *alloc, ShinErrStack *err_stack) {
   Ctx ctx = {
       .htable = &htable,
       .iter_no = 0,
-      .fib_ctx = &fib_ctx,
   };
 
   for (shin_usize iter_no = 0; iter_no < NUM_ITER; iter_no += STEP) {
     ctx.iter_no = iter_no;
     if (iter_no == 0) {
-      fiber_start(&parent_ctx, (void *)&ctx, myfib, fiber_stack);
+      fiber_start(&parent_ctx, &fib_ctx, (void *)&ctx, myfib, fiber_stack);
     } else {
-      fiber_switch(&parent_ctx, ctx.fib_ctx);
+      fiber_switch(&parent_ctx, &fib_ctx);
     }
     // fiber did the step yielded
 

@@ -26,8 +26,9 @@ _Static_assert(sizeof(FiberCtx) == 64);
 constexpr shin_usize FIBER_STACK_RED_ZONE_SIZE = 128;
 constexpr shin_usize FIBER_STACK_ALIGN = 16;
 
-typedef void fiber_startfn(FiberCtx const *prev, void *usr_ctx);
-void fiber_start(FiberCtx *prev, void *usr_ctx,
+typedef void fiber_startfn(FiberCtx const *parent_ctx, FiberCtx *fiber_ctx,
+                           void *usr_ctx);
+void fiber_start(FiberCtx *prev, FiberCtx *fiber_ctx, void *usr_ctx,
                  __attribute__((__noreturn__)) fiber_startfn startfn,
                  void *fiber_stack);
 void fiber_switch(FiberCtx *prev, FiberCtx const *next);
