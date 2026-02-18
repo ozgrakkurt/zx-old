@@ -21,11 +21,13 @@ typedef struct FiberCtx {
   shin_u64 rbp;
   shin_u64 rip;
 } FiberCtx;
-_Static_assert(sizeof(FiberCtx) == 8);
+_Static_assert(sizeof(FiberCtx) == 64);
 
 typedef bool fiber_startfn(FiberCtx *prev, void *ctx);
 
-void fiber_start(FiberCtx *prev, void *ctx, fiber_startfn startfn);
+void fiber_start(FiberCtx *prev, void *ctx,
+                 __attribute__((__noreturn__)) fiber_startfn startfn, void *rsp,
+                 void *rbp);
 void fiber_switch(FiberCtx *prev, FiberCtx const *next);
 
 #endif

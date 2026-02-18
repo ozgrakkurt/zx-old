@@ -54,6 +54,7 @@ XORF: Library = Library(
 )
 
 FIBER: Library = Library(
+    source_files=set(["fiber.c"]),
     asm_files=set(["fiber.s"]),
 )
 
