@@ -104,31 +104,50 @@ myfib(FiberCtx const *parent_ctx, FiberCtx *fiber_ctx, void *usr_ctx) {
 
 constexpr shin_usize STACK_SIZE = 512 * 1024;
 
+constexpr shin_usize N_FIBERS = 10;
+
 ShinStatus dobench(ShinAlloc *alloc, ShinErrStack *err_stack) {
-  void *fiber_stack_alloc = nullptr;
-  SHIN_ERR_TRY(
-      (ShinAlloc_aligned_alloc(alloc, FIBER_STACK_ALIGN,
-                               FIBER_STACK_RED_ZONE_SIZE + STACK_SIZE,
-                               (void **)&fiber_stack_alloc, err_stack)),
-      err_stack);
+  Ctx ctxes[N_FIBERS] = {0};
+  void *fiber_staxes[N_FIBERS] = {0};
+  for (shin_usize fiber_idx = 0; fiber_idx < N_FIBERS; fiber_idx++) {
+    void *fiber_stack_alloc = nullptr;
+    SHIN_ERR_TRY(
+        (ShinAlloc_aligned_alloc(alloc, FIBER_STACK_ALIGN,
+                                 FIBER_STACK_RED_ZONE_SIZE + STACK_SIZE,
+                                 (void **)&fiber_stack_alloc, err_stack)),
+        err_stack);
 
-  void *fiber_stack = &fiber_stack_alloc[STACK_SIZE];
+    fiber_staxes[fiber_idx] = &fiber_stack_alloc[STACK_SIZE];
 
-  // these will be filled by fiber_start call below
+    bool *finished = nullptr;
+    SHIN_ERR_TRY(
+        (ShinAlloc_alloc(alloc, sizeof(bool), (void **)&finished, err_stack)),
+        err_stack);
+    *finished = false;
+
+    Ctx ctx = {
+        .finished = finished,
+        .err_stack = err_stack,
+        .alloc = alloc,
+    };
+
+    ctxes[fiber_idx] = ctx;
+  }
+
+  FiberCtx fiber_ctxes[N_FIBERS] = {0};
   FiberCtx parent_ctx = {0};
-  FiberCtx fib_ctx = {0};
 
-  bool finished = false;
-
-  Ctx ctx = {
-      .finished = &finished,
-      .err_stack = err_stack,
-      .alloc = alloc,
-  };
-
-  fiber_start(&parent_ctx, &fib_ctx, (void *)&ctx, myfib, fiber_stack);
-  while (!finished) {
-    fiber_switch(&parent_ctx, &fib_ctx);
+  for (shin_usize fiber_idx = 0; fiber_idx < N_FIBERS; fiber_idx++) {
+    fiber_start(&parent_ctx, &fiber_ctxes[fiber_idx], (void *)&ctxes[fiber_idx],
+                myfib, fiber_staxes[fiber_idx]);
+  }
+  bool running = true;
+  while (running) {
+    running = false;
+    for (shin_usize fiber_idx = 0; fiber_idx < N_FIBERS; fiber_idx++) {
+      fiber_switch(&parent_ctx, &fiber_ctxes[fiber_idx]);
+      running |= !(*ctxes[fiber_idx].finished);
+    }
   }
 
   return ShinStatus_Ok;
