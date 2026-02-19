@@ -12,6 +12,8 @@
 constexpr shin_usize MEMORY_SIZE = 1 << 30;
 constexpr shin_usize CAP = 40000;
 
+constexpr shin_usize N_FIBERS = 2;
+
 typedef shin_u256 key_type;
 
 static inline bool keys_eql(void const *ctx, void const *a, void const *b) {
@@ -25,6 +27,7 @@ typedef struct Ctx {
   ShinAlloc *alloc;
   ShinErrStack *err_stack;
   bool *finished;
+  shin_usize switch_interval;
 } Ctx;
 
 static void __attribute__((noreturn))
@@ -34,6 +37,7 @@ myfib(FiberCtx const *parent_ctx, FiberCtx *fiber_ctx, void *usr_ctx) {
 
   ShinErrStack *err_stack = ctx.err_stack;
   ShinAlloc *alloc = ctx.alloc;
+  shin_usize const switch_interval = ctx.switch_interval;
 
   ShinHashtable table;
   SHIN_ERR_TRACE_ABORT(
@@ -58,26 +62,26 @@ myfib(FiberCtx const *parent_ctx, FiberCtx *fiber_ctx, void *usr_ctx) {
       shin_u64 const hash =
           shin_rapidhash_v3((shin_u8 const *)&key, sizeof(key_type), 0);
       hashes[i] = hash;
-      if (i % 32 == 0) {
+      if (i % switch_interval == 0) {
         fiber_switch(fiber_ctx, parent_ctx);
       }
     }
 
     shin_f64 const hash_ticks_per_elem =
-        (shin_f64)ShinTimer_lap(&timer) / (shin_f64)CAP;
+        (shin_f64)ShinTimer_lap(&timer) / (shin_f64)(CAP * N_FIBERS);
     printf("Hashing: %.3f ticks per element\n", (double){hash_ticks_per_elem});
 
     for (shin_usize i = 0; i < CAP; i++) {
       key_type const key = i;
       ShinHashtable_insert(&table, hashes[i], &key, sizeof(key_type), nullptr,
                            keys_eql);
-      if (i % 32 == 0) {
+      if (i % switch_interval == 0) {
         fiber_switch(fiber_ctx, parent_ctx);
       }
     }
 
     shin_f64 const insert_ticks_per_elem =
-        (shin_f64)ShinTimer_lap(&timer) / (shin_f64)CAP;
+        (shin_f64)ShinTimer_lap(&timer) / (shin_f64)(CAP * N_FIBERS);
     printf("Insert: %.3f ticks per element\n", (double){insert_ticks_per_elem});
 
     for (shin_usize i = 0; i < CAP; i++) {
@@ -85,13 +89,13 @@ myfib(FiberCtx const *parent_ctx, FiberCtx *fiber_ctx, void *usr_ctx) {
       SHIN_ASSERT(
           (nullptr != ShinHashtable_get(&table, hashes[i], &key,
                                         sizeof(key_type), nullptr, keys_eql)));
-      if (i % 32 == 0) {
+      if (i % switch_interval == 0) {
         fiber_switch(fiber_ctx, parent_ctx);
       }
     }
 
     shin_f64 const get_ticks_per_elem =
-        (shin_f64)ShinTimer_lap(&timer) / (shin_f64)CAP;
+        (shin_f64)ShinTimer_lap(&timer) / (shin_f64)(CAP * N_FIBERS);
     printf("Get: %.3f ticks per element\n", (double){get_ticks_per_elem});
   }
 
@@ -102,18 +106,21 @@ myfib(FiberCtx const *parent_ctx, FiberCtx *fiber_ctx, void *usr_ctx) {
   SHIN_ASSERT((false));
 }
 
-constexpr shin_usize STACK_SIZE = 512 * 1024;
-
-constexpr shin_usize N_FIBERS = 10;
+constexpr shin_usize STACK_SIZE = 128 * 1024;
 
 ShinStatus dobench(ShinAlloc *alloc, ShinErrStack *err_stack) {
   Ctx ctxes[N_FIBERS] = {0};
   void *fiber_staxes[N_FIBERS] = {0};
+
+  ShinXoshiro256 rand = ShinXoshiro256_init(69);
+
   for (shin_usize fiber_idx = 0; fiber_idx < N_FIBERS; fiber_idx++) {
     void *fiber_stack_alloc = nullptr;
+    shin_usize const skew = (ShinXoshiro256_next(&rand) % (N_FIBERS * 2)) * 64;
+    shin_usize const alloc_size = SHIN_NEXT_MULTIPLE_OF(
+        FIBER_STACK_RED_ZONE_SIZE + STACK_SIZE + skew, (shin_usize){64});
     SHIN_ERR_TRY(
-        (ShinAlloc_aligned_alloc(alloc, FIBER_STACK_ALIGN,
-                                 FIBER_STACK_RED_ZONE_SIZE + STACK_SIZE,
+        (ShinAlloc_aligned_alloc(alloc, 64, alloc_size,
                                  (void **)&fiber_stack_alloc, err_stack)),
         err_stack);
 
@@ -129,6 +136,7 @@ ShinStatus dobench(ShinAlloc *alloc, ShinErrStack *err_stack) {
         .finished = finished,
         .err_stack = err_stack,
         .alloc = alloc,
+        .switch_interval = (fiber_idx + 1) * 5,
     };
 
     ctxes[fiber_idx] = ctx;
@@ -145,7 +153,9 @@ ShinStatus dobench(ShinAlloc *alloc, ShinErrStack *err_stack) {
   while (running) {
     running = false;
     for (shin_usize fiber_idx = 0; fiber_idx < N_FIBERS; fiber_idx++) {
-      fiber_switch(&parent_ctx, &fiber_ctxes[fiber_idx]);
+      if (!(*ctxes[fiber_idx].finished)) {
+        fiber_switch(&parent_ctx, &fiber_ctxes[fiber_idx]);
+      }
       running |= !(*ctxes[fiber_idx].finished);
     }
   }
@@ -154,7 +164,7 @@ ShinStatus dobench(ShinAlloc *alloc, ShinErrStack *err_stack) {
 }
 
 int main(void) {
-  void *const page = shin_page_alloc_thp_2mb(MEMORY_SIZE);
+  void *const page = shin_page_alloc_huge_1gb(MEMORY_SIZE);
 
   ShinErrStack err_stack = ShinErrStack_init();
   ShinAlloc alloc = ShinAlloc_init(page, MEMORY_SIZE);
