@@ -156,7 +156,7 @@ ShinStatus dobench(ShinAlloc *alloc, ShinErrStack *err_stack) {
       if (!(*ctxes[fiber_idx].finished)) {
         fiber_switch(&parent_ctx, &fiber_ctxes[fiber_idx]);
       }
-      running |= !(ctxes[fiber_idx].finished);
+      running |= !(*ctxes[fiber_idx].finished);
     }
   }
 
