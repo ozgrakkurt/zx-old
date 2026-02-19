@@ -58,6 +58,9 @@ FIBER: Library = Library(
     test_targets={
         "fiber_test": set([]),
     },
+    bench_targets={
+        "fiber_bench": set([]),
+    },
 )
 
 KG: Library = Library(

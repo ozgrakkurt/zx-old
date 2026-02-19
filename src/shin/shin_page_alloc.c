@@ -63,7 +63,3 @@ void shin_page_alloc_free(void *page, shin_usize size) {
   SHIN_ASSERT((page != nullptr));
   SHIN_ASSERT((-1 != munmap(page, (size_t){size})));
 }
-
-void shin_page_alloc_memlock_all(void) {
-  SHIN_ASSERT((mlockall(MCL_CURRENT | MCL_FUTURE) == 0));
-}

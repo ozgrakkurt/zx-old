@@ -76,8 +76,6 @@ static inline ShinStatus do_inserts(ShinAlloc *alloc, ShinErrStack *err_stack) {
 }
 
 int main(void) {
-  shin_page_alloc_memlock_all();
-
   void *const page = shin_page_alloc_thp_2mb(MEMORY_SIZE);
 
   ShinErrStack err_stack = ShinErrStack_init();
