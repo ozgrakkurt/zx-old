@@ -63,6 +63,10 @@ FIBER: Library = Library(
     },
 )
 
+# FIO: Library = Library(
+#     source_files=set(["fio_executor.c"]),
+# )
+
 KG: Library = Library(
     source_files=set(["kg_array.c"]),
 )

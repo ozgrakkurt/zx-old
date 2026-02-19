@@ -12,16 +12,10 @@
 #include <shin/shin_def.h>
 
 typedef struct FiberCtx {
-  shin_u64 rbx;
-  shin_u64 r12;
-  shin_u64 r13;
-  shin_u64 r14;
-  shin_u64 r15;
   shin_u64 rsp;
-  shin_u64 rbp;
   shin_u64 rip;
 } FiberCtx;
-_Static_assert(sizeof(FiberCtx) == 64);
+_Static_assert(sizeof(FiberCtx) == 16);
 
 constexpr shin_usize FIBER_STACK_RED_ZONE_SIZE = 128;
 constexpr shin_usize FIBER_STACK_ALIGN = 16;
