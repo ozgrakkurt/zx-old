@@ -7,6 +7,6 @@ py_format:
 py_check:
 	uvx ty check *.py
 c_format:
-	clang-format -i -style=file src/*/*.c include/*/*.h
+	clang-format -i -style=file src/*/*.c src/*/*.h include/*/*.h
 git_repack:
 	git repack -a -d -f --depth=250 --window=250

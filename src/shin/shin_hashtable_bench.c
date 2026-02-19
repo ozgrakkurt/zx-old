@@ -1,4 +1,5 @@
 #include <shin/shin_alloc.h>
+#include <shin/shin_def.h>
 #include <shin/shin_err.h>
 #include <shin/shin_err_trace.h>
 #include <shin/shin_hashtable.h>

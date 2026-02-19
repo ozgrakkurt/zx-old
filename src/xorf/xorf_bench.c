@@ -1,11 +1,14 @@
 #include <inttypes.h>
+#include <shin/shin_alloc.h>
 #include <shin/shin_def.h>
 #include <shin/shin_err.h>
 #include <shin/shin_err_trace.h>
 #include <shin/shin_hashtable.h>
 #include <shin/shin_page_alloc.h>
+#include <shin/shin_rapidhash_v3>
 #include <shin/shin_time.h>
 #include <shin/shin_xoshiro256.h>
+#include <stdio.h>
 #include <string.h>
 #include <xorf/xorf.h>
 

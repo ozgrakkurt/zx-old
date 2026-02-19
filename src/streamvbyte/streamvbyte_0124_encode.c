@@ -16,7 +16,7 @@
 #include <streamvbyte/streamvbyte.h>
 #include <string.h>
 
-#include "./streamvbyte_shuffle_tables_0124_encode.h"
+#include "./shuffle_tables/streamvbyte_shuffle_tables_0124_encode.h"
 
 ShinStatus streamvbyte_0124_encode(shin_u32 const *restrict input,
                                    shin_u32 input_len, shin_u8 *restrict output,
