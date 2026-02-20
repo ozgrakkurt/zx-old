@@ -27,6 +27,7 @@ ROOTPATH = os.path.dirname(os.path.abspath(__file__))
 
 @dataclass
 class Config:
+    original_cmd: str
     cc: str
     ar: str
     objdump: str
@@ -439,7 +440,7 @@ def gen_ninja_build(
     nw.comment("regeneration")
     nw.rule(
         "configure",
-        command=f"{os.path.abspath(__file__)} {' '.join(sys.argv[1:])}",
+        command=config.original_cmd,
         generator=True,
         description="Regenerate build.ninja via configure script",
     )
@@ -664,6 +665,34 @@ def gen_ninja_build(
     nw.close()
 
 
+def reconstruct_command(args: argparse.Namespace) -> str:
+    flags = {
+        "build-dir": args.build_dir,
+        "honggfuzz-path": args.honggfuzz_path,
+        "cc": args.cc,
+        "ar": args.ar,
+        "objdump": args.objdump,
+        "march": args.march,
+        "target": args.target,
+        "thin-lto": args.thin_lto,
+        "disable-libc": args.disable_libc,
+        "static-link": args.static_link,
+    }
+
+    out_flags = []
+    for fname, flag in flags.items():
+        if isinstance(flag, bool):
+            if flag:
+                out_flags.append(f"--{fname}")
+            else:
+                out_flags.append(f"--no-{fname}")
+        elif flag is not None:
+            assert isinstance(flag, str), "flag has to be string at this point"
+            out_flags.append(f'--{fname}="{flag}"')
+
+    return os.path.abspath(__file__) + " " + " ".join(out_flags)
+
+
 if __name__ == "__main__":
     parser = argparse.ArgumentParser(
         prog="configure.py",
@@ -736,6 +765,7 @@ if __name__ == "__main__":
         )
 
     cfg = Config(
+        original_cmd=reconstruct_command(args),
         cc=args.cc,
         ar=args.ar,
         objdump=args.objdump,
