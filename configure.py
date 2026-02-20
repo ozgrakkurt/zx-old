@@ -30,7 +30,6 @@ class Config:
     cc: str
     ar: str
     objdump: str
-    tidy: str
     march: str
     target: Optional[str]
     thin_lto: bool
@@ -130,37 +129,6 @@ def validate_profile(profile: Profile) -> None:
 
 def validate_config(config: Config) -> None:
     pass
-
-
-def make_tidyflags() -> List[str]:
-    checks = [
-        "-*",
-        "bugprone-bool-pointer-implicit-conversion",
-        "readability-implicit-bool-conversion",
-        "performance-*",
-        "misc-*",
-        "android-cloexec-*",
-        "readability-duplicate-include",
-        "readability-misleading-indentation",
-        "bugprone-assert-side-effect",
-        "bugprone-macro-repeated-side-effects",
-        "bugprone-infinite-loop",
-        "bugprone-macro-parentheses",
-        "bugprone-posix-return",
-        "bugprone-reserved-identifier",
-        "bugprone-signal-handler",
-        "bugprone-signed-char-misuse",
-        "bugprone-sizeof-expression",
-        "bugprone-branch-clone",
-    ]
-
-    tidyflags = [
-        "-header-filter=.*",
-        f"-checks='{','.join(checks)}'",
-        "--warnings-as-errors=*",
-    ]
-
-    return tidyflags
 
 
 def make_asflags(profile: Profile, config: Config) -> List[str]:
@@ -330,7 +298,6 @@ def process_sub_target(
     lib_name: str,
     tgt_name: str,
     deps: Set[str],
-    tidy_stamps: List[str],
 ) -> str:
     link_inputs = []
 
@@ -353,10 +320,6 @@ def process_sub_target(
         link_inputs,
     )
 
-    tidy_stamp = obj + ".tidy_stamp"
-    nw.build(tidy_stamp, "tidy", src)
-    tidy_stamps.append(tidy_stamp)
-
     nw.newline()
 
     return exe_path
@@ -367,7 +330,6 @@ def process_exe(
     libraries: Dict[str, Library],
     exe_name: str,
     exe: Executable,
-    tidy_stamps: List[str],
 ) -> str:
     link_inputs = []
 
@@ -378,10 +340,6 @@ def process_exe(
         src = os.path.join("$src_path", exe_name, source_file)
         nw.build(obj, "cc", src)
         link_inputs.append(obj)
-
-        tidy_stamp = obj + ".tidy_stamp"
-        nw.build(tidy_stamp, "tidy", src)
-        tidy_stamps.append(tidy_stamp)
 
     exe_path = os.path.join("$build_path", exe_name)
 
@@ -413,7 +371,6 @@ def gen_ninja_build(
     cflags = make_cflags(profile, config)
     asflags = make_asflags(profile, config)
     ldflags = make_ldflags(build_path, config)
-    tidyflags = make_tidyflags()
 
     # build_path is required to be absolute (checked in validation)
     ninjapath = os.path.join(build_path, "build.ninja")
@@ -431,7 +388,6 @@ def gen_ninja_build(
     nw.variable("cflags", " ".join(cflags))
     nw.variable("asflags", " ".join(asflags))
     nw.variable("ldflags", " ".join(ldflags))
-    nw.variable("tidyflags", " ".join(tidyflags))
 
     nw.newline()
 
@@ -439,7 +395,6 @@ def gen_ninja_build(
     nw.variable("cc", config.cc)
     nw.variable("ar", config.ar)
     nw.variable("objdump", config.objdump)
-    nw.variable("tidy", config.tidy)
 
     if config.fuzzing:
         assert config.hfuzz is not None, (
@@ -477,11 +432,6 @@ def gen_ninja_build(
         "objdump",
         command="$objdump -d -S -M intel $in > $out",
         description="OBJDUMP $in",
-    )
-    nw.rule(
-        "tidy",
-        command="$tidy $tidyflags $in -- $cflags && touch $out",
-        description="TIDY $in",
     )
 
     nw.newline()
@@ -545,7 +495,6 @@ def gen_ninja_build(
         nw.newline()
 
     test_stamps = []
-    tidy_stamps = []
     lib_files = []
     test_exes = []
     bench_exes = []
@@ -566,10 +515,6 @@ def gen_ninja_build(
             src = os.path.join("$src_path", lib_name, source_file)
             nw.build(obj, "cc", src)
             obj_files.append(obj)
-
-            tidy_stamp = obj + ".tidy_stamp"
-            nw.build(tidy_stamp, "tidy", src)
-            tidy_stamps.append(tidy_stamp)
 
         for asm_file in lib.asm_files:
             obj = os.path.join(
@@ -594,7 +539,7 @@ def gen_ninja_build(
                 # implicitly depend on parent library
                 deps.add(lib_name)
                 exe_path = process_sub_target(
-                    nw, project.libraries, lib_name, fuzz_tgt_name, deps, tidy_stamps
+                    nw, project.libraries, lib_name, fuzz_tgt_name, deps
                 )
 
                 fuzz_exes.append(exe_path)
@@ -623,7 +568,7 @@ def gen_ninja_build(
                 # implicitly depend on parent library
                 deps.add(lib_name)
                 exe_path = process_sub_target(
-                    nw, project.libraries, lib_name, test_tgt_name, deps, tidy_stamps
+                    nw, project.libraries, lib_name, test_tgt_name, deps
                 )
 
                 # Add test execution step
@@ -646,7 +591,7 @@ def gen_ninja_build(
                 # implicitly depend on parent library
                 deps.add(lib_name)
                 exe_path = process_sub_target(
-                    nw, project.libraries, lib_name, bench_tgt_name, deps, tidy_stamps
+                    nw, project.libraries, lib_name, bench_tgt_name, deps
                 )
 
                 # Add bench execution step
@@ -670,7 +615,7 @@ def gen_ninja_build(
         # process executables
         for exe_name, exe in project.executables.items():
             nw.comment(f"executable #{exe_name}")
-            exe_path = process_exe(nw, project.libraries, exe_name, exe, tidy_stamps)
+            exe_path = process_exe(nw, project.libraries, exe_name, exe)
             executables.append(exe_path)
             nw.comment("execution")
             nw.build(exe_name, "runexe", exe_path)
@@ -696,9 +641,6 @@ def gen_ninja_build(
         nw.comment("Run all tests")
         nw.build("test", "phony", test_stamps)
 
-        nw.comment("Run tidy on all source files")
-        nw.build("tidy", "phony", tidy_stamps)
-
         nw.newline()
 
         nw.default(
@@ -707,7 +649,6 @@ def gen_ninja_build(
                 "build_tests",
                 "build_benches",
                 "build_exes",
-                "tidy",
             ]
         )
     else:
@@ -758,12 +699,6 @@ if __name__ == "__main__":
         metavar="EXE",
     )
     parser.add_argument(
-        "--tidy",
-        default="clang-tidy",
-        help="clang-tidy executable to use for linting.",
-        metavar="EXE",
-    )
-    parser.add_argument(
         "--march",
         default="native",
         help="target CPU architecture to be passed into the compiler",
@@ -804,7 +739,6 @@ if __name__ == "__main__":
         cc=args.cc,
         ar=args.ar,
         objdump=args.objdump,
-        tidy=args.tidy,
         march=args.march,
         target=args.target,
         thin_lto=args.thin_lto,
