@@ -239,8 +239,6 @@ def make_ldflags(build_path: str, config: Config) -> List[str]:
         "-lm",
         # use llvm linker
         "-fuse-ld=lld",
-        # always omit frame pointer. This is used in assembly functions so don't change it.
-        "-fomit-frame-pointer",
     ]
 
     if config.static_link:
