@@ -15,7 +15,7 @@ constexpr shin_u32 MAX_N = 2048;
 constexpr shin_usize MEM_SIZE =
     (sizeof(shin_u32) * MAX_N + MEM_ALIGN - 1) / MEM_ALIGN * MEM_ALIGN;
 
-_Thread_local void *MEM;
+static void *MEM;
 
 int LLVMFuzzerInitialize(int *argc, char ***argv) {
   (void)argc;

@@ -31,7 +31,7 @@ typedef struct InputEntry {
 constexpr shin_usize MEM_SIZE = ((shin_usize){1wbu} << 23);
 constexpr shin_usize CAPACITY = 319wbu;
 
-_Thread_local void *MEM;
+static void *MEM;
 
 int LLVMFuzzerInitialize(int *argc, char ***argv) {
   (void)argc;
