@@ -84,6 +84,10 @@ static ShinStatus benchy(ShinAlloc *alloc, ShinErrStack *err_stack) {
   fprintf(stderr, "Query: %.3f ticks per element\n",
           (double){query_ticks_per_elem});
 
+  fprintf(stderr, "Overhead percentage: %.3f\n",
+          (shin_f64)(100 * (header.array_length - num_keys)) /
+              (shin_f64)num_keys);
+
   return ShinStatus_Ok;
 }
 
