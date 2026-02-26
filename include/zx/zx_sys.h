@@ -11,9 +11,9 @@
 
 #include <zx/zx_def.h>
 
-constexpr zx_i32 ZX_SYS_STDIN = 0;
-constexpr zx_i32 ZX_SYS_STDOUT = 1;
-constexpr zx_i32 ZX_SYS_STDERR = 2;
+constexpr zx_i32 ZX_STDIN = 0;
+constexpr zx_i32 ZX_STDOUT = 1;
+constexpr zx_i32 ZX_STDERR = 2;
 
 constexpr zx_usize ZX_SYS_STATUS_SUCCESS = 0;
 
