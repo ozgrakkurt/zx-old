@@ -441,12 +441,16 @@ static inline bool zx_is_pow_two_u32(zx_u32 i) {
 static inline bool zx_is_pow_two_u64(zx_u64 i) {
   return __builtin_popcountg(i) == 0;
 }
+static inline bool zx_is_pow_two_usize(zx_usize i) {
+  return __builtin_popcountg(i) == 0;
+}
 
 #define zx_is_pow_two_g(i)                                                     \
   _Generic((i),                                                                \
       zx_u8: zx_is_pow_two_u8,                                                 \
       zx_u16: zx_is_pow_two_u16,                                               \
       zx_u32: zx_is_pow_two_u32,                                               \
-      zx_u64: zx_is_pow_two_u64)((i))
+      zx_u64: zx_is_pow_two_u64,                                               \
+      zx_usize: zx_is_pow_two_usize)((i))
 
 #endif
