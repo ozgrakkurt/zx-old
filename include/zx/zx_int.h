@@ -275,13 +275,19 @@ static inline zx_usize zx_fastmod_usize(zx_usize a, zx_usize b) {
   return (zx_usize)(mul >> BIT_SIZE);
 }
 
-static inline zx_u8 zx_ctz_u8(zx_u8 i) { return __builtin_ctzg(i, 8); }
+static inline zx_u8 zx_ctz_u8(zx_u8 i) { return (zx_u8)__builtin_ctzg(i, 8); }
 
-static inline zx_u8 zx_ctz_u16(zx_u16 i) { return __builtin_ctzg(i, 16); }
+static inline zx_u8 zx_ctz_u16(zx_u16 i) {
+  return (zx_u8)__builtin_ctzg(i, 16);
+}
 
-static inline zx_u8 zx_ctz_u32(zx_u32 i) { return __builtin_ctzg(i, 32); }
+static inline zx_u8 zx_ctz_u32(zx_u32 i) {
+  return (zx_u8)__builtin_ctzg(i, 32);
+}
 
-static inline zx_u8 zx_ctz_u64(zx_u64 i) { return __builtin_ctzg(i, 64); }
+static inline zx_u8 zx_ctz_u64(zx_u64 i) {
+  return (zx_u8)__builtin_ctzg(i, 64);
+}
 
 #define zx_ctz_g(i)                                                            \
   _Generic((i),                                                                \
@@ -290,13 +296,19 @@ static inline zx_u8 zx_ctz_u64(zx_u64 i) { return __builtin_ctzg(i, 64); }
       zx_u32: zx_ctz_u32,                                                      \
       zx_u64: zx_ctz_u64)((i))
 
-static inline zx_u8 zx_clz_u8(zx_u8 i) { return __builtin_clzg(i, 8); }
+static inline zx_u8 zx_clz_u8(zx_u8 i) { return (zx_u8)__builtin_clzg(i, 8); }
 
-static inline zx_u8 zx_clz_u16(zx_u16 i) { return __builtin_clzg(i, 16); }
+static inline zx_u8 zx_clz_u16(zx_u16 i) {
+  return (zx_u8)__builtin_clzg(i, 16);
+}
 
-static inline zx_u8 zx_clz_u32(zx_u32 i) { return __builtin_clzg(i, 32); }
+static inline zx_u8 zx_clz_u32(zx_u32 i) {
+  return (zx_u8)__builtin_clzg(i, 32);
+}
 
-static inline zx_u8 zx_clz_u64(zx_u64 i) { return __builtin_clzg(i, 64); }
+static inline zx_u8 zx_clz_u64(zx_u64 i) {
+  return (zx_u8)__builtin_clzg(i, 64);
+}
 
 #define zx_clz_g(i)                                                            \
   _Generic((i),                                                                \

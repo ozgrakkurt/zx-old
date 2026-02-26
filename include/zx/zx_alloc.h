@@ -26,7 +26,6 @@ static inline ZXAlloc ZXAlloc_init(zx_u8 *buf, zx_usize capacity) {
 }
 
 static inline void ZXAlloc_reset(ZXAlloc *self) {
-  ZX_ASSERT((err_stack != nullptr));
   ZX_ASSERT((self != nullptr));
   self->offset = 0;
 }

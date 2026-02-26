@@ -11,7 +11,7 @@ PROFILES: Dict[str, Profile] = {
 }
 
 ZX: Library = Library(
-    source_files=set(["zx_sys.c", "zx_mem.c", "zx_page_alloc.c"]),
+    source_files=set(["zx_sys.c", "zx_mem.c", "zx_page_alloc.c", "zx_err_trace.c"]),
 )
 
 PROJECT: Project = Project(
