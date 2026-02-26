@@ -15,6 +15,8 @@ constexpr zx_i32 ZX_SYS_STDIN = 0;
 constexpr zx_i32 ZX_SYS_STDOUT = 1;
 constexpr zx_i32 ZX_SYS_STDERR = 2;
 
+constexpr zx_usize ZX_SYS_STATUS_SUCCESS = 0;
+
 zx_usize zx_sys_read(zx_i32 fd, zx_u8 *buf, zx_usize size, zx_usize *n_read);
 
 zx_usize zx_sys_write(zx_i32 fd, zx_u8 const *buf, zx_usize size,

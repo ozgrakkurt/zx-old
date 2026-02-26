@@ -8,7 +8,6 @@
 
 #include <zx/zx_def.h>
 #include <zx/zx_sys.h>
-#include <zx/zx_sys_status.h>
 
 typedef unsigned long zx_sys_reg;
 static_assert(sizeof(zx_sys_reg) == sizeof(zx_sys_reg));
@@ -122,8 +121,6 @@ static zx_usize zx_sys_errno(zx_sys_reg ret) {
 
 constexpr zx_sys_reg ZX_SYSCALL_READ = 0;
 constexpr zx_sys_reg ZX_SYSCALL_WRITE = 1;
-constexpr zx_sys_reg ZX_SYSCALL_OPEN = 2;
-constexpr zx_sys_reg ZX_SYSCALL_CLOSE = 3;
 constexpr zx_sys_reg ZX_SYSCALL_MMAP = 9;
 constexpr zx_sys_reg ZX_SYSCALL_MUNMAP = 11;
 constexpr zx_sys_reg ZX_SYSCALL_MADVISE = 28;
@@ -166,7 +163,7 @@ zx_usize zx_sys_write(zx_i32 fd, zx_u8 const *buf, zx_usize size,
 
 [[noreturn]]
 void zx_sys_abort(void) {
-  ZXSysStatus const status =
+  zx_usize const status =
       zx_sys_errno(zx_syscall1(ZX_SYSCALL_EXIT_GROUP, (zx_sys_reg){127}));
   (void)status;
   __builtin_unreachable();
