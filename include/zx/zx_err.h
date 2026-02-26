@@ -21,7 +21,7 @@
       zx_u32 const write_idx =                                                 \
           (depth == ZX_ERR_STACK_CAP_) ? (ZX_ERR_STACK_CAP_ - 1) : depth;      \
       stack->info_lengths[write_idx] =                                         \
-          __builtin_strlen(ZX_ERR_INFO(ZX_ERR_TRY(expr)));                     \
+          sizeof(ZX_ERR_INFO(ZX_ERR_TRY(expr))) - 1;                           \
       stack->infos[write_idx] = ZX_ERR_INFO(ZX_ERR_TRY(expr));                 \
       stack->depth = write_idx + 1;                                            \
       return status;                                                           \
@@ -32,8 +32,7 @@
   do {                                                                         \
     ZXStatus const status = (expr);                                            \
     ZXErrStack *stack = (stack_var);                                           \
-    stack->info_lengths[0] =                                                   \
-        __builtin_strlen(ZX_ERR_INFO(ZX_ERR_RETURN(expr)));                    \
+    stack->info_lengths[0] = sizeof(ZX_ERR_INFO(ZX_ERR_RETURN(expr))) - 1;     \
     stack->infos[0] = ZX_ERR_INFO(ZX_ERR_RETURN(expr));                        \
     stack->depth = 1;                                                          \
     return status;                                                             \
@@ -44,8 +43,7 @@
     bool const v = (expr);                                                     \
     if (!v) {                                                                  \
       ZXErrStack *stack = (stack_var);                                         \
-      stack->info_lengths[0] =                                                 \
-          __builtin_strlen(ZX_ERR_INFO(ZX_ERR_ASSERT(expr)));                  \
+      stack->info_lengths[0] = sizeof(ZX_ERR_INFO(ZX_ERR_ASSERT(expr))) - 1;   \
       stack->infos[0] = ZX_ERR_INFO(ZX_ERR_ASSERT(expr));                      \
       stack->depth = 1;                                                        \
       return ZXStatus_AssertFail;                                              \
