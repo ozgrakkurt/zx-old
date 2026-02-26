@@ -126,7 +126,7 @@ constexpr zx_sys_reg ZX_SYSCALL_MUNMAP = 11;
 constexpr zx_sys_reg ZX_SYSCALL_MADVISE = 28;
 constexpr zx_sys_reg ZX_SYSCALL_EXIT_GROUP = 231;
 
-zx_usize zx_sys_read(zx_i32 fd, zx_u8 *buf, zx_usize size, zx_usize *n_read) {
+zx_usize zx_sys_read(zx_i32 fd, void *buf, zx_usize size, zx_usize *n_read) {
   constexpr zx_usize MAX = 0x7ffff000wbu;
   zx_usize const read_len = (MAX <= size) ? MAX : size;
 
@@ -143,7 +143,7 @@ zx_usize zx_sys_read(zx_i32 fd, zx_u8 *buf, zx_usize size, zx_usize *n_read) {
   return status;
 }
 
-zx_usize zx_sys_write(zx_i32 fd, zx_u8 const *buf, zx_usize size,
+zx_usize zx_sys_write(zx_i32 fd, void const *buf, zx_usize size,
                       zx_usize *n_written) {
   constexpr zx_usize MAX = 0x7ffff000wbu;
   zx_usize const write_len = (MAX <= size) ? MAX : size;

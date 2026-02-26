@@ -7,7 +7,7 @@
 #define ZX_ASSERT_COLOR_RESET_ "\x1B[0m"
 
 #define ZX_ASSERT_STRINGIFY_(x) #x
-#define ZX_ASSERT_TO_STRING_(x) ZX_ERR_STRINGIFY_(x)
+#define ZX_ASSERT_TO_STRING_(x) ZX_ASSERT_STRINGIFY_(x)
 
 #define ZX_ASSERT_INFO_(expr)                                                  \
   "\tFILE=" __FILE__ "; LINE=" ZX_ASSERT_TO_STRING_(                           \
@@ -20,7 +20,9 @@
       char const *err_str = ZX_ASSERT_COLOR_RED_                               \
           "Failed assertion at:\n" ZX_ASSERT_INFO_(ZX_ASSERT(expr))            \
               ZX_ASSERT_COLOR_RESET_ "\n";                                     \
-      (void)zx_sys_write(ZX_STDERR, err_str, __builtin_strlen(err_str));       \
+      zx_usize n_written = 0;                                                  \
+      (void)zx_sys_write(ZX_STDERR, err_str, __builtin_strlen(err_str),        \
+                         &n_written);                                          \
       zx_sys_abort();                                                          \
     }                                                                          \
   } while (false)
