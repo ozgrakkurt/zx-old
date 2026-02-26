@@ -156,48 +156,27 @@ static inline zx_usize zx_chk_div_usize(zx_usize a, zx_usize b) {
 
 static inline zx_u8 zx_next_multiple_of_u8(zx_u8 a, zx_u8 b) {
   ZX_ASSERT((b > 0));
-  zx_u16 const wa = a;
-  zx_u16 const wb = b;
-  zx_u16 const ret = (wa + wb - (zx_u16){1}) / wb * wb;
-  ZX_ASSERT((ret <= ZX_U8_MAX));
-  return (zx_u8)ret;
+  return (zx_chk_add_u8(a, b) - (zx_u8){1}) / b * b;
 }
 
 static inline zx_u16 zx_next_multiple_of_u16(zx_u16 a, zx_u16 b) {
   ZX_ASSERT((b > 0));
-  zx_u32 const wa = a;
-  zx_u32 const wb = b;
-  zx_u32 const ret = (wa + wb - (zx_u32){1}) / wb * wb;
-  ZX_ASSERT((ret <= ZX_U16_MAX));
-  return (zx_u16)ret;
+  return (zx_chk_add_u16(a, b) - (zx_u16){1}) / b * b;
 }
 
 static inline zx_u32 zx_next_multiple_of_u32(zx_u32 a, zx_u32 b) {
   ZX_ASSERT((b > 0));
-  zx_u64 const wa = a;
-  zx_u64 const wb = b;
-  zx_u64 const ret = (wa + wb - (zx_u64){1}) / wb * wb;
-  ZX_ASSERT((ret <= ZX_U32_MAX));
-  return (zx_u32)ret;
+  return (zx_chk_add_u32(a, b) - (zx_u32){1}) / b * b;
 }
 
 static inline zx_u64 zx_next_multiple_of_u64(zx_u64 a, zx_u64 b) {
   ZX_ASSERT((b > 0));
-  zx_u128 const wa = a;
-  zx_u128 const wb = b;
-  zx_u128 const ret = (wa + wb - (zx_u128){1}) / wb * wb;
-  ZX_ASSERT((ret <= ZX_U64_MAX));
-  return (zx_u64)ret;
+  return (zx_chk_add_u64(a, b) - (zx_u64){1}) / b * b;
 }
 
 static inline zx_usize zx_next_multiple_of_usize(zx_usize a, zx_usize b) {
-  typedef unsigned _BitInt(sizeof(zx_usize) * 8 * 2) wide;
   ZX_ASSERT((b > 0));
-  wide const wa = a;
-  wide const wb = b;
-  wide const ret = (wa + wb - (wide){1}) / wb * wb;
-  ZX_ASSERT((ret <= ZX_USIZE_MAX));
-  return (zx_usize)ret;
+  return (zx_chk_add_usize(a, b) - (zx_usize){1}) / b * b;
 }
 
 #define zx_next_multiple_of_g(a, b)                                            \
@@ -442,19 +421,19 @@ static inline zx_u64 zx_next_pow_two_u64(zx_u64 i) {
       zx_u64: zx_next_pow_two_u64)((i))
 
 static inline bool zx_is_pow_two_u8(zx_u8 i) {
-  return __builtin_popcountg(i) == 0;
+  return __builtin_popcountg(i) == 1;
 }
 static inline bool zx_is_pow_two_u16(zx_u16 i) {
-  return __builtin_popcountg(i) == 0;
+  return __builtin_popcountg(i) == 1;
 }
 static inline bool zx_is_pow_two_u32(zx_u32 i) {
-  return __builtin_popcountg(i) == 0;
+  return __builtin_popcountg(i) == 1;
 }
 static inline bool zx_is_pow_two_u64(zx_u64 i) {
-  return __builtin_popcountg(i) == 0;
+  return __builtin_popcountg(i) == 1;
 }
 static inline bool zx_is_pow_two_usize(zx_usize i) {
-  return __builtin_popcountg(i) == 0;
+  return __builtin_popcountg(i) == 1;
 }
 
 #define zx_is_pow_two_g(i)                                                     \

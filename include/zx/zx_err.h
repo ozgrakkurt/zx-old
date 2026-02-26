@@ -3,9 +3,6 @@
 
 #include <zx/zx_def.h>
 
-#define ZX_ERR_COLOR_RED_ "\x1B[31m"
-#define ZX_ERR_COLOR_RESET_ "\x1B[0m"
-
 #define ZX_ERR_STRINGIFY_(x) #x
 #define ZX_ERR_TO_STRING_(x) ZX_ERR_STRINGIFY_(x)
 #define ZX_ERR_INFO_(expr)                                                     \

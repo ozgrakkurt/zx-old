@@ -43,13 +43,13 @@ static inline ZXStatus ZXHashtable_init(ZXAlloc *alloc, zx_u32 capacity,
                                         zx_usize entry_align, zx_u32 entry_size,
                                         ZXHashtable *table,
                                         ZXErrStack *err_stack) {
-  zx_u32 cap = zx_next_pow_two_u32(
-      (capacity * (zx_u32){100wbu} / ZX_HASHTABLE_LOAD_FACTOR_));
+  zx_u32 cap = zx_next_pow_two_u32(capacity * (zx_u32){100wbu} /
+                                   ZX_HASHTABLE_LOAD_FACTOR_);
   cap = zx_int_max_u32(ZX_HASHTABLE_GROUP_SIZE_, cap);
   ZX_ASSERT((cap >= capacity));
   ZX_ASSERT((cap > 0));
   // check it is a power of two
-  ZX_ASSERT((ZX_IS_POWER_OF_TWO(cap)));
+  ZX_ASSERT((zx_is_pow_two_u32(cap)));
   zx_u32 const cap_mask = cap - 1;
 
   // align to cachline because why not?
@@ -66,7 +66,7 @@ static inline ZXStatus ZXHashtable_init(ZXAlloc *alloc, zx_u32 capacity,
   __builtin_memset(metadata, ZX_HASHTABLE_TAG_EMPTY, metadata_size);
 
   zx_usize const entries_size = (zx_usize){entry_size} * (zx_usize){cap};
-  zx_usize const entries_align = ZX_MAX(entry_align, ALIGN);
+  zx_usize const entries_align = zx_int_max_usize(entry_align, ALIGN);
   void *entries = nullptr;
   ZX_ERR_TRY((ZXAlloc_aligned_alloc(alloc, entries_align, entries_size,
                                     &entries, err_stack)),
@@ -99,9 +99,10 @@ typedef bool zx_hashtable_key_eqfn(void const *ctx, void const *entry_a,
 static inline void ZXHashtable_load_(void const *restrict group_ptr, zx_u8 tag,
                                      zx_u16 *restrict tag_match,
                                      zx_u16 *restrict empty_match) {
-  typedef unsigned regt;
-  static_assert(4 == sizeof(regt));
+  typedef unsigned long regt;
+  static_assert(8 == sizeof(regt));
 
+  regt const gp = (regt)group_ptr;
   regt const tg = (regt){tag};
   regt tm;
   regt em;
@@ -113,7 +114,7 @@ static inline void ZXHashtable_load_(void const *restrict group_ptr, zx_u8 tag,
                    "vpmovmskb %%xmm2, %0\n\t"
                    "vpmovmskb %%xmm0, %1\n\t" // empty match
                    : "=r"(tm), "=r"(em)
-                   : "m"(group_ptr), "r"(tg)
+                   : "r"(gp), "r"(tg)
                    : "xmm0", "xmm1", "xmm2");
 
   *tag_match = (zx_u16)tm;
