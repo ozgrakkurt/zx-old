@@ -165,7 +165,9 @@ def make_cflags(profile: Profile, config: Config) -> List[str]:
         "-pipe",
         f"-O{profile.opt_level}",
         "-I$include_path",
+        # frame pointer is useless anyway because fibers don't save it
         "-fomit-frame-pointer",
+        # this caused compilation errors so is disabled. could be an idea to re-enable it
         "-fno-stack-protector",
         # disable libc
         "-nostdlib",

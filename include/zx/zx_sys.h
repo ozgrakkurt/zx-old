@@ -1,0 +1,34 @@
+#ifndef ZX_SYS_H
+#define ZX_SYS_H
+
+#ifndef __x86_64__
+#error "only x86_64 is supported"
+#endif
+
+#ifndef __linux__
+#error "only linux is supported"
+#endif
+
+#include <zx/zx_def.h>
+
+constexpr zx_i32 ZX_SYS_STDIN = 0;
+constexpr zx_i32 ZX_SYS_STDOUT = 1;
+constexpr zx_i32 ZX_SYS_STDERR = 2;
+
+zx_usize zx_sys_read(zx_i32 fd, zx_u8 *buf, zx_usize size, zx_usize *n_read);
+
+zx_usize zx_sys_write(zx_i32 fd, zx_u8 const *buf, zx_usize size,
+                      zx_usize *n_written);
+
+[[noreturn]]
+void zx_sys_abort(void);
+
+// returns the resulting pointer through `mem` argument
+zx_usize zx_sys_mmap(void *address, zx_usize length, zx_i32 prot, zx_i32 flags,
+                     zx_i32 fd, zx_i64 offset, void **mem);
+
+zx_usize zx_sys_munmap(void *mem, zx_usize length);
+
+zx_usize zx_sys_madvise(void *mem, zx_usize length, zx_i32 advice);
+
+#endif

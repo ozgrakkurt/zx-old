@@ -10,7 +10,9 @@ PROFILES: Dict[str, Profile] = {
     "fuzz": Profile(opt_level=2, enable_fuzzing=True),
 }
 
-ZX: Library = Library()
+ZX: Library = Library(
+    source_files=set(["zx_sys.c"]),
+)
 
 PROJECT: Project = Project(
     libraries={
