@@ -92,7 +92,7 @@ static inline ZXStatus ZXFmtBuf_write(ZXFmtBuf const *fmt, zx_i32 fd,
   zx_usize const status = zx_sys_write(fd, fmt->buf, fmt->offset, &n_written);
 
   if (status != ZX_SYS_STATUS_SUCCESS) {
-    ZX_ERR_RETURN((zx_sys_convert_status(status)), err_stack);
+    ZX_ERR_RETURN((zx_err_convert_sys_status(status)), err_stack);
   }
 
   if (n_written < fmt->offset) {

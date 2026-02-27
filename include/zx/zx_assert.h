@@ -15,17 +15,21 @@
 
 #define ZX_ASSERT(expr)                                                        \
   do {                                                                         \
-    bool const v = (expr);                                                     \
-    if (!v) {                                                                  \
-      char const *err_str = ZX_ASSERT_COLOR_RED_                               \
-          "Failed assertion at:\n" ZX_ASSERT_INFO_(ZX_ASSERT(expr))            \
-              ZX_ASSERT_COLOR_RESET_ "\n";                                     \
-      zx_usize n_written = 0;                                                  \
-      (void)zx_sys_write(ZX_STDERR, err_str, __builtin_strlen(err_str),        \
-                         &n_written);                                          \
-      zx_sys_abort();                                                          \
-    }                                                                          \
+    char const *zx_assert_info_ = ZX_ASSERT_COLOR_RED_                         \
+        "Failed assertion at:\n" ZX_ASSERT_INFO_(ZX_ASSERT(expr))              \
+            ZX_ASSERT_COLOR_RESET_ "\n";                                       \
+    zx_assert_((expr), zx_assert_info_, __builtin_strlen(zx_assert_info_));    \
   } while (false)
+
+static inline void zx_assert_(bool success, char const *info,
+                              zx_usize info_len) {
+  if (!success) {
+    zx_usize n_written = 0;
+    zx_usize const status = zx_sys_write(ZX_STDERR, info, info_len, &n_written);
+    (void)status;
+    zx_sys_abort();
+  }
+}
 
 #ifdef ZX_DBG_ASSERT_ENABLED
 #define ZX_DBG_ASSERT(expr) ZX_ASSERT(expr)

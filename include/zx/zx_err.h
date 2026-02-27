@@ -3,6 +3,7 @@
 
 #include <zx/zx_assert.h>
 #include <zx/zx_def.h>
+#include <zx/zx_sys.h>
 
 #define ZX_ERR_STRINGIFY_(x) #x
 #define ZX_ERR_TO_STRING_(x) ZX_ERR_STRINGIFY_(x)
@@ -95,6 +96,17 @@ static inline bool zx_err_assert_(bool success, char const *info,
     stack->depth = 1;
   }
   return success;
+}
+
+static inline ZXStatus zx_err_convert_sys_status(zx_usize status) {
+  switch (status) {
+  case ZX_SYS_STATUS_SUCCESS: {
+    return ZXStatus_Ok;
+  }
+  default: {
+    return ZXStatus_SysErrUnexpected;
+  }
+  }
 }
 
 #endif
