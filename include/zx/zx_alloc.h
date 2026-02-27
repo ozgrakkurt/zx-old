@@ -16,8 +16,7 @@ typedef struct ZXAlloc {
 } ZXAlloc;
 
 static inline ZXAlloc ZXAlloc_init(zx_u8 *buf, zx_usize capacity) {
-  ZX_ASSERT((buf != nullptr));
-  ZX_ASSERT((capacity > 0));
+  ZX_ASSERT((buf != nullptr || capacity == 0));
   return (ZXAlloc){
       .capacity = capacity,
       .offset = 0,
@@ -37,10 +36,13 @@ static inline ZXStatus ZXAlloc_aligned_alloc(ZXAlloc *self, zx_usize align,
   ZX_ASSERT((self != nullptr));
   ZX_ASSERT((ptr != nullptr));
   ZX_ASSERT((*ptr == nullptr));
-  ZX_ASSERT((size > 0));
-
   ZX_ASSERT((align <= (1 << 12)));
   ZX_ASSERT((zx_is_pow_two_usize(align)));
+
+  if (size == 0) {
+    *ptr = nullptr;
+    return ZXStatus_Ok;
+  }
 
   zx_usize const alloc_align = zx_int_max_usize(align, ZX_ALLOC_MIN_ALIGN);
 

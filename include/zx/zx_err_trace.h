@@ -6,14 +6,14 @@
 #include <zx/zx_err.h>
 #include <zx/zx_sys.h>
 
-#define ZX_ERR_COLOR_RED_ "\x1B[31m"
-#define ZX_ERR_COLOR_RESET_ "\x1B[0m"
+#define ZX_ERR_TRACE_COLOR_RED_ "\x1B[31m"
+#define ZX_ERR_TRACE_COLOR_RESET_ "\x1B[0m"
 
 #define ZX_ERR_TRACE_ABORT(expr, stack_var)                                    \
   do {                                                                         \
-    char const *zx_err_trace_abort_info_ =                                     \
-        ZX_ERR_COLOR_RED_ "Aborting because of error at:\n" ZX_ERR_INFO_(      \
-            ZX_ERR_TRACE_ABORT(expr)) ZX_ERR_COLOR_RESET_ "\n";                \
+    char const *zx_err_trace_abort_info_ = ZX_ERR_TRACE_COLOR_RED_             \
+        "Aborting because of error at:\n" ZX_ERR_INFO_(                        \
+            ZX_ERR_TRACE_ABORT(expr)) ZX_ERR_TRACE_COLOR_RESET_ "\n";          \
     zx_err_trace_abort_((expr), zx_err_trace_abort_info_,                      \
                         __builtin_strlen(zx_err_trace_abort_info_),            \
                         (stack_var));                                          \
