@@ -18,6 +18,7 @@ ZX: Library = Library(
             "zx_page_alloc.c",
             "zx_err_trace.c",
             "zx_start.c",
+            "zx_fuzz.c",
         ]
     ),
     test_targets={
