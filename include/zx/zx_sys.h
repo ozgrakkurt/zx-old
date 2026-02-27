@@ -10,12 +10,24 @@
 #endif
 
 #include <zx/zx_def.h>
+#include <zx/zx_err.h>
 
 constexpr zx_i32 ZX_STDIN = 0;
 constexpr zx_i32 ZX_STDOUT = 1;
 constexpr zx_i32 ZX_STDERR = 2;
 
 constexpr zx_usize ZX_SYS_STATUS_SUCCESS = 0;
+
+static inline ZXStatus zx_sys_convert_status(zx_usize status) {
+  switch (status) {
+  case ZX_SYS_STATUS_SUCCESS: {
+    return ZXStatus_Ok;
+  }
+  default: {
+    return ZXStatus_SysErrUnexpected;
+  }
+  }
+}
 
 zx_usize zx_sys_read(zx_i32 fd, void *buf, zx_usize size, zx_usize *n_read);
 
