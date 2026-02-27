@@ -2,6 +2,7 @@
 #include <zx/zx_def.h>
 #include <zx/zx_err.h>
 #include <zx/zx_err_trace.h>
+#include <zx/zx_page_alloc.h>
 #include <zx/zx_sys.h>
 
 ZXStatus zx_err_trace_collect(ZXAlloc *alloc, ZXErrStack const *stack,
@@ -49,26 +50,21 @@ ZXStatus zx_err_trace_collect(ZXAlloc *alloc, ZXErrStack const *stack,
 [[noreturn]] void zx_err_trace_abort(ZXErrStack const *stack) {
   ZX_ASSERT((stack != nullptr));
 
-  char const *head = "Aborting with stack trace:\n";
+  constexpr zx_usize TRACE_CAP = 1 << 12;
+  void *trace_mem = zx_page_alloc_4kb(TRACE_CAP);
 
-  zx_usize head_nw = 0;
-  zx_usize const head_status =
-      zx_sys_write(ZX_STDERR, head, __builtin_strlen(head), &head_nw);
-  // maybe should check nw == strlen here?
-  if (ZX_SYS_STATUS_SUCCESS != head_status) {
-    zx_sys_abort();
-  }
+  ZXErrStack dummy_stack = ZXErrStack_init();
+  ZXAlloc alloc = ZXAlloc_init(trace_mem, TRACE_CAP);
+  char const *trace = nullptr;
+  zx_usize trace_len = 0;
+  ZXStatus const status =
+      zx_err_trace_collect(&alloc, stack, &trace, &trace_len, &dummy_stack);
+  ZX_ASSERT((status != ZXStatus_Ok));
 
-  for (zx_u32 i = 0; i < stack->depth; i++) {
-    char const *info = stack->infos[i];
-
+  if (trace_len > 0) {
     zx_usize nw = 0;
-    zx_usize const status =
-        zx_sys_write(ZX_STDERR, info, __builtin_strlen(info), &nw);
-    // maybe should check nw == strlen here?
-    if (ZX_SYS_STATUS_SUCCESS != status) {
-      zx_sys_abort();
-    }
+    zx_usize const status = zx_sys_write(ZX_STDERR, trace, trace_len, &nw);
+    (void)status;
   }
 
   zx_sys_abort();
