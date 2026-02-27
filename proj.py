@@ -27,6 +27,7 @@ ZX: Library = Library(
     },
     bench_targets={
         "zx_hashtable_bench": set([]),
+        "zx_err_trace_bench": set([]),
     },
 )
 
