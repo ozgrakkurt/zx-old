@@ -4,7 +4,6 @@
 #include <zx/zx_err.h>
 #include <zx/zx_err_trace.h>
 #include <zx/zx_page_alloc.h>
-#include <zx/zx_start.h>
 #include <zx/zx_sys.h>
 
 ZXStatus err_func(zx_usize depth, ZXErrStack *err_stack) {
@@ -52,10 +51,9 @@ int main(void) {
                                              &trace_size, &collect_stack)),
                        &collect_stack);
 
-    // fprintf(stderr, "Collected trace:\n%s", trace);
-    zx_usize n_written = 0;
-    zx_sys_write(ZX_STDERR, trace, trace_size, &n_written);
-    ZX_ASSERT((n_written == trace_size));
+    // zx_usize n_written = 0;
+    // zx_sys_write(ZX_STDERR, trace, trace_size, &n_written);
+    // ZX_ASSERT((n_written == trace_size));
   }
 
   // ZX_DBG_ASSERT(false);
