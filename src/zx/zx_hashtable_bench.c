@@ -6,7 +6,6 @@
 #include <zx/zx_hashtable.h>
 #include <zx/zx_page_alloc.h>
 #include <zx/zx_rapidhash_v3.h>
-#include <zx/zx_start.h>
 #include <zx/zx_sys.h>
 #include <zx/zx_time.h>
 #include <zx/zx_xoshiro256.h>

@@ -27,7 +27,7 @@ static inline ZXTimer ZXTimer_init(void) {
   };
 }
 
-// returns the number of clock cycles elapsed
+// returns the number of ticks (roughly clock cycles) elapsed
 static inline zx_u64 ZXTimer_lap(ZXTimer *timer) {
   zx_u64 const now = zx_timer_now_();
   zx_u64 const diff = now - timer->start;
