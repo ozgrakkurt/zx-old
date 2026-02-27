@@ -30,6 +30,9 @@ ZX: Library = Library(
         "zx_hashtable_bench": set([]),
         "zx_err_trace_bench": set([]),
     },
+    fuzz_targets={
+        "zx_hashtable_fuzz": set([]),
+    },
 )
 
 PROJECT: Project = Project(

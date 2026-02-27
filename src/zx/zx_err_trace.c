@@ -59,7 +59,7 @@ ZXStatus zx_err_trace_collect(ZXAlloc *alloc, ZXErrStack const *stack,
   zx_usize trace_len = 0;
   ZXStatus const status =
       zx_err_trace_collect(&alloc, stack, &trace, &trace_len, &dummy_stack);
-  ZX_ASSERT((status != ZXStatus_Ok));
+  ZX_ASSERT((status == ZXStatus_Ok));
 
   if (trace_len > 0) {
     zx_usize nw = 0;

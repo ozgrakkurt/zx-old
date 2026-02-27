@@ -340,50 +340,52 @@ def process_library(
     artifacts.lib_files.append(lib_file_path)
     nw.newline()
 
-    # process test targets for this library
-    if len(lib.test_targets) > 0:
-        nw.comment(f"test targets for library #{lib_name}")
-    for test_tgt_name, test_tgt_deps in lib.test_targets.items():
-        deps = copy.deepcopy(test_tgt_deps)
-        # implicitly depend on parent library
-        deps.add(lib_name)
-        exe_path = process_sub_target(nw, libraries, lib_name, test_tgt_name, deps)
+    if not profile.enable_fuzzing:
+        # process test targets for this library
+        if len(lib.test_targets) > 0:
+            nw.comment(f"test targets for library #{lib_name}")
+        for test_tgt_name, test_tgt_deps in lib.test_targets.items():
+            deps = copy.deepcopy(test_tgt_deps)
+            # implicitly depend on parent library
+            deps.add(lib_name)
+            exe_path = process_sub_target(nw, libraries, lib_name, test_tgt_name, deps)
 
-        # Add test execution step
-        artifacts.test_exes.append(exe_path)
+            # Add test execution step
+            artifacts.test_exes.append(exe_path)
 
-        stamp_path = os.path.join("$build_path", "stamps", f"{test_tgt_name}.stamp")
+            stamp_path = os.path.join("$build_path", "stamps", f"{test_tgt_name}.stamp")
 
-        nw.build(stamp_path, "runtest", exe_path)
-        artifacts.test_stamps.append(stamp_path)
+            nw.build(stamp_path, "runtest", exe_path)
+            artifacts.test_stamps.append(stamp_path)
 
-        nw.newline()
+            nw.newline()
 
-    # process the benchmark targets for this library
-    if len(lib.bench_targets) > 0:
-        nw.comment(f"benchmark targets for library #{lib_name}")
-    for bench_tgt_name, bench_tgt_deps in lib.bench_targets.items():
-        deps = copy.deepcopy(bench_tgt_deps)
-        # implicitly depend on parent library
-        deps.add(lib_name)
-        exe_path = process_sub_target(nw, libraries, lib_name, bench_tgt_name, deps)
+    if not profile.enable_fuzzing:
+        # process the benchmark targets for this library
+        if len(lib.bench_targets) > 0:
+            nw.comment(f"benchmark targets for library #{lib_name}")
+        for bench_tgt_name, bench_tgt_deps in lib.bench_targets.items():
+            deps = copy.deepcopy(bench_tgt_deps)
+            # implicitly depend on parent library
+            deps.add(lib_name)
+            exe_path = process_sub_target(nw, libraries, lib_name, bench_tgt_name, deps)
 
-        # Add bench execution step
-        nw.comment("bencmark execution")
-        artifacts.bench_exes.append(exe_path)
-        nw.build(bench_tgt_name, "runexe", exe_path)
+            # Add bench execution step
+            nw.comment("bencmark execution")
+            artifacts.bench_exes.append(exe_path)
+            nw.build(bench_tgt_name, "runexe", exe_path)
 
-        nw.newline()
+            nw.newline()
 
-        # generate assembly output
-        nw.comment("assembly generation")
-        asm_out = os.path.join(
-            "$build_path",
-            f"{bench_tgt_name}.asm",
-        )
-        nw.build(asm_out, "objdump", exe_path)
-        artifacts.asm_outputs.append(asm_out)
-        nw.newline()
+            # generate assembly output
+            nw.comment("assembly generation")
+            asm_out = os.path.join(
+                "$build_path",
+                f"{bench_tgt_name}.asm",
+            )
+            nw.build(asm_out, "objdump", exe_path)
+            artifacts.asm_outputs.append(asm_out)
+            nw.newline()
 
     if profile.enable_fuzzing:
         # process fuzz targets for this library
@@ -527,11 +529,12 @@ def gen_ninja_build(
     for lib_name, lib in project.libraries.items():
         process_library(artifacts, nw, project.libraries, lib_name, lib)
 
-    # process executables
-    for exe_name, exe in project.executables.items():
-        process_exe(artifacts, nw, project.libraries, exe_name, exe)
+    if not profile.enable_fuzzing:
+        # process executables
+        for exe_name, exe in project.executables.items():
+            process_exe(artifacts, nw, project.libraries, exe_name, exe)
 
-    nw.newline()
+        nw.newline()
 
     nw.comment("Build all libraries")
     nw.build("build_libs", "phony", artifacts.lib_files)
