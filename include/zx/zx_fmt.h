@@ -14,15 +14,15 @@ static inline ZXStatus zx_fmt_format_u64(char *buf, zx_usize capacity,
   char digits[MAX_NUM_DIGITS];
 
   zx_usize pos = MAX_NUM_DIGITS;
-  while (val > 0) {
+  do {
     pos--;
-    digits[pos] = val % 10;
+    digits[pos] = '0' + (char)(val % 10);
     val /= 10;
-  }
+  } while (val > 0);
   zx_usize const len = MAX_NUM_DIGITS - pos;
 
   zx_usize const off = *offset;
-  zx_usize new_offset = zx_chk_add(off, len);
+  zx_usize new_offset = zx_chk_add_usize(off, len);
   ZX_ERR_ASSERT((new_offset < capacity), err_stack);
 
   __builtin_memcpy(&buf[off], &digits[pos], len);
@@ -36,7 +36,7 @@ static inline ZXStatus zx_fmt_format_str(char *buf, zx_usize capacity,
                                          zx_usize *offset, char const *str,
                                          zx_usize len, ZXErrStack *err_stack) {
   zx_usize const off = *offset;
-  zx_usize new_offset = zx_chk_add(off, len);
+  zx_usize new_offset = zx_chk_add_usize(off, len);
   ZX_ERR_ASSERT((new_offset < capacity), err_stack);
 
   __builtin_memcpy(&buf[off], str, len);
@@ -46,11 +46,20 @@ static inline ZXStatus zx_fmt_format_str(char *buf, zx_usize capacity,
   return ZXStatus_Ok;
 }
 
+static inline ZXStatus zx_fmt_format_cstr(char *buf, zx_usize capacity,
+                                          zx_usize *offset, char const *str,
+                                          ZXErrStack *err_stack) {
+  ZX_ERR_TRY((zx_fmt_format_str(buf, capacity, offset, str,
+                                __builtin_strlen(str), err_stack)),
+             err_stack);
+  return ZXStatus_Ok;
+}
+
 static inline ZXStatus zx_fmt_format_char(char *buf, zx_usize capacity,
                                           zx_usize *offset, char ch,
                                           ZXErrStack *err_stack) {
   zx_usize const off = *offset;
-  zx_usize new_offset = zx_chk_add(off, 1);
+  zx_usize new_offset = zx_chk_add_usize(off, 1);
   ZX_ERR_ASSERT((new_offset < capacity), err_stack);
 
   buf[off] = ch;
@@ -74,7 +83,7 @@ static inline ZXFmtBuf ZXFmtBuf_init(char *buf, zx_usize capacity) {
   };
 }
 
-static inline ZXFmtBuf ZXFmtBuf_write(ZXFmtBuf const *fmt, zx_i32 fd,
+static inline ZXStatus ZXFmtBuf_write(ZXFmtBuf const *fmt, zx_i32 fd,
                                       ZXErrStack *err_stack) {
   ZX_ASSERT((fmt->offset < fmt->capacity));
   ZX_ASSERT((fmt->buf[fmt->offset] == 0));
@@ -109,6 +118,14 @@ static inline ZXStatus ZXFmtBuf_format_str(ZXFmtBuf *fmt, char const *str,
   ZX_ERR_TRY(zx_fmt_format_str(fmt->buf, fmt->capacity, &fmt->offset, str, len,
                                err_stack),
              err_stack);
+  return ZXStatus_Ok;
+}
+
+static inline ZXStatus ZXFmtBuf_format_cstr(ZXFmtBuf *fmt, char const *str,
+                                            ZXErrStack *err_stack) {
+  ZX_ERR_TRY(
+      zx_fmt_format_cstr(fmt->buf, fmt->capacity, &fmt->offset, str, err_stack),
+      err_stack);
   return ZXStatus_Ok;
 }
 

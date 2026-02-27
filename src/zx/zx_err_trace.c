@@ -9,7 +9,7 @@ ZXStatus zx_err_trace_collect(ZXAlloc *alloc, ZXErrStack const *stack,
                               ZXErrStack *err_stack) {
   zx_usize const depth = stack->depth;
   char const *const *infos = stack->infos;
-  zx_usize const *info_lengths = stack->info_lengths;
+  zx_u16 const *info_lengths = stack->info_lengths;
 
   zx_usize total_len = 0;
   for (zx_u32 i = 0; i < depth; i++) {
