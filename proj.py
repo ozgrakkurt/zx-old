@@ -10,10 +10,6 @@ PROFILES: Dict[str, Profile] = {
     "fuzz": Profile(opt_level=2, enable_fuzzing=True),
 }
 
-START: Library = Library(
-    source_files=set(["start.c"]),
-)
-
 ZX: Library = Library(
     source_files=set(
         [
@@ -35,7 +31,6 @@ ZX: Library = Library(
 
 PROJECT: Project = Project(
     libraries={
-        "start": START,
         "zx": ZX,
     },
 )

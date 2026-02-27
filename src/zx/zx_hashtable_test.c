@@ -4,6 +4,7 @@
 #include <zx/zx_hashtable.h>
 #include <zx/zx_page_alloc.h>
 #include <zx/zx_rapidhash_v3.h>
+#include <zx/zx_start.h>
 
 constexpr zx_usize MEMORY_SIZE = 1 << 20;
 constexpr zx_usize CAP = 3169;

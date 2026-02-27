@@ -25,7 +25,6 @@ from definition import Executable, Library, Project, Profile
 ROOTPATH = os.path.dirname(os.path.abspath(__file__))
 
 BASE_LIB_NAME = "zx"
-START_LIB_NAME = "start"
 
 
 @dataclass
@@ -65,9 +64,6 @@ def validate_lib_sub_implicit_deps(lib_name: str, sub_name: str, deps: Set[str])
     assert BASE_LIB_NAME not in deps, (
         f"sub target {sub_name} of library {lib_name} can't explicitly depend on {BASE_LIB_NAME}. It is implicitly included."
     )
-    assert START_LIB_NAME not in deps, (
-        f"sub target {sub_name} of library {lib_name} can't explicitly depend on {START_LIB_NAME}. It is implicitly included."
-    )
 
 
 def validate_library(libs: Dict[str, Library], lib_name: str, lib: Library) -> None:
@@ -80,9 +76,6 @@ def validate_library(libs: Dict[str, Library], lib_name: str, lib: Library) -> N
         )
         assert dep_name != BASE_LIB_NAME, (
             f"library {lib_name} explicitly depends on {BASE_LIB_NAME}, this in not allowed as it is implicit."
-        )
-        assert dep_name != START_LIB_NAME, (
-            f"library {lib_name} explicitly depends on {START_LIB_NAME}, this in not allowed as it is implicit."
         )
 
     for fuzz_tgt_name, deps in lib.fuzz_targets.items():
@@ -110,9 +103,6 @@ def validate_exe(libs: Dict[str, Library], exe_name: str, exe: Executable) -> No
         assert dep_name != BASE_LIB_NAME, (
             f"exe {exe_name} explicitly depends on {BASE_LIB_NAME}, this in not allowed as it is implicit."
         )
-        assert dep_name != START_LIB_NAME, (
-            f"exe {exe_name} explicitly depends on {START_LIB_NAME}, this in not allowed as it is implicit."
-        )
 
 
 def validate_project(project: Project) -> None:
@@ -135,9 +125,6 @@ def validate_project(project: Project) -> None:
 
     assert BASE_LIB_NAME in project.libraries, (
         f"{BASE_LIB_NAME} library has to be defined"
-    )
-    assert START_LIB_NAME in project.libraries, (
-        f"{START_LIB_NAME} library has to be defined"
     )
 
 
@@ -310,8 +297,7 @@ def process_exe(
     exe_path = os.path.join("$build_path", exe_name)
 
     deps = collect_deps(libraries, exe.dependencies)
-    # implicitly depend on start lib so it injects _start fuction to call main
-    deps.add(START_LIB_NAME)
+
     for lib_name in deps:
         lib_file_path = os.path.join("$build_path", f"lib{lib_name}.a")
         link_inputs.append(lib_file_path)
@@ -361,8 +347,6 @@ def process_library(
         deps = copy.deepcopy(test_tgt_deps)
         # implicitly depend on parent library
         deps.add(lib_name)
-        # implicitly depend on start lib so it injects _start fuction to call main
-        deps.add(START_LIB_NAME)
         exe_path = process_sub_target(nw, libraries, lib_name, test_tgt_name, deps)
 
         # Add test execution step
@@ -382,8 +366,6 @@ def process_library(
         deps = copy.deepcopy(bench_tgt_deps)
         # implicitly depend on parent library
         deps.add(lib_name)
-        # implicitly depend on start lib so it injects _start fuction to call main
-        deps.add(START_LIB_NAME)
         exe_path = process_sub_target(nw, libraries, lib_name, bench_tgt_name, deps)
 
         # Add bench execution step

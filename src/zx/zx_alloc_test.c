@@ -3,6 +3,7 @@
 #include <zx/zx_err.h>
 #include <zx/zx_err_trace.h>
 #include <zx/zx_page_alloc.h>
+#include <zx/zx_start.h>
 
 constexpr zx_usize MEMORY_SIZE = 1 << 16;
 
