@@ -33,4 +33,19 @@ zx_usize zx_sys_munmap(void *mem, zx_usize length);
 
 zx_usize zx_sys_madvise(void *mem, zx_usize length, zx_i32 advice);
 
+// echo '#include <sys/mman.h>' | gcc -E - -dM | grep "#define MAP_"
+#define ZX_SYS_MAP_PRIVATE 0x02
+#define ZX_SYS_MAP_ANONYMOUS 0x20
+#define ZX_SYS_MAP_LOCKED 0x02000
+#define ZX_SYS_MAP_POPULATE 0x08000
+#define ZX_SYS_MAP_HUGETLB 0x40000
+
+#define ZX_SYS_MAP_HUGE_SHIFT 26
+#define ZX_SYS_MAP_HUGE_2MB (21 << ZX_SYS_MAP_HUGE_SHIFT)
+#define ZX_SYS_MAP_HUGE_1GB (30 << ZX_SYS_MAP_HUGE_SHIFT)
+#define ZX_SYS_MADV_HUGEPAGE 14
+
+#define ZX_SYS_PROT_READ 0x1
+#define ZX_SYS_PROT_WRITE 0x2
+
 #endif

@@ -8,7 +8,7 @@
         __attribute__((section("zx_fuzz_marker_is_hit"), used)) = false;       \
     static char const *zx_fuzz_marker_filename_                                \
         __attribute__((section("zx_fuzz_marker_filename"), used)) = __FILE__;  \
-    static int const *zx_fuzz_marker_lineno_                                   \
+    static int zx_fuzz_marker_lineno_                                          \
         __attribute__((section("zx_fuzz_marker_lineno"), used)) = __LINE__;    \
     (void)zx_fuzz_marker_filename_;                                            \
     (void)zx_fuzz_marker_lineno;                                               \
@@ -25,7 +25,7 @@
         __attribute__((section("zx_fuzz_err_is_hit"), used)) = false;          \
     static char const *zx_fuzz_err_filename_                                   \
         __attribute__((section("zx_fuzz_err_filename"), used)) = __FILE__;     \
-    static int const *zx_fuzz_err_lineno_                                      \
+    static int zx_fuzz_err_lineno_                                             \
         __attribute__((section("zx_fuzz_err_lineno"), used)) = __LINE__;       \
     (void)zx_fuzz_err_filename_;                                               \
     (void)zx_fuzz_err_lineno;                                                  \
@@ -38,15 +38,12 @@
 #ifdef ZX_FUZZING_ENABLED
 #define ZX_FUZZ_ABORT                                                          \
   do {                                                                         \
-    static bool zx_fuzz_abort_is_hit_                                          \
-        __attribute__((section("zx_fuzz_abort_is_hit"), used)) = false;        \
     static char const *zx_fuzz_abort_filename_                                 \
         __attribute__((section("zx_fuzz_abort_filename"), used)) = __FILE__;   \
-    static int const *zx_fuzz_abort_lineno_                                    \
+    static int zx_fuzz_abort_lineno_                                           \
         __attribute__((section("zx_fuzz_abort_lineno"), used)) = __LINE__;     \
     (void)zx_fuzz_abort_filename_;                                             \
     (void)zx_fuzz_abort_lineno;                                                \
-    zx_fuzz_abort_is_hit_ = true;                                              \
   } while (false)
 #else
 #define ZX_FUZZ_ABORT(expr) ((void)0)
