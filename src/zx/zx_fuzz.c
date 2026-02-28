@@ -109,10 +109,6 @@ int main(void) {
              ZX_SYS_STATUS_SUCCESS));
   ZX_ASSERT((zx_sys_sigaction(ZX_SYS_SIGSEGV, zx_fuzz_handle_crash) ==
              ZX_SYS_STATUS_SUCCESS));
-  // register the abort handler last so all registration errors trigger the
-  // default abort handler.
-  ZX_ASSERT((zx_sys_sigaction(ZX_SYS_SIGABRT, zx_fuzz_handle_crash) ==
-             ZX_SYS_STATUS_SUCCESS));
 
   ZX_FUZZ_STATE = (ZXFuzzState){
       .fuzz_input = nullptr,
@@ -128,22 +124,23 @@ int main(void) {
   ZX_ERR_TRACE_ABORT((zx_fuzz_setup(&err_stack)), &err_stack);
 
   while (true) {
-    // zx_usize n_consumed = 0;
-
-    __asm__ volatile(
-        "xorq %%rax, %%rax\n\t" // Clear low 64 bits of dividend
-        "xorq %%rdx, %%rdx\n\t" // Clear high 64 bits of dividend (IMPORTANT)
-        "xorq %%rcx, %%rcx\n\t" // Set divisor to 0
-        "divq %%rcx"            // Divide RDX:RAX by RCX
-        :
-        :
-        : "rax", "rdx", "rcx" // Tell the compiler these registers are clobbered
-    );
+    // __asm__ volatile(
+    //     "xorq %%rax, %%rax\n\t" // Clear low 64 bits of dividend
+    //     "xorq %%rdx, %%rdx\n\t" // Clear high 64 bits of dividend (IMPORTANT)
+    //     "xorq %%rcx, %%rcx\n\t" // Set divisor to 0
+    //     "divq %%rcx"            // Divide RDX:RAX by RCX
+    //     :
+    //     :
+    //     : "rax", "rdx", "rcx" // Tell the compiler these registers are
+    //     clobbered
+    // );
     //
-    // ZX_ERR_TRACE_ABORT(zx_fuzz_run((zx_u8 const *)"anan",
-    //                                __builtin_strlen("anan"), &n_consumed,
-    //                                &err_stack),
-    //                    &err_stack);
+
+    zx_usize n_consumed = 0;
+    ZX_ERR_TRACE_ABORT(zx_fuzz_run((zx_u8 const *)"anan",
+                                   __builtin_strlen("anan"), &n_consumed,
+                                   &err_stack),
+                       &err_stack);
   }
 
   return 0;

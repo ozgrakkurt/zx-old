@@ -3,9 +3,6 @@
 
 #include <zx/zx_sys.h>
 
-#define ZX_ASSERT_COLOR_RED_ "\x1B[31m"
-#define ZX_ASSERT_COLOR_RESET_ "\x1B[0m"
-
 #define ZX_ASSERT_STRINGIFY_(x) #x
 #define ZX_ASSERT_TO_STRING_(x) ZX_ASSERT_STRINGIFY_(x)
 
@@ -15,9 +12,8 @@
 
 #define ZX_ASSERT(expr)                                                        \
   do {                                                                         \
-    char const *zx_assert_info_ = ZX_ASSERT_COLOR_RED_                         \
-        "Failed assertion at:\n" ZX_ASSERT_INFO_(ZX_ASSERT(expr))              \
-            ZX_ASSERT_COLOR_RESET_ "\n";                                       \
+    char const *zx_assert_info_ =                                              \
+        "Failed assertion at:\n" ZX_ASSERT_INFO_(ZX_ASSERT(expr)) "\n";        \
     zx_assert_((expr), zx_assert_info_, __builtin_strlen(zx_assert_info_));    \
   } while (false)
 
