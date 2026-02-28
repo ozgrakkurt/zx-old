@@ -32,6 +32,30 @@ static inline ZXStatus zx_fmt_format_u64(char *buf, zx_usize capacity,
   return ZXStatus_Ok;
 }
 
+static inline ZXStatus zx_fmt_format_i64(char *buf, zx_usize capacity,
+                                         zx_usize *offset, zx_i64 val,
+                                         ZXErrStack *err_stack) {
+  if (val >= 0) {
+    ZX_ERR_TRY(
+        (zx_fmt_format_u64(buf, capacity, offset, (zx_u64)val, err_stack)),
+        err_stack);
+  } else {
+    zx_usize const off = *offset;
+    zx_usize const new_offset = zx_chk_add_usize(off, 1);
+    ZX_ERR_ASSERT((new_offset < capacity), err_stack);
+
+    buf[off] = '-';
+    buf[new_offset] = 0;
+    *offset = new_offset;
+
+    ZX_ERR_TRY(
+        (zx_fmt_format_u64(buf, capacity, offset, (zx_u64)-val, err_stack)),
+        err_stack);
+  }
+
+  return ZXStatus_Ok;
+}
+
 static inline ZXStatus zx_fmt_format_str(char *buf, zx_usize capacity,
                                          zx_usize *offset, char const *str,
                                          zx_usize len, ZXErrStack *err_stack) {
@@ -108,6 +132,14 @@ static inline ZXStatus ZXFmtBuf_format_u64(ZXFmtBuf *fmt, zx_u64 val,
                                            ZXErrStack *err_stack) {
   ZX_ERR_TRY(
       zx_fmt_format_u64(fmt->buf, fmt->capacity, &fmt->offset, val, err_stack),
+      err_stack);
+  return ZXStatus_Ok;
+}
+
+static inline ZXStatus ZXFmtBuf_format_i64(ZXFmtBuf *fmt, zx_i64 val,
+                                           ZXErrStack *err_stack) {
+  ZX_ERR_TRY(
+      zx_fmt_format_i64(fmt->buf, fmt->capacity, &fmt->offset, val, err_stack),
       err_stack);
   return ZXStatus_Ok;
 }
