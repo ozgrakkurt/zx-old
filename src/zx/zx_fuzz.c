@@ -16,7 +16,7 @@ ZXStatus zx_fuzz_run(zx_u8 const *fuzz_input, zx_usize fuzz_input_len,
 typedef struct ZXFuzzState {
   char const *fuzz_input;
   zx_usize fuzz_input_len;
-  char const *crash_msg;
+  char *crash_msg;
   zx_usize crash_msg_capacity;
   ZXErrStack err_stack;
   bool is_init;
@@ -33,7 +33,8 @@ static ZXFuzzState ZX_FUZZ_STATE = {
     .was_called = false,
 };
 
-void crash_handler(int signum) {
+[[noreturn]]
+void zx_fuzz_handle_crash(int signum) {
   bool was_called = ZX_FUZZ_STATE.was_called;
   ZX_FUZZ_STATE.was_called = true;
   if (was_called) {
@@ -45,9 +46,9 @@ void crash_handler(int signum) {
       (ZX_FUZZ_STATE.crash_msg == nullptr) ||
       (ZX_FUZZ_STATE.crash_msg_capacity == 0) || (!ZX_FUZZ_STATE.is_init)) {
     char const *msg =
-        "Global fuzz state isn't initialized properly. Crash handler can't run "
+        "\nGlobal fuzz state isn't initialized. Crash handler can't run "
         "properly. Prematurely exiting the process now... Check code in "
-        "file " __FILE__ " line " __LINE__ "\n";
+        "file " __FILE__ "\n\n";
     zx_usize n_written = 0;
     zx_sys_write(ZX_STDERR, msg, __builtin_strlen(msg), &n_written);
     (void)n_written;
@@ -99,25 +100,50 @@ void crash_handler(int signum) {
   (void)ZXFmtBuf_format_cstr(&fmt_buf, ")\n", &ZX_FUZZ_STATE.err_stack);
 
 quit:
-  (void)ZXFmtBuf_write(&fmt_buf, ZX_SYS_STDERR, &err_stack);
+  (void)ZXFmtBuf_write(&fmt_buf, ZX_STDERR, &ZX_FUZZ_STATE.err_stack);
   zx_sys_exit(ZX_SYS_EXIT_FAILURE);
 }
 
 int main(void) {
-  ZX_ASSERT((zx_sys_sigaction(ZX_SYS_SIGFPE, crash_handler)));
-  ZX_ASSERT((zx_sys_sigaction(ZX_SYS_SIGSEGV, crash_handler)));
+  ZX_ASSERT((zx_sys_sigaction(ZX_SYS_SIGFPE, zx_fuzz_handle_crash) ==
+             ZX_SYS_STATUS_SUCCESS));
+  ZX_ASSERT((zx_sys_sigaction(ZX_SYS_SIGSEGV, zx_fuzz_handle_crash) ==
+             ZX_SYS_STATUS_SUCCESS));
   // register the abort handler last so all registration errors trigger the
   // default abort handler.
-  ZX_ASSERT((zx_sys_sigaction(ZX_SYS_SIGABRT, crash_handler)));
+  ZX_ASSERT((zx_sys_sigaction(ZX_SYS_SIGABRT, zx_fuzz_handle_crash) ==
+             ZX_SYS_STATUS_SUCCESS));
+
+  ZX_FUZZ_STATE = (ZXFuzzState){
+      .fuzz_input = nullptr,
+      .fuzz_input_len = 0,
+      .crash_msg = nullptr,
+      .crash_msg_capacity = 0,
+      .err_stack = {0},
+      .is_init = false,
+      .was_called = false,
+  };
 
   ZXErrStack err_stack = ZXErrStack_init();
   ZX_ERR_TRACE_ABORT((zx_fuzz_setup(&err_stack)), &err_stack);
+
   while (true) {
-    zx_usize n_consumed = 0;
-    ZX_ERR_TRACE_ABORT(zx_fuzz_run((zx_u8 const *)"anan",
-                                   __builtin_strlen("anan"), &n_consumed,
-                                   &err_stack),
-                       &err_stack);
+    // zx_usize n_consumed = 0;
+
+    __asm__ volatile(
+        "xorq %%rax, %%rax\n\t" // Clear low 64 bits of dividend
+        "xorq %%rdx, %%rdx\n\t" // Clear high 64 bits of dividend (IMPORTANT)
+        "xorq %%rcx, %%rcx\n\t" // Set divisor to 0
+        "divq %%rcx"            // Divide RDX:RAX by RCX
+        :
+        :
+        : "rax", "rdx", "rcx" // Tell the compiler these registers are clobbered
+    );
+    //
+    // ZX_ERR_TRACE_ABORT(zx_fuzz_run((zx_u8 const *)"anan",
+    //                                __builtin_strlen("anan"), &n_consumed,
+    //                                &err_stack),
+    //                    &err_stack);
   }
 
   return 0;

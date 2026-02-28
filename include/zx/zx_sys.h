@@ -19,7 +19,6 @@ constexpr zx_usize ZX_SYS_STATUS_SUCCESS = 0;
 
 typedef void zx_sys_sigactionfn(int signum);
 zx_usize zx_sys_sigaction(int signum, zx_sys_sigactionfn actionfn);
-zx_usize zx_sys_sigaction_restore_default(int signum);
 
 zx_usize zx_sys_read(zx_i32 fd, void *buf, zx_usize size, zx_usize *n_read);
 

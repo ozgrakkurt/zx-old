@@ -7,6 +7,7 @@
 #endif
 
 #include <zx/zx_def.h>
+#include <zx/zx_fuzz.h>
 #include <zx/zx_sys.h>
 
 typedef unsigned long zx_sys_reg;
@@ -135,30 +136,24 @@ typedef struct ZXSysSigaction {
   unsigned long sa_mask;
 } ZXSysSigaction;
 
+constexpr int ZX_SYS_SA_RESTORER = 0x04000000;
+
+__asm__(".type zx_sys_restorer, @function\n"
+        ".global zx_sys_restorer\n"
+        "zx_sys_restorer:\n\t"
+        "movq $15, %rax\n\t"
+        "syscall\n\t");
+
+[[noreturn]]
+void zx_sys_restorer(void);
+
 zx_usize zx_sys_sigaction(int signum, zx_sys_sigactionfn actionfn) {
   ZXSysSigaction act = {
       .k_sa_handler = actionfn,
-      .sa_flags = 0,
-      .sa_restorer = nullptr,
+      .sa_flags = ZX_SYS_SA_RESTORER,
+      .sa_restorer = zx_sys_restorer,
       .sa_mask = 0,
   };
-  ZXSysSigaction old_act;
-  zx_sys_reg const ret =
-      zx_syscall4(ZX_SYSCALL_RT_SIGACTION, (zx_sys_reg)signum, (zx_sys_reg)&act,
-                  (zx_sys_reg)&old_act, sizeof(act.sa_mask));
-  (void)old_act;
-
-  return zx_sys_errno(ret);
-}
-
-zx_usize zx_sys_sigaction_restore_default(int signum) {
-  ZXSysSigaction act = {
-      .k_sa_handler = nullptr,
-      .sa_flags = 0,
-      .sa_restorer = nullptr,
-      .sa_mask = 0,
-  };
-
   ZXSysSigaction old_act;
   zx_sys_reg const ret =
       zx_syscall4(ZX_SYSCALL_RT_SIGACTION, (zx_sys_reg)signum, (zx_sys_reg)&act,
@@ -205,6 +200,10 @@ zx_usize zx_sys_write(zx_i32 fd, void const *buf, zx_usize size,
 
 [[noreturn]]
 void zx_sys_abort(void) {
+#ifdef ZX_FUZZING_ENABLED
+  zx_fuzz_handle_crash(ZX_SYS_SIGABRT);
+#endif
+
   zx_usize const status =
       zx_sys_errno(zx_syscall1(ZX_SYSCALL_EXIT_GROUP, (zx_sys_reg){127}));
   (void)status;

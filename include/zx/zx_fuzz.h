@@ -2,6 +2,10 @@
 #define ZX_FUZZ_H
 
 #ifdef ZX_FUZZING_ENABLED
+
+[[noreturn]]
+void zx_fuzz_handle_crash(int signum);
+
 #define ZX_FUZZ_MARKER                                                         \
   do {                                                                         \
     static bool zx_fuzz_marker_is_hit_                                         \
@@ -14,11 +18,7 @@
     (void)zx_fuzz_marker_lineno;                                               \
     zx_fuzz_marker_is_hit_ = true;                                             \
   } while (false)
-#else
-#define ZX_FUZZ_MARKER(expr) ((void)0)
-#endif
 
-#ifdef ZX_FUZZING_ENABLED
 #define ZX_FUZZ_ERR                                                            \
   do {                                                                         \
     static bool zx_fuzz_err_is_hit_                                            \
@@ -31,11 +31,7 @@
     (void)zx_fuzz_err_lineno;                                                  \
     zx_fuzz_err_is_hit_ = true;                                                \
   } while (false)
-#else
-#define ZX_FUZZ_ERR(expr) ((void)0)
-#endif
 
-#ifdef ZX_FUZZING_ENABLED
 #define ZX_FUZZ_ABORT                                                          \
   do {                                                                         \
     static char const *zx_fuzz_abort_filename_                                 \
@@ -45,8 +41,13 @@
     (void)zx_fuzz_abort_filename_;                                             \
     (void)zx_fuzz_abort_lineno;                                                \
   } while (false)
-#else
+
+#else // ifdef ZX_FUZZING_ENABLED
+
+#define ZX_FUZZ_MARKER(expr) ((void)0)
 #define ZX_FUZZ_ABORT(expr) ((void)0)
-#endif
+#define ZX_FUZZ_ERR(expr) ((void)0)
+
+#endif // ifdef ZX_FUZZING_ENABLED
 
 #endif

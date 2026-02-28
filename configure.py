@@ -536,38 +536,44 @@ def gen_ninja_build(
 
         nw.newline()
 
-    nw.comment("Build all libraries")
-    nw.build("build_libs", "phony", artifacts.lib_files)
+    if not profile.enable_fuzzing:
+        nw.comment("Build all libraries")
+        nw.build("build_libs", "phony", artifacts.lib_files)
 
-    nw.comment("Build all tests")
-    nw.build("build_tests", "phony", artifacts.test_exes)
+        nw.comment("Build all tests")
+        nw.build("build_tests", "phony", artifacts.test_exes)
 
-    nw.comment("Build all benchmarks")
-    nw.build("build_benches", "phony", artifacts.bench_exes)
+        nw.comment("Build all benchmarks")
+        nw.build("build_benches", "phony", artifacts.bench_exes)
 
-    nw.comment("Build all benchmark assembly output")
-    nw.build("asm", "phony", artifacts.asm_outputs)
+        nw.comment("Build all benchmark assembly output")
+        nw.build("asm", "phony", artifacts.asm_outputs)
 
-    nw.comment("Build all exes")
-    nw.build("build_exes", "phony", artifacts.executables)
+        nw.comment("Build all exes")
+        nw.build("build_exes", "phony", artifacts.executables)
 
-    nw.comment("Run all tests")
-    nw.build("test", "phony", artifacts.test_stamps)
+        nw.comment("Run all tests")
+        nw.build("test", "phony", artifacts.test_stamps)
 
-    nw.comment("Build all fuzzers")
-    nw.build("build_fuzzers", "phony", artifacts.fuzz_exes)
+        nw.newline()
 
-    nw.newline()
+        nw.default(
+            [
+                "build_libs",
+                "build_tests",
+                "build_benches",
+                "build_exes",
+            ]
+        )
+    else:
+        nw.comment("Build all fuzzers")
+        nw.build("build_fuzzers", "phony", artifacts.fuzz_exes)
 
-    nw.default(
-        [
-            "build_libs",
-            "build_tests",
-            "build_benches",
-            "build_exes",
-            "build_fuzzers",
-        ]
-    )
+        nw.default(
+            [
+                "build_fuzzers",
+            ]
+        )
 
     nw.newline()
 
