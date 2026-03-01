@@ -3,9 +3,6 @@
 
 #ifdef ZX_FUZZING_ENABLED
 
-[[noreturn]]
-void zx_fuzz_handle_crash(int signum);
-
 #define ZX_FUZZ_MARKER                                                         \
   do {                                                                         \
     static bool zx_fuzz_marker_is_hit_                                         \
@@ -15,8 +12,9 @@ void zx_fuzz_handle_crash(int signum);
     static int zx_fuzz_marker_lineno_                                          \
         __attribute__((section("zx_fuzz_marker_lineno"), used)) = __LINE__;    \
     (void)zx_fuzz_marker_filename_;                                            \
-    (void)zx_fuzz_marker_lineno;                                               \
+    (void)zx_fuzz_marker_lineno_;                                              \
     zx_fuzz_marker_is_hit_ = true;                                             \
+    (void)zx_fuzz_marker_is_hit_;                                              \
   } while (false)
 
 #define ZX_FUZZ_ERR                                                            \
@@ -28,8 +26,9 @@ void zx_fuzz_handle_crash(int signum);
     static int zx_fuzz_err_lineno_                                             \
         __attribute__((section("zx_fuzz_err_lineno"), used)) = __LINE__;       \
     (void)zx_fuzz_err_filename_;                                               \
-    (void)zx_fuzz_err_lineno;                                                  \
+    (void)zx_fuzz_err_lineno_;                                                 \
     zx_fuzz_err_is_hit_ = true;                                                \
+    (void)zx_fuzz_err_is_hit_;                                                 \
   } while (false)
 
 #define ZX_FUZZ_ABORT                                                          \
@@ -39,7 +38,7 @@ void zx_fuzz_handle_crash(int signum);
     static int zx_fuzz_abort_lineno_                                           \
         __attribute__((section("zx_fuzz_abort_lineno"), used)) = __LINE__;     \
     (void)zx_fuzz_abort_filename_;                                             \
-    (void)zx_fuzz_abort_lineno;                                                \
+    (void)zx_fuzz_abort_lineno_;                                               \
   } while (false)
 
 #else // ifdef ZX_FUZZING_ENABLED

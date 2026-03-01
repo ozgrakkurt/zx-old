@@ -1,148 +1,145 @@
 #ifdef ZX_FUZZING_ENABLED
 
+#include <zx/zx_alloc.h>
 #include <zx/zx_assert.h>
 #include <zx/zx_err.h>
 #include <zx/zx_err_trace.h>
 #include <zx/zx_fmt.h>
+#include <zx/zx_fuzz.h>
+#include <zx/zx_page_alloc.h>
 #include <zx/zx_sys.h>
 
-ZXStatus zx_fuzz_setup(ZXErrStack *err_stack);
-ZXStatus zx_fuzz_run(zx_u8 const *fuzz_input, zx_usize fuzz_input_len,
-                     zx_usize *n_consumed, ZXErrStack *err_stack);
+ZXStatus zx_fuzz_setup(void **usr_ctx, ZXErrStack *err_stack);
+ZXStatus zx_fuzz_one(void *usr_ctx, zx_u8 const *fuzz_input,
+                     zx_usize fuzz_input_len, zx_usize *n_consumed,
+                     ZXErrStack *err_stack);
 
-// global fuzz state for implementing the crash signal handler
-// this kind of global state is needed because we can't pass arguments to the
-// crash signal handler.
-typedef struct ZXFuzzState {
-  char const *fuzz_input;
-  zx_usize fuzz_input_len;
-  char *crash_msg;
-  zx_usize crash_msg_capacity;
-  ZXErrStack err_stack;
-  bool is_init;
-  bool was_called;
-} ZXFuzzState;
+extern bool __start_zx_fuzz_marker_is_hit;
+extern int const __start_zx_fuzz_marker_lineno;
 
-static ZXFuzzState ZX_FUZZ_STATE = {
-    .fuzz_input = nullptr,
-    .fuzz_input_len = 0,
-    .crash_msg = nullptr,
-    .crash_msg_capacity = 0,
-    .err_stack = {0},
-    .is_init = false,
-    .was_called = false,
-};
+extern char const __start_zx_fuzz_marker_filename;
+extern char const __stop_zx_fuzz_marker_filename;
 
-[[noreturn]]
-void zx_fuzz_handle_crash(int signum) {
-  bool was_called = ZX_FUZZ_STATE.was_called;
-  ZX_FUZZ_STATE.was_called = true;
-  if (was_called) {
-    zx_sys_exit(ZX_SYS_EXIT_FAILURE);
+extern bool __start_zx_fuzz_err_is_hit;
+extern int const __start_zx_fuzz_err_lineno;
+
+extern char const __start_zx_fuzz_err_filename;
+extern char const __stop_zx_fuzz_err_filename;
+
+extern int const __start_zx_fuzz_abort_lineno;
+extern char const __start_zx_fuzz_abort_filename;
+extern char const __stop_zx_fuzz_abort_filename;
+
+constexpr zx_usize MEM_CAP = 1 << 30;
+constexpr zx_usize FMT_BUF_CAP = 1 << 14;
+
+static ZXStatus print_counts(ZXFmtBuf *fmt_buf, zx_usize n_markers,
+                             zx_usize n_errs, zx_usize n_aborts,
+                             ZXErrStack *err_stack) {
+  ZX_ERR_TRY((ZXFmtBuf_format_cstr(fmt_buf, "Found:\n\t MARKERS: ", err_stack)),
+             err_stack);
+  ZX_ERR_TRY((ZXFmtBuf_format_u64(fmt_buf, n_markers, err_stack)), err_stack);
+  ZX_ERR_TRY((ZXFmtBuf_format_cstr(fmt_buf, "\n\t ERRS: ", err_stack)),
+             err_stack);
+  ZX_ERR_TRY((ZXFmtBuf_format_u64(fmt_buf, n_errs, err_stack)), err_stack);
+  ZX_ERR_TRY((ZXFmtBuf_format_cstr(fmt_buf, "\n\t ABORTS: ", err_stack)),
+             err_stack);
+  ZX_ERR_TRY((ZXFmtBuf_format_u64(fmt_buf, n_aborts, err_stack)), err_stack);
+  ZX_ERR_TRY((ZXFmtBuf_format_cstr(fmt_buf, "\n", err_stack)), err_stack);
+
+  ZX_ERR_TRY((ZXFmtBuf_write(fmt_buf, ZX_STDERR, err_stack)), err_stack);
+
+  ZXFmtBuf_reset(fmt_buf);
+
+  return ZXStatus_Ok;
+}
+
+static void clear_is_hit(zx_usize n_markers, zx_usize n_errs) {
+  __builtin_memset(&__start_zx_fuzz_marker_is_hit, false, n_markers);
+  __builtin_memset(&__start_zx_fuzz_err_is_hit, false, n_errs);
+}
+
+static void count_is_hit(zx_usize n_markers, zx_usize n_errs,
+                         zx_usize *n_markers_hit, zx_usize *n_errs_hit) {
+  zx_usize marker_count = 0;
+  for (zx_usize i = 0; i < n_markers; i++) {
+    if ((&__start_zx_fuzz_marker_is_hit)[i]) {
+      marker_count++;
+    }
+  }
+  zx_usize err_count = 0;
+  for (zx_usize i = 0; i < n_errs; i++) {
+    if ((&__start_zx_fuzz_err_is_hit)[i]) {
+      err_count++;
+    }
   }
 
-  if ((ZX_FUZZ_STATE.fuzz_input == nullptr) ||
-      (ZX_FUZZ_STATE.fuzz_input_len == 0) ||
-      (ZX_FUZZ_STATE.crash_msg == nullptr) ||
-      (ZX_FUZZ_STATE.crash_msg_capacity == 0) || (!ZX_FUZZ_STATE.is_init)) {
-    char const *msg =
-        "\nGlobal fuzz state isn't initialized. Crash handler can't run "
-        "properly. Prematurely exiting the process now... Check code in "
-        "file " __FILE__ "\n\n";
-    zx_usize n_written = 0;
-    zx_sys_write(ZX_STDERR, msg, __builtin_strlen(msg), &n_written);
-    (void)n_written;
-    zx_sys_exit(ZX_SYS_EXIT_FAILURE);
-  }
+  *n_markers_hit = marker_count;
+  *n_errs_hit = err_count;
+}
 
-  ZXFmtBuf fmt_buf =
-      ZXFmtBuf_init(ZX_FUZZ_STATE.crash_msg, ZX_FUZZ_STATE.crash_msg_capacity);
+static ZXStatus print_hit_counts(ZXFmtBuf *fmt_buf, zx_usize n_markers_hit,
+                                 zx_usize n_errs_hit, ZXErrStack *err_stack) {
+  ZX_ERR_TRY((ZXFmtBuf_format_cstr(fmt_buf, "Hit:\n\t MARKERS: ", err_stack)),
+             err_stack);
+  ZX_ERR_TRY((ZXFmtBuf_format_u64(fmt_buf, n_markers_hit, err_stack)),
+             err_stack);
+  ZX_ERR_TRY((ZXFmtBuf_format_cstr(fmt_buf, "\n\t ERRS: ", err_stack)),
+             err_stack);
+  ZX_ERR_TRY((ZXFmtBuf_format_u64(fmt_buf, n_errs_hit, err_stack)), err_stack);
+  ZX_ERR_TRY((ZXFmtBuf_format_cstr(fmt_buf, "\n", err_stack)), err_stack);
 
-  char const *signame = "unknown";
-  switch (signum) {
-  case ZX_SYS_SIGFPE: {
-    signame = "SIGFPE";
-    break;
-  }
-  case ZX_SYS_SIGABRT: {
-    signame = "SIGABRT";
-    break;
-  }
-  case ZX_SYS_SIGSEGV: {
-    signame = "SIGSEGV";
-    break;
-  }
-  default: {
-    (void)ZXFmtBuf_format_cstr(
-        &fmt_buf, "received unexpected signum: ", &ZX_FUZZ_STATE.err_stack);
-    (void)ZXFmtBuf_format_i64(&fmt_buf, (zx_i64){signum},
-                              &ZX_FUZZ_STATE.err_stack);
-    (void)ZXFmtBuf_format_cstr(&fmt_buf,
-                               "aborting crash handler prematurely now...\n",
-                               &ZX_FUZZ_STATE.err_stack);
-    goto quit;
-  }
-  }
+  ZX_ERR_TRY((ZXFmtBuf_write(fmt_buf, ZX_STDERR, err_stack)), err_stack);
 
-  // write file containing crashing fuzz input.
-  // determine file name and path somehow.
-  // input should be put into a static variable every time before a fuzz run.
-  // maybe also write a "formatted" file by converting the raw fuzz input into
-  // user readable string using a function given by fuzz target.
+  ZXFmtBuf_reset(fmt_buf);
 
-  (void)ZXFmtBuf_format_cstr(
-      &fmt_buf, "Crashing because of signal name: ", &ZX_FUZZ_STATE.err_stack);
-  (void)ZXFmtBuf_format_cstr(&fmt_buf, signame, &ZX_FUZZ_STATE.err_stack);
-  (void)ZXFmtBuf_format_cstr(&fmt_buf,
-                             " (signal code: ", &ZX_FUZZ_STATE.err_stack);
-  (void)ZXFmtBuf_format_i64(&fmt_buf, (zx_i64){signum},
-                            &ZX_FUZZ_STATE.err_stack);
-  (void)ZXFmtBuf_format_cstr(&fmt_buf, ")\n", &ZX_FUZZ_STATE.err_stack);
-
-quit:
-  (void)ZXFmtBuf_write(&fmt_buf, ZX_STDERR, &ZX_FUZZ_STATE.err_stack);
-  zx_sys_exit(ZX_SYS_EXIT_FAILURE);
+  return ZXStatus_Ok;
 }
 
 int main(void) {
-  ZX_ASSERT((zx_sys_sigaction(ZX_SYS_SIGFPE, zx_fuzz_handle_crash) ==
-             ZX_SYS_STATUS_SUCCESS));
-  ZX_ASSERT((zx_sys_sigaction(ZX_SYS_SIGSEGV, zx_fuzz_handle_crash) ==
-             ZX_SYS_STATUS_SUCCESS));
+  zx_usize const n_markers = ((zx_usize)&__stop_zx_fuzz_marker_filename) -
+                             ((zx_usize)&__start_zx_fuzz_marker_filename);
+  zx_usize const n_errs = ((zx_usize)&__stop_zx_fuzz_err_filename) -
+                          ((zx_usize)&__start_zx_fuzz_err_filename);
+  zx_usize const n_aborts = ((zx_usize)&__stop_zx_fuzz_abort_filename) -
+                            ((zx_usize)&__start_zx_fuzz_abort_filename);
 
-  ZX_FUZZ_STATE = (ZXFuzzState){
-      .fuzz_input = nullptr,
-      .fuzz_input_len = 0,
-      .crash_msg = nullptr,
-      .crash_msg_capacity = 0,
-      .err_stack = {0},
-      .is_init = false,
-      .was_called = false,
-  };
+  void *mem = zx_page_alloc_thp_2mb(MEM_CAP);
+  ZXAlloc alloc = ZXAlloc_init(mem, MEM_CAP);
 
   ZXErrStack err_stack = ZXErrStack_init();
-  ZX_ERR_TRACE_ABORT((zx_fuzz_setup(&err_stack)), &err_stack);
+
+  char *fmt_buf_alloc = nullptr;
+  ZX_ERR_TRACE_ABORT(
+      (ZXAlloc_alloc(&alloc, FMT_BUF_CAP, (void **)&fmt_buf_alloc, &err_stack)),
+      &err_stack);
+  ZXFmtBuf fmt_buf = ZXFmtBuf_init(fmt_buf_alloc, FMT_BUF_CAP);
+
+  ZX_ERR_TRACE_ABORT(
+      (print_counts(&fmt_buf, n_markers, n_errs, n_aborts, &err_stack)),
+      &err_stack);
+
+  void *usr_ctx = nullptr;
+  ZX_ERR_TRACE_ABORT((zx_fuzz_setup(&usr_ctx, &err_stack)), &err_stack);
 
   while (true) {
-    // __asm__ volatile(
-    //     "xorq %%rax, %%rax\n\t" // Clear low 64 bits of dividend
-    //     "xorq %%rdx, %%rdx\n\t" // Clear high 64 bits of dividend (IMPORTANT)
-    //     "xorq %%rcx, %%rcx\n\t" // Set divisor to 0
-    //     "divq %%rcx"            // Divide RDX:RAX by RCX
-    //     :
-    //     :
-    //     : "rax", "rdx", "rcx" // Tell the compiler these registers are
-    //     clobbered
-    // );
-    //
-
+    clear_is_hit(n_markers, n_errs);
     zx_usize n_consumed = 0;
-    ZX_ERR_TRACE_ABORT(zx_fuzz_run((zx_u8 const *)"anan",
-                                   __builtin_strlen("anan"), &n_consumed,
-                                   &err_stack),
-                       &err_stack);
+    ZX_ERR_TRACE_ABORT(
+        (zx_fuzz_one(usr_ctx, (zx_u8 const *)"anan", __builtin_strlen("anan"),
+                     &n_consumed, &err_stack)),
+        &err_stack);
+    ZX_FUZZ_MARKER;
+
+    zx_usize n_marker_hit = 0;
+    zx_usize n_err_hit = 0;
+    count_is_hit(n_markers, n_errs, &n_marker_hit, &n_err_hit);
+    ZX_ERR_TRACE_ABORT(
+        (print_hit_counts(&fmt_buf, n_marker_hit, n_err_hit, &err_stack)),
+        &err_stack);
   }
 
+  zx_page_alloc_free(mem, MEM_CAP);
   return 0;
 }
 

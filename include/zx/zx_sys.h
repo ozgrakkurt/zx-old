@@ -17,9 +17,6 @@ constexpr zx_i32 ZX_STDERR = 2;
 
 constexpr zx_usize ZX_SYS_STATUS_SUCCESS = 0;
 
-typedef void zx_sys_sigactionfn(int signum);
-zx_usize zx_sys_sigaction(int signum, zx_sys_sigactionfn actionfn);
-
 zx_usize zx_sys_read(zx_i32 fd, void *buf, zx_usize size, zx_usize *n_read);
 
 zx_usize zx_sys_write(zx_i32 fd, void const *buf, zx_usize size,
@@ -53,11 +50,6 @@ constexpr int ZX_SYS_MADV_HUGEPAGE = 14;
 
 constexpr int ZX_SYS_PROT_READ = 0x1;
 constexpr int ZX_SYS_PROT_WRITE = 0x2;
-
-// echo '#include <signal.h>' | gcc -E - -dM | grep SIGSEG
-constexpr int ZX_SYS_SIGSEGV = 11;
-constexpr int ZX_SYS_SIGABRT = 6;
-constexpr int ZX_SYS_SIGFPE = 8;
 
 constexpr int ZX_SYS_EXIT_SUCCESS = 0;
 constexpr int ZX_SYS_EXIT_FAILURE = 1;

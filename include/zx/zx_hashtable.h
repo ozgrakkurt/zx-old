@@ -17,6 +17,7 @@
 #include <zx/zx_assert.h>
 #include <zx/zx_def.h>
 #include <zx/zx_err.h>
+#include <zx/zx_fuzz.h>
 #include <zx/zx_int.h>
 
 typedef struct ZXHashtable {
@@ -43,6 +44,8 @@ static inline ZXStatus ZXHashtable_init(ZXAlloc *alloc, zx_u32 capacity,
                                         zx_usize entry_align, zx_u32 entry_size,
                                         ZXHashtable *table,
                                         ZXErrStack *err_stack) {
+  ZX_FUZZ_MARKER;
+
   zx_u32 cap = zx_next_pow_two_u32(capacity * (zx_u32){100wbu} /
                                    ZX_HASHTABLE_LOAD_FACTOR_);
   cap = zx_int_max_u32(ZX_HASHTABLE_GROUP_SIZE_, cap);

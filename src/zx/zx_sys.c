@@ -124,44 +124,8 @@ constexpr zx_sys_reg ZX_SYSCALL_READ = 0;
 constexpr zx_sys_reg ZX_SYSCALL_WRITE = 1;
 constexpr zx_sys_reg ZX_SYSCALL_MMAP = 9;
 constexpr zx_sys_reg ZX_SYSCALL_MUNMAP = 11;
-constexpr zx_sys_reg ZX_SYSCALL_RT_SIGACTION = 13;
 constexpr zx_sys_reg ZX_SYSCALL_MADVISE = 28;
 constexpr zx_sys_reg ZX_SYSCALL_EXIT_GROUP = 231;
-
-// -> pahole sigaction
-typedef struct ZXSysSigaction {
-  void (*k_sa_handler)(int);
-  unsigned long sa_flags;
-  void (*sa_restorer)(void);
-  unsigned long sa_mask;
-} ZXSysSigaction;
-
-constexpr int ZX_SYS_SA_RESTORER = 0x04000000;
-
-__asm__(".type zx_sys_restorer, @function\n"
-        ".global zx_sys_restorer\n"
-        "zx_sys_restorer:\n\t"
-        "movq $15, %rax\n\t"
-        "syscall\n\t");
-
-[[noreturn]]
-void zx_sys_restorer(void);
-
-zx_usize zx_sys_sigaction(int signum, zx_sys_sigactionfn actionfn) {
-  ZXSysSigaction act = {
-      .k_sa_handler = actionfn,
-      .sa_flags = ZX_SYS_SA_RESTORER,
-      .sa_restorer = zx_sys_restorer,
-      .sa_mask = 0,
-  };
-  ZXSysSigaction old_act;
-  zx_sys_reg const ret =
-      zx_syscall4(ZX_SYSCALL_RT_SIGACTION, (zx_sys_reg)signum, (zx_sys_reg)&act,
-                  (zx_sys_reg)&old_act, sizeof(act.sa_mask));
-  (void)old_act;
-
-  return zx_sys_errno(ret);
-}
 
 zx_usize zx_sys_read(zx_i32 fd, void *buf, zx_usize size, zx_usize *n_read) {
   constexpr zx_usize MAX = 0x7ffff000wbu;
@@ -200,12 +164,6 @@ zx_usize zx_sys_write(zx_i32 fd, void const *buf, zx_usize size,
 
 [[noreturn]]
 void zx_sys_abort(void) {
-#ifdef ZX_FUZZING_ENABLED
-// cheat here and call fuzz signal handler.
-// we do this because registering a signal handler for abort is useless.
-  zx_fuzz_handle_crash(ZX_SYS_SIGABRT);
-#endif
-
   zx_usize const status =
       zx_sys_errno(zx_syscall1(ZX_SYSCALL_EXIT_GROUP, (zx_sys_reg){127}));
   (void)status;

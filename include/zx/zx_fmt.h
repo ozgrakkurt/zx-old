@@ -128,6 +128,8 @@ static inline ZXStatus ZXFmtBuf_write(ZXFmtBuf const *fmt, zx_i32 fd,
   }
 }
 
+static inline void ZXFmtBuf_reset(ZXFmtBuf *fmt) { fmt->offset = 0; }
+
 static inline ZXStatus ZXFmtBuf_format_u64(ZXFmtBuf *fmt, zx_u64 val,
                                            ZXErrStack *err_stack) {
   ZX_ERR_TRY(

@@ -3,6 +3,7 @@
 
 #include <zx/zx_assert.h>
 #include <zx/zx_def.h>
+#include <zx/zx_fuzz.h>
 #include <zx/zx_sys.h>
 
 #define ZX_ERR_STRINGIFY_(x) #x
@@ -18,7 +19,9 @@
     if (zx_err_try_(zx_err_try_status_, zx_err_try_info_,                      \
                     __builtin_strlen(zx_err_try_info_), (stack_var))) {        \
       return zx_err_try_status_;                                               \
+      ZX_FUZZ_ERR;                                                             \
     }                                                                          \
+    ZX_FUZZ_MARKER;                                                            \
   } while (false)
 
 #define ZX_ERR_RETURN(expr, stack_var)                                         \
@@ -28,6 +31,7 @@
     char const *zx_err_return_info_ = ZX_ERR_INFO_(ZX_ERR_RETURN(expr));       \
     zx_err_return_(zx_err_return_info_, __builtin_strlen(zx_err_return_info_), \
                    (stack_var));                                               \
+    ZX_FUZZ_ERR;                                                               \
     return zx_err_return_status_;                                              \
   } while (false)
 
@@ -36,8 +40,10 @@
     char const *zx_err_assert_info_ = ZX_ERR_INFO_(ZX_ASSERT_RETURN(expr));    \
     if (!zx_err_assert_((expr), zx_err_assert_info_,                           \
                         __builtin_strlen(zx_err_assert_info_), (stack_var))) { \
+      ZX_FUZZ_ERR;                                                             \
       return ZXStatus_AssertFail;                                              \
     }                                                                          \
+    ZX_FUZZ_MARKER;                                                            \
   } while (false)
 
 typedef enum [[nodiscard]] ZXStatus : unsigned char {
