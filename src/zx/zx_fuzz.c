@@ -30,9 +30,6 @@ extern int const __start_zx_fuzz_abort_lineno;
 extern char const __start_zx_fuzz_abort_filename;
 extern char const __stop_zx_fuzz_abort_filename;
 
-constexpr zx_usize MEM_CAP = 1 << 30;
-constexpr zx_usize FMT_BUF_CAP = 1 << 14;
-
 static ZXStatus print_counts(ZXFmtBuf *fmt_buf, zx_usize n_markers,
                              zx_usize n_errs, zx_usize n_aborts,
                              ZXErrStack *err_stack) {
@@ -96,13 +93,19 @@ static ZXStatus print_hit_counts(ZXFmtBuf *fmt_buf, zx_usize n_markers_hit,
   return ZXStatus_Ok;
 }
 
+constexpr zx_usize MEM_CAP = 1 << 30;
+constexpr zx_usize FMT_BUF_CAP = 1 << 14;
+
 int main(void) {
-  zx_usize const n_markers = ((zx_usize)&__stop_zx_fuzz_marker_filename) -
-                             ((zx_usize)&__start_zx_fuzz_marker_filename);
-  zx_usize const n_errs = ((zx_usize)&__stop_zx_fuzz_err_filename) -
-                          ((zx_usize)&__start_zx_fuzz_err_filename);
-  zx_usize const n_aborts = ((zx_usize)&__stop_zx_fuzz_abort_filename) -
-                            ((zx_usize)&__start_zx_fuzz_abort_filename);
+  zx_usize const n_markers = (((zx_usize)&__stop_zx_fuzz_marker_filename) -
+                              ((zx_usize)&__start_zx_fuzz_marker_filename)) /
+                             sizeof(void *);
+  zx_usize const n_errs = (((zx_usize)&__stop_zx_fuzz_err_filename) -
+                           ((zx_usize)&__start_zx_fuzz_err_filename)) /
+                          sizeof(void *);
+  zx_usize const n_aborts = (((zx_usize)&__stop_zx_fuzz_abort_filename) -
+                             ((zx_usize)&__start_zx_fuzz_abort_filename)) /
+                            sizeof(void *);
 
   void *mem = zx_page_alloc_thp_2mb(MEM_CAP);
   ZXAlloc alloc = ZXAlloc_init(mem, MEM_CAP);
