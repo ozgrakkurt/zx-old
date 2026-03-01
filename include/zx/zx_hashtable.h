@@ -17,7 +17,7 @@
 #include <zx/zx_assert.h>
 #include <zx/zx_def.h>
 #include <zx/zx_err.h>
-#include <zx/zx_fuzz.h>
+#include <zx/zx_fuzz_instr.h>
 #include <zx/zx_int.h>
 
 typedef struct ZXHashtable {

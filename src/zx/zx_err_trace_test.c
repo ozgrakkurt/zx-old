@@ -47,9 +47,9 @@ int main(void) {
     // secondary error stack for tracking errors happening while collecting the
     // error trace
     ZXErrStack collect_stack = ZXErrStack_init();
-    ZX_ERR_TRACE_ABORT((zx_err_trace_collect(&alloc, &err_stack, &trace,
-                                             &trace_size, &collect_stack)),
-                       &collect_stack);
+    ZX_ERR_TRACE_TRY_ABORT((zx_err_trace_collect(&alloc, &err_stack, &trace,
+                                                 &trace_size, &collect_stack)),
+                           &collect_stack);
 
     // zx_usize n_written = 0;
     // zx_sys_write(ZX_STDERR, trace, trace_size, &n_written);

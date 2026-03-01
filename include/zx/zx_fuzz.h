@@ -5,7 +5,6 @@
 
 #include <zx/zx_def.h>
 #include <zx/zx_err.h>
-#include <zx/zx_fuzz_instr.h>
 
 ZXStatus zx_fuzz_setup(void **usr_ctx, ZXErrStack *err_stack);
 ZXStatus zx_fuzz_one(void *usr_ctx, zx_u8 const *fuzz_input,

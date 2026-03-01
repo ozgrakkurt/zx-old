@@ -103,10 +103,10 @@ int main(void) {
   ZXErrStack err_stack = ZXErrStack_init();
   ZXAlloc alloc = ZXAlloc_init(page, MEMORY_SIZE);
 
-  ZX_ERR_TRACE_ABORT((smoke_test(&alloc, &err_stack)), &err_stack);
+  ZX_ERR_TRACE_TRY_ABORT((smoke_test(&alloc, &err_stack)), &err_stack);
   ZXAlloc_reset(&alloc);
 
-  ZX_ERR_TRACE_ABORT((zero_size_test(&alloc, &err_stack)), &err_stack);
+  ZX_ERR_TRACE_TRY_ABORT((zero_size_test(&alloc, &err_stack)), &err_stack);
 
   zx_page_alloc_free(page, MEMORY_SIZE);
   return 0;

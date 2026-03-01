@@ -7,6 +7,7 @@
 #include <zx/zx_err_trace.h>
 #include <zx/zx_fmt.h>
 #include <zx/zx_fuzz.h>
+#include <zx/zx_fuzz_instr.h>
 #include <zx/zx_page_alloc.h>
 #include <zx/zx_sys.h>
 
@@ -72,6 +73,7 @@ static ZXStatus zx_fuzz_print_hit_counts(ZXFmtBuf *fmt_buf,
 int main(void) {
   constexpr zx_usize MEM_CAP = 1 << 30;
   constexpr zx_usize FMT_BUF_CAP = 1 << 14;
+  constexpr zx_usize INPUT_CAP = 1 << 19;
 
   ZXFuzzLinkerSet const linker_set = ZXFuzzLinkerSet_load();
 
@@ -80,32 +82,44 @@ int main(void) {
 
   ZXErrStack err_stack = ZXErrStack_init();
 
+  zx_u8 *fuzz_input = nullptr;
+  ZX_ERR_TRACE_TRY_ABORT(
+      (ZXAlloc_alloc(&alloc, INPUT_CAP, (void **)&fuzz_input, &err_stack)),
+      &err_stack);
+  __builtin_memset(fuzz_input, 0, INPUT_CAP);
+  zx_usize fuzz_input_len = 1 << 12;
+
   char *fmt_buf_alloc = nullptr;
-  ZX_ERR_TRACE_ABORT(
+  ZX_ERR_TRACE_TRY_ABORT(
       (ZXAlloc_alloc(&alloc, FMT_BUF_CAP, (void **)&fmt_buf_alloc, &err_stack)),
       &err_stack);
   ZXFmtBuf fmt_buf = ZXFmtBuf_init(fmt_buf_alloc, FMT_BUF_CAP);
 
-  ZX_ERR_TRACE_ABORT((zx_fuzz_print_counts(&linker_set, &fmt_buf, &err_stack)),
-                     &err_stack);
+  ZX_ERR_TRACE_TRY_ABORT(
+      (zx_fuzz_print_counts(&linker_set, &fmt_buf, &err_stack)), &err_stack);
 
   void *usr_ctx = nullptr;
-  ZX_ERR_TRACE_ABORT((zx_fuzz_setup(&usr_ctx, &err_stack)), &err_stack);
+  ZX_ERR_TRACE_TRY_ABORT((zx_fuzz_setup(&usr_ctx, &err_stack)), &err_stack);
 
   while (true) {
     zx_fuzz_clear_is_hit(&linker_set);
+
     zx_usize n_consumed = 0;
-    ZX_ERR_TRACE_ABORT(
-        (zx_fuzz_one(usr_ctx, (zx_u8 const *)"anan", __builtin_strlen("anan"),
-                     &n_consumed, &err_stack)),
-        &err_stack);
+    ZXStatus const fuzz_one_status = zx_fuzz_one(
+        usr_ctx, fuzz_input, fuzz_input_len, &n_consumed, &err_stack);
+
+    switch (fuzz_one_status) {
+    case ZXStatus_Err;
+    }
+
+    ZX_ERR_TRACE_TRY_ABORT((fuzz_one_status), &err_stack);
     ZX_FUZZ_MARKER;
 
     zx_usize const n_marker_hit =
         zx_fuzz_count_is_hit(linker_set.marker_is_hit, linker_set.n_markers);
     zx_usize const n_err_hit =
         zx_fuzz_count_is_hit(linker_set.err_is_hit, linker_set.n_errs);
-    ZX_ERR_TRACE_ABORT((zx_fuzz_print_hit_counts(&fmt_buf, n_marker_hit,
+    ZX_ERR_TRACE_TRY_ABORT((zx_fuzz_print_hit_counts(&fmt_buf, n_marker_hit,
                                                  n_err_hit, &err_stack)),
                        &err_stack);
   }

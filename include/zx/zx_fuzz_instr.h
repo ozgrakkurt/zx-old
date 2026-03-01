@@ -17,7 +17,7 @@
     (void)zx_fuzz_marker_is_hit_;                                              \
   } while (false)
 
-#define ZX_FUZZ_ERR                                                            \
+#define ZX_FUZZ_ERR_MARKER                                                     \
   do {                                                                         \
     static bool zx_fuzz_err_is_hit_                                            \
         __attribute__((section("zx_fuzz_err_is_hit"), used)) = false;          \
@@ -31,7 +31,7 @@
     (void)zx_fuzz_err_is_hit_;                                                 \
   } while (false)
 
-#define ZX_FUZZ_ABORT                                                          \
+#define ZX_FUZZ_ABORT_MARKER                                                   \
   do {                                                                         \
     static char const *zx_fuzz_abort_filename_                                 \
         __attribute__((section("zx_fuzz_abort_filename"), used)) = __FILE__;   \
@@ -43,9 +43,9 @@
 
 #else // ifdef ZX_FUZZING_ENABLED
 
-#define ZX_FUZZ_MARKER(expr) ((void)0)
-#define ZX_FUZZ_ABORT(expr) ((void)0)
-#define ZX_FUZZ_ERR(expr) ((void)0)
+#define ZX_FUZZ_MARKER ((void)0)
+#define ZX_FUZZ_ABORT_MARKER ((void)0)
+#define ZX_FUZZ_ERR_MARKER ((void)0)
 
 #endif // ifdef ZX_FUZZING_ENABLED
 

@@ -102,7 +102,7 @@ int main(void) {
 
   for (zx_usize i = 0; i < 50; i++) {
     ZXAlloc_reset(&alloc);
-    ZX_ERR_TRACE_ABORT((do_bench(&alloc, &err_stack)), &err_stack);
+    ZX_ERR_TRACE_TRY_ABORT((do_bench(&alloc, &err_stack)), &err_stack);
   }
 
   zx_page_alloc_free(page, MEMORY_SIZE);

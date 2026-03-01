@@ -7,14 +7,14 @@
 #include <zx/zx_fuzz_instr.h>
 #include <zx/zx_sys.h>
 
-#define ZX_ERR_TRACE_ABORT(expr, stack_var)                                    \
+#define ZX_ERR_TRACE_TRY_ABORT(expr, stack_var)                                \
   do {                                                                         \
     char const *zx_err_trace_abort_info_ =                                     \
         "Aborting because of error at:\n" ZX_ERR_INFO_(                        \
-            ZX_ERR_TRACE_ABORT(expr));                                         \
+            ZX_ERR_TRACE_TRY_ABORT(expr));                                     \
     ZXStatus const zx_err_trace_abort_status_ = (expr);                        \
     if (zx_err_trace_abort_status_ != ZXStatus_Ok) {                           \
-      ZX_FUZZ_ABORT;                                                           \
+      ZX_FUZZ_ABORT_MARKER;                                                    \
       zx_err_trace_abort_(zx_err_trace_abort_info_,                            \
                           __builtin_strlen(zx_err_trace_abort_info_),          \
                           (stack_var));                                        \

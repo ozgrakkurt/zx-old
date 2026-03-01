@@ -7,7 +7,6 @@
 #endif
 
 #include <zx/zx_def.h>
-#include <zx/zx_fuzz.h>
 #include <zx/zx_sys.h>
 
 typedef unsigned long zx_sys_reg;

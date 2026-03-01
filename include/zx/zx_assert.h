@@ -17,7 +17,7 @@
         "Failed assertion at:\n" ZX_ASSERT_INFO_(ZX_ASSERT(expr)) "\n";        \
     bool const zx_assert_success_ = (expr);                                    \
     if (!zx_assert_success_) {                                                 \
-      ZX_FUZZ_ABORT;                                                           \
+      ZX_FUZZ_ABORT_MARKER;                                                    \
       zx_assert_(zx_assert_info_, __builtin_strlen(zx_assert_info_));          \
     }                                                                          \
     ZX_FUZZ_MARKER;                                                            \
