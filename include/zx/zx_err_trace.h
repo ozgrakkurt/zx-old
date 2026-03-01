@@ -4,7 +4,7 @@
 #include <zx/zx_alloc.h>
 #include <zx/zx_def.h>
 #include <zx/zx_err.h>
-#include <zx/zx_fuzz.h>
+#include <zx/zx_fuzz_instr.h>
 #include <zx/zx_sys.h>
 
 #define ZX_ERR_TRACE_ABORT(expr, stack_var)                                    \

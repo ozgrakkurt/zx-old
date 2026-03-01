@@ -3,7 +3,7 @@
 
 #include <zx/zx_assert.h>
 #include <zx/zx_def.h>
-#include <zx/zx_fuzz.h>
+#include <zx/zx_fuzz_instr.h>
 #include <zx/zx_sys.h>
 
 #define ZX_ERR_STRINGIFY_(x) #x

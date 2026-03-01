@@ -1,7 +1,7 @@
 #ifndef ZX_ASSERT_H
 #define ZX_ASSERT_H
 
-#include <zx/zx_fuzz.h>
+#include <zx/zx_fuzz_instr.h>
 #include <zx/zx_sys.h>
 
 #define ZX_ASSERT_STRINGIFY_(x) #x
