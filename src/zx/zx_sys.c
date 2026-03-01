@@ -201,6 +201,8 @@ zx_usize zx_sys_write(zx_i32 fd, void const *buf, zx_usize size,
 [[noreturn]]
 void zx_sys_abort(void) {
 #ifdef ZX_FUZZING_ENABLED
+// cheat here and call fuzz signal handler.
+// we do this because registering a signal handler for abort is useless.
   zx_fuzz_handle_crash(ZX_SYS_SIGABRT);
 #endif
 
