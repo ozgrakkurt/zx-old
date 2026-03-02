@@ -52,8 +52,8 @@ static inline ZXStatus ZXHashtable_init(ZXAlloc *alloc, zx_u32 capacity,
 
   zx_u32 cap = zx_next_pow_two_u32(capacity * (zx_u32){100wbu} /
                                    ZX_HASHTABLE_LOAD_FACTOR_);
-  cap = zx_int_max_u32(ZX_HASHTABLE_GROUP_SIZE_, cap);
-  ZX_ASSERT((cap >= capacity));
+  cap = zx_chk_add_u32(ZX_HASHTABLE_GROUP_SIZE_, cap);
+  ZX_ASSERT((cap > capacity));
   ZX_ASSERT((cap > 0));
   // check it is a power of two
   ZX_ASSERT((zx_is_pow_two_u32(cap)));
@@ -167,16 +167,22 @@ ZXHashtable_find_idx_(ZXHashtable const *const table, zx_u64 const hash,
 
       void const *const entry_ptr = &entries[entry_size * idx];
       if (key_eqfn(ctx, entry_ptr, entry)) {
+        ZX_FUZZ_MARKER;
+
         return (ZXHashtableFindIdx){
             .idx = idx,
             .occupied = true,
         };
       } else {
+        ZX_FUZZ_MARKER;
+
         tag_match = ZXHashtable_remove_lowest_set_bit_(tag_match);
       }
     }
 
     if (empty_match != 0) {
+      ZX_FUZZ_MARKER;
+
       zx_u8 const tag_pos = zx_ctz_u16(empty_match);
       return (ZXHashtableFindIdx){
           .idx = (meta_idx + tag_pos) & cap_mask,
@@ -185,10 +191,18 @@ ZXHashtable_find_idx_(ZXHashtable const *const table, zx_u64 const hash,
     }
 
     // Should have found an empty slot by now
+    //
+    // Keep in mind if we have a hashtable that is at it's capacity and we do a
+    // _get operation on it, it would hit this assert and abort. But our
+    // "capacity" is different from "cap". Cap is always bigger than capacity,
+    // so even in this case, we will find an empty slot and return like that
+    // before we abort on this assert.
     ZX_ASSERT((stride <= cap_mask));
 
     stride += ZX_HASHTABLE_GROUP_SIZE_;
     meta_idx = (meta_idx + stride) & cap_mask;
+
+    ZX_FUZZ_MARKER;
   }
 }
 
@@ -216,10 +230,12 @@ ZXHashtable_insert(ZXHashtable *const table, zx_u64 const hash,
   __builtin_memcpy(entry_ptr, entry, entry_size);
 
   if (find.occupied) {
+    ZX_FUZZ_MARKER;
     return true;
   } else {
     ZX_ASSERT((table->capacity_left > 0));
     table->capacity_left -= 1;
+    ZX_FUZZ_MARKER;
     return false;
   }
 }
@@ -249,6 +265,7 @@ ZXHashtable_get_or_insert(ZXHashtable *const table, zx_u64 const hash,
   void *const entry_ptr = &entries[entry_size * idx];
 
   if (find.occupied) {
+    ZX_FUZZ_MARKER;
     return entry_ptr;
   } else {
     ZX_ASSERT((table->capacity_left > 0));
@@ -258,6 +275,7 @@ ZXHashtable_get_or_insert(ZXHashtable *const table, zx_u64 const hash,
     meta[maybe_mirror_idx] = tag;
     __builtin_memcpy(entry_ptr, entry, entry_size);
 
+    ZX_FUZZ_MARKER;
     return entry_ptr;
   }
 }
@@ -276,8 +294,10 @@ ZXHashtable_get(ZXHashtable const *const table, zx_u64 const hash,
     zx_u32 const idx = find.idx & cap_mask;
     zx_u8 const *const entries = (zx_u8 const *)table->entries;
     void const *const entry_ptr = &entries[entry_size * idx];
+    ZX_FUZZ_MARKER;
     return entry_ptr;
   } else {
+    ZX_FUZZ_MARKER;
     return nullptr;
   }
 }
