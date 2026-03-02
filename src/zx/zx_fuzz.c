@@ -128,6 +128,8 @@ int main(void) {
   void *usr_ctx = nullptr;
   ZX_ERR_TRACE_TRY_ABORT((zx_fuzz_setup(&usr_ctx, &err_stack)), &err_stack);
 
+  ZXXoshiro256 rand = ZXXoshiro256_init(0);
+
   zx_u64 prev_score = 0;
   zx_u64 stall_count = 0;
   while (true) {
