@@ -3,32 +3,34 @@
 
 #ifdef ZX_FUZZING_ENABLED
 
+#include <zx/zx_def.h>
+
 #define ZX_FUZZ_MARKER                                                         \
   do {                                                                         \
-    static bool zx_fuzz_marker_is_hit_                                         \
-        __attribute__((section("zx_fuzz_marker_is_hit"), used)) = false;       \
+    static zx_u8 zx_fuzz_marker_hit_                                           \
+        __attribute__((section("zx_fuzz_marker_hit"), used)) = 0;              \
     static char const *zx_fuzz_marker_filename_                                \
         __attribute__((section("zx_fuzz_marker_filename"), used)) = __FILE__;  \
     static int zx_fuzz_marker_lineno_                                          \
         __attribute__((section("zx_fuzz_marker_lineno"), used)) = __LINE__;    \
     (void)zx_fuzz_marker_filename_;                                            \
     (void)zx_fuzz_marker_lineno_;                                              \
-    zx_fuzz_marker_is_hit_ = true;                                             \
-    (void)zx_fuzz_marker_is_hit_;                                              \
+    zx_fuzz_marker_hit_ = (zx_fuzz_marker_hit_ + 1wbu) | (zx_u8){1wbu};        \
+    (void)zx_fuzz_marker_hit_;                                                 \
   } while (false)
 
 #define ZX_FUZZ_ERR_MARKER                                                     \
   do {                                                                         \
-    static bool zx_fuzz_err_is_hit_                                            \
-        __attribute__((section("zx_fuzz_err_is_hit"), used)) = false;          \
+    static zx_u8 zx_fuzz_err_hit_                                              \
+        __attribute__((section("zx_fuzz_err_hit"), used)) = 0;                 \
     static char const *zx_fuzz_err_filename_                                   \
         __attribute__((section("zx_fuzz_err_filename"), used)) = __FILE__;     \
     static int zx_fuzz_err_lineno_                                             \
         __attribute__((section("zx_fuzz_err_lineno"), used)) = __LINE__;       \
     (void)zx_fuzz_err_filename_;                                               \
     (void)zx_fuzz_err_lineno_;                                                 \
-    zx_fuzz_err_is_hit_ = true;                                                \
-    (void)zx_fuzz_err_is_hit_;                                                 \
+    zx_fuzz_err_hit_ = (zx_fuzz_err_hit_ + 1wbu) | (zx_u8){1wbu};              \
+    (void)zx_fuzz_err_hit_;                                                    \
   } while (false)
 
 #define ZX_FUZZ_ABORT_MARKER                                                   \

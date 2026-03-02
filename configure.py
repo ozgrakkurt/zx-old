@@ -148,8 +148,8 @@ def make_cflags(profile: Profile, config: Config) -> List[str]:
         # these don't seem to catch much but enable anyways
         "-Wpointer-bool-conversion",
         "-Wbool-operation",
-        # make sure switch on enum is exhaustive
-        "-Wswitch-enum",
+        # make sure switch on enum has a default
+        "-Wswitch-default",
         # Treat warnings as errors.
         "-Werror",
         # Target arch, preferably 'native'.

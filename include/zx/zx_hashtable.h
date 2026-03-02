@@ -25,6 +25,7 @@ typedef struct ZXHashtable {
   zx_u8 *metadata;
   zx_u32 cap_mask;
   zx_u32 capacity_left;
+  zx_u32 capacity;
 } ZXHashtable;
 
 static_assert(sizeof(ZXHashtable) == sizeof(void *) * 3);
@@ -80,9 +81,17 @@ static inline ZXStatus ZXHashtable_init(ZXAlloc *alloc, zx_u32 capacity,
       .metadata = metadata,
       .cap_mask = cap_mask,
       .capacity_left = capacity,
+      .capacity = capacity,
   };
 
   return ZXStatus_Ok;
+}
+
+static inline void ZXHashtable_reset(ZXHashtable *table) {
+  zx_u32 const cap = table->cap_mask + 1;
+  zx_usize const metadata_size = cap + ZX_HASHTABLE_GROUP_SIZE_;
+  __builtin_memset(table->metadata, ZX_HASHTABLE_TAG_EMPTY, metadata_size);
+  table->capacity_left = table->capacity;
 }
 
 static inline zx_u16 ZXHashtable_remove_lowest_set_bit_(zx_u16 bitmask) {

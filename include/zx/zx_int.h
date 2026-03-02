@@ -233,21 +233,21 @@ static inline zx_usize zx_int_max_usize(zx_usize a, zx_usize b) {
 
 // faster alternative for doing modulo on random numbers.
 // basically same as doing `rand() % b` if rand is uniformly random.
-static inline zx_u32 zx_fastmod_u32(zx_u32 a, zx_u32 b) {
+static inline zx_u32 zx_rand_mod_u32(zx_u32 a, zx_u32 b) {
   zx_u64 const mul = (zx_u64){a} * (zx_u64){b};
   return (zx_u32)(mul >> 32);
 }
 
 // faster alternative for doing modulo on random numbers.
 // basically same as doing `rand() % b` if rand is uniformly random.
-static inline zx_u64 zx_fastmod_u64(zx_u64 a, zx_u64 b) {
+static inline zx_u64 zx_rand_mod_u64(zx_u64 a, zx_u64 b) {
   zx_u128 const mul = (zx_u128){a} * (zx_u128){b};
   return (zx_u64)(mul >> 64);
 }
 
 // faster alternative for doing modulo on random numbers.
 // basically same as doing `rand() % b` if rand is uniformly random.
-static inline zx_usize zx_fastmod_usize(zx_usize a, zx_usize b) {
+static inline zx_usize zx_rand_mod_usize(zx_usize a, zx_usize b) {
   constexpr zx_usize BIT_SIZE = sizeof(zx_usize) * 8;
   typedef unsigned _BitInt(BIT_SIZE * 2) wide;
   wide const mul = (wide){a} * (wide){b};
