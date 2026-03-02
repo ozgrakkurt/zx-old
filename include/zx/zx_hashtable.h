@@ -26,9 +26,10 @@ typedef struct ZXHashtable {
   zx_u32 cap_mask;
   zx_u32 capacity_left;
   zx_u32 capacity;
+  zx_u8 padding[4];
 } ZXHashtable;
 
-static_assert(sizeof(ZXHashtable) == sizeof(void *) * 3);
+static_assert(sizeof(ZXHashtable) == sizeof(void *) * 4);
 
 static inline zx_u32 ZXHashtable_capacity_left(ZXHashtable const *table) {
   return table->capacity_left;
@@ -45,7 +46,9 @@ static inline ZXStatus ZXHashtable_init(ZXAlloc *alloc, zx_u32 capacity,
                                         zx_usize entry_align, zx_u32 entry_size,
                                         ZXHashtable *table,
                                         ZXErrStack *err_stack) {
-  ZX_FUZZ_MARKER;
+  ZX_ASSERT((alloc != nullptr));
+  ZX_ASSERT((table != nullptr));
+  ZX_ASSERT((err_stack != nullptr));
 
   zx_u32 cap = zx_next_pow_two_u32(capacity * (zx_u32){100wbu} /
                                    ZX_HASHTABLE_LOAD_FACTOR_);
@@ -54,7 +57,7 @@ static inline ZXStatus ZXHashtable_init(ZXAlloc *alloc, zx_u32 capacity,
   ZX_ASSERT((cap > 0));
   // check it is a power of two
   ZX_ASSERT((zx_is_pow_two_u32(cap)));
-  zx_u32 const cap_mask = cap - 1;
+  zx_u32 const cap_mask = zx_chk_sub_u32(cap, 1);
 
   // align to cachline because why not?
   constexpr zx_usize ALIGN = 64;
@@ -62,14 +65,14 @@ static inline ZXStatus ZXHashtable_init(ZXAlloc *alloc, zx_u32 capacity,
   // allocate extra sizeof(simd) bytes so we can do simd loads on any byte index
   // also have to mirror the first group with the extra group at the end to have
   // simple read path.
-  zx_usize const metadata_size = cap + ZX_HASHTABLE_GROUP_SIZE_;
+  zx_usize const metadata_size = zx_chk_add_u32(cap, ZX_HASHTABLE_GROUP_SIZE_);
   zx_u8 *metadata = nullptr;
   ZX_ERR_TRY((ZXAlloc_aligned_alloc(alloc, ALIGN, metadata_size,
                                     (void **)&metadata, err_stack)),
              err_stack);
   __builtin_memset(metadata, ZX_HASHTABLE_TAG_EMPTY, metadata_size);
 
-  zx_usize const entries_size = (zx_usize){entry_size} * (zx_usize){cap};
+  zx_usize const entries_size = zx_chk_mul_usize(entry_size, cap);
   zx_usize const entries_align = zx_int_max_usize(entry_align, ALIGN);
   void *entries = nullptr;
   ZX_ERR_TRY((ZXAlloc_aligned_alloc(alloc, entries_align, entries_size,
@@ -88,8 +91,9 @@ static inline ZXStatus ZXHashtable_init(ZXAlloc *alloc, zx_u32 capacity,
 }
 
 static inline void ZXHashtable_reset(ZXHashtable *table) {
-  zx_u32 const cap = table->cap_mask + 1;
-  zx_usize const metadata_size = cap + ZX_HASHTABLE_GROUP_SIZE_;
+  ZX_ASSERT((table != nullptr));
+  zx_u32 const cap = zx_chk_add_u32(table->cap_mask, 1);
+  zx_usize const metadata_size = zx_chk_add_u32(cap, ZX_HASHTABLE_GROUP_SIZE_);
   __builtin_memset(table->metadata, ZX_HASHTABLE_TAG_EMPTY, metadata_size);
   table->capacity_left = table->capacity;
 }
@@ -122,12 +126,12 @@ static inline void ZXHashtable_load_(void const *restrict group_ptr, zx_u8 tag,
   __asm__ volatile("vmovdqu (%2), %%xmm0\n\t"            // load group
                    "vmovd %3, %%xmm1\n\t"                // load tag
                    "vpbroadcastb %%xmm1, %%xmm1\n\t"     // broadcast tag
-                   "vpcmpeqb %%xmm0, %%xmm1, %%xmm2\n\t" // tag match
-                   "vpmovmskb %%xmm2, %0\n\t"
+                   "vpcmpeqb %%xmm0, %%xmm1, %%xmm1\n\t" // tag match
+                   "vpmovmskb %%xmm1, %0\n\t"
                    "vpmovmskb %%xmm0, %1\n\t" // empty match
                    : "=r"(tm), "=r"(em)
                    : "r"(gp), "r"(tg)
-                   : "xmm0", "xmm1", "xmm2");
+                   : "xmm0", "xmm1");
 
   *tag_match = (zx_u16)tm;
   *empty_match = (zx_u16)em;

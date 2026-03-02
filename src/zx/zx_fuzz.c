@@ -52,17 +52,6 @@ static ZXStatus zx_fuzz_print_input_reset_warning(ZXFmtBuf *fmt_buf,
   return ZXStatus_Ok;
 }
 
-static zx_usize zx_fuzz_count_is_hit(bool const *is_hit, zx_usize is_hit_len) {
-  zx_usize count = 0;
-  for (zx_usize i = 0; i < is_hit_len; i++) {
-    if (is_hit[i]) {
-      count++;
-    }
-  }
-
-  return count;
-}
-
 static void zx_fuzz_clear_state(ZXFuzzLinkerSet const *state) {
   __builtin_memset(state->marker_hit, 0, state->n_markers);
   __builtin_memset(state->err_hit, 0, state->n_errs);
@@ -88,10 +77,9 @@ static zx_u64 zx_fuzz_calculate_score(ZXFuzzLinkerSet const *state) {
 
 static zx_u64 zx_fuzz_calculate_signature(ZXFuzzLinkerSet const *state) {
   zx_u64 const marker_hash =
-      zx_rapidhash_v3(state->marker_hit, state->n_markers * sizeof(zx_u8), 0);
-  zx_u64 const err_hash =
-      zx_rapidhash_v3(state->err_hit, state->n_errs * sizeof(zx_u8), 0);
-  return zx_rapidhash_v3(&marker_hash, sizeof(zx_u64), err_hash);
+      zx_rapidhash_v3(state->marker_hit, state->n_markers, 0);
+  zx_u64 const err_hash = zx_rapidhash_v3(state->err_hit, state->n_errs, 0);
+  return zx_rapidhash_v3((zx_u8 const *)&marker_hash, sizeof(zx_u64), err_hash);
 }
 
 int main(void) {
@@ -101,6 +89,9 @@ int main(void) {
   constexpr zx_u32 INPUT_INCREMENT_STEP = 1 << 9;
   constexpr zx_u64 STALL_RESELECT_THRESHOLD = 1000;
   constexpr zx_u64 STALL_RANDOM_THRESHOLD = 1000000;
+
+  constexpr zx_u32 INPUT_HISTORY_COUNT_CAP = 1 << 14;
+  constexpr zx_u32 INPUT_HISTORY_SIZE_CAP = 1 << 24;
 
   ZXFuzzLinkerSet const state = ZXFuzzLinkerSet_load();
 
@@ -125,17 +116,23 @@ int main(void) {
   ZX_ERR_TRACE_TRY_ABORT((zx_fuzz_print_counts(&state, &fmt_buf, &err_stack)),
                          &err_stack);
 
+  ZXFuzzInputs inputs;
+  ZX_ERR_TRACE_TRY_ABORT(
+      (ZXFuzzInputs_init(&alloc, INPUT_HISTORY_COUNT_CAP,
+                         INPUT_HISTORY_SIZE_CAP, &inputs, &err_stack)),
+      &err_stack);
+
   void *usr_ctx = nullptr;
   ZX_ERR_TRACE_TRY_ABORT((zx_fuzz_setup(&usr_ctx, &err_stack)), &err_stack);
 
-  ZXXoshiro256 rand = ZXXoshiro256_init(0);
+  // ZXXoshiro256 rand = ZXXoshiro256_init(0);
 
   zx_u64 prev_score = 0;
   zx_u64 stall_count = 0;
   while (true) {
     zx_fuzz_clear_state(&state);
 
-    zx_usize n_consumed = 0;
+    zx_u32 n_consumed = 0;
     ZXStatus const fuzz_one_status = zx_fuzz_one(
         usr_ctx, fuzz_input, fuzz_input_len, &n_consumed, &err_stack);
 
@@ -147,11 +144,11 @@ int main(void) {
     if (ZXStatus_Ok == fuzz_one_status) {
       // shrink so we don't save unused input tail
       // keep input size at least 1
-      fuzz_input_size = n_consumed | (zx_u32){1wbu};
+      fuzz_input_len = n_consumed | (zx_u32){1wbu};
     }
 
-    bool const resetted =
-        ZXFuzzInput_append_or_reset(&inputs, fuzz_input, fuzz_input_len);
+    bool const resetted = ZXFuzzInputs_append_or_reset(
+        &inputs, fuzz_input, fuzz_input_len, signature);
     if (resetted) {
       ZX_ERR_TRACE_TRY_ABORT(
           (zx_fuzz_print_input_reset_warning(&fmt_buf, &err_stack)),
@@ -164,7 +161,7 @@ int main(void) {
       case ZXStatus_FuzzInputTooShort: {
         ZX_ASSERT((fuzz_input_len < INPUT_CAP));
         zx_usize const max_inc = INPUT_CAP - fuzz_input_len;
-        fuzz_input_size += zx_int_min_usize(max_inc, INPUT_INCREMENT_STEP);
+        fuzz_input_len += zx_int_min_usize(max_inc, INPUT_INCREMENT_STEP);
         break;
       }
       default: {

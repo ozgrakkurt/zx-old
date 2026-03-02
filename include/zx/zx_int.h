@@ -41,14 +41,6 @@ static inline zx_usize zx_chk_add_usize(zx_usize a, zx_usize b) {
   return (zx_usize)ret;
 }
 
-#define ZX_CHK_ADD_G(a, b)                                                     \
-  _Generic(((a) + (b)),                                                        \
-      zx_u8: zx_chk_add_u8,                                                    \
-      zx_u16: zx_chk_add_u16,                                                  \
-      zx_u32: zx_chk_add_u32,                                                  \
-      zx_u64: zx_chk_add_u64,                                                  \
-      zx_usize: zx_chk_add_usize)((a), (b))
-
 static inline zx_u8 zx_chk_sub_u8(zx_u8 a, zx_u8 b) {
   ZX_ASSERT((a >= b));
   return a - b;
@@ -73,14 +65,6 @@ static inline zx_usize zx_chk_sub_usize(zx_usize a, zx_usize b) {
   ZX_ASSERT((a >= b));
   return a - b;
 }
-
-#define ZX_CHK_SUB_G(a, b)                                                     \
-  _Generic(((a) + (b)),                                                        \
-      zx_u8: zx_chk_sub_u8,                                                    \
-      zx_u16: zx_chk_sub_u16,                                                  \
-      zx_u32: zx_chk_sub_u32,                                                  \
-      zx_u64: zx_chk_sub_u64,                                                  \
-      zx_usize: zx_chk_sub_usize)((a), (b))
 
 static inline zx_u8 zx_chk_mul_u8(zx_u8 a, zx_u8 b) {
   zx_u16 const ret = (zx_u16){a} * (zx_u16){b};
@@ -113,14 +97,6 @@ static inline zx_usize zx_chk_mul_usize(zx_usize a, zx_usize b) {
   return (zx_usize)ret;
 }
 
-#define ZX_CHK_MUL_G(a, b)                                                     \
-  _Generic(((a) + (b)),                                                        \
-      zx_u8: zx_chk_mul_u8,                                                    \
-      zx_u16: zx_chk_mul_u16,                                                  \
-      zx_u32: zx_chk_mul_u32,                                                  \
-      zx_u64: zx_chk_mul_u64,                                                  \
-      zx_usize: zx_chk_mul_usize)((a), (b))
-
 static inline zx_u8 zx_chk_div_u8(zx_u8 a, zx_u8 b) {
   ZX_ASSERT((b > 0));
   return a / b;
@@ -145,14 +121,6 @@ static inline zx_usize zx_chk_div_usize(zx_usize a, zx_usize b) {
   ZX_ASSERT((b > 0));
   return a / b;
 }
-
-#define ZX_CHK_DIV_G(a, b)                                                     \
-  _Generic(((a) + (b)),                                                        \
-      zx_u8: zx_chk_div_u8,                                                    \
-      zx_u16: zx_chk_div_u16,                                                  \
-      zx_u32: zx_chk_div_u32,                                                  \
-      zx_u64: zx_chk_div_u64,                                                  \
-      zx_usize: zx_chk_div_usize)((a), (b))
 
 static inline zx_u8 zx_next_multiple_of_u8(zx_u8 a, zx_u8 b) {
   ZX_ASSERT((b > 0));
@@ -179,14 +147,6 @@ static inline zx_usize zx_next_multiple_of_usize(zx_usize a, zx_usize b) {
   return (zx_chk_add_usize(a, b) - (zx_usize){1}) / b * b;
 }
 
-#define ZX_NEXT_MULTIPLE_OF_G(a, b)                                            \
-  _Generic(((a) + (b)),                                                        \
-      zx_u8: zx_next_multiple_of_u8,                                           \
-      zx_u16: zx_next_multiple_of_u16,                                         \
-      zx_u32: zx_next_multiple_of_u32,                                         \
-      zx_u64: zx_next_multiple_of_u64,                                         \
-      zx_usize: zx_next_multiple_of_usize)((a), (b))
-
 static inline zx_u8 zx_int_min_u8(zx_u8 a, zx_u8 b) { return a > b ? b : a; }
 static inline zx_u16 zx_int_min_u16(zx_u16 a, zx_u16 b) {
   return a > b ? b : a;
@@ -201,14 +161,6 @@ static inline zx_usize zx_int_min_usize(zx_usize a, zx_usize b) {
   return a > b ? b : a;
 }
 
-#define ZX_INT_MIN_G(a, b)                                                     \
-  _Generic(((a) + (b)),                                                        \
-      zx_u8: zx_int_min_u8,                                                    \
-      zx_u16: zx_int_min_u16,                                                  \
-      zx_u32: zx_int_min_u32,                                                  \
-      zx_u64: zx_int_min_u64,                                                  \
-      zx_usize: zx_int_min_usize)((a), (b))
-
 static inline zx_u8 zx_int_max_u8(zx_u8 a, zx_u8 b) { return a < b ? b : a; }
 static inline zx_u16 zx_int_max_u16(zx_u16 a, zx_u16 b) {
   return a < b ? b : a;
@@ -222,14 +174,6 @@ static inline zx_u64 zx_int_max_u64(zx_u64 a, zx_u64 b) {
 static inline zx_usize zx_int_max_usize(zx_usize a, zx_usize b) {
   return a < b ? b : a;
 }
-
-#define ZX_INT_MAX_G(a, b)                                                     \
-  _Generic(((a) + (b)),                                                        \
-      zx_u8: zx_int_max_u8,                                                    \
-      zx_u16: zx_int_max_u16,                                                  \
-      zx_u32: zx_int_max_u32,                                                  \
-      zx_u64: zx_int_max_u64,                                                  \
-      zx_usize: zx_int_max_usize)((a), (b))
 
 // faster alternative for doing modulo on random numbers.
 // basically same as doing `rand() % b` if rand is uniformly random.
@@ -268,13 +212,6 @@ static inline zx_u8 zx_ctz_u64(zx_u64 i) {
   return (zx_u8)__builtin_ctzg(i, 64);
 }
 
-#define ZX_CTZ_G(i)                                                            \
-  _Generic((i),                                                                \
-      zx_u8: zx_ctz_u8,                                                        \
-      zx_u16: zx_ctz_u16,                                                      \
-      zx_u32: zx_ctz_u32,                                                      \
-      zx_u64: zx_ctz_u64)((i))
-
 static inline zx_u8 zx_clz_u8(zx_u8 i) { return (zx_u8)__builtin_clzg(i, 8); }
 
 static inline zx_u8 zx_clz_u16(zx_u16 i) {
@@ -288,13 +225,6 @@ static inline zx_u8 zx_clz_u32(zx_u32 i) {
 static inline zx_u8 zx_clz_u64(zx_u64 i) {
   return (zx_u8)__builtin_clzg(i, 64);
 }
-
-#define ZX_CLZ_G(i)                                                            \
-  _Generic((i),                                                                \
-      zx_u8: zx_clz_u8,                                                        \
-      zx_u16: zx_clz_u16,                                                      \
-      zx_u32: zx_clz_u32,                                                      \
-      zx_u64: zx_clz_u64)((i))
 
 static inline zx_u8 zx_bit_width_u8(zx_u8 i) {
   return (zx_u8){8} - zx_clz_u8(i);
@@ -311,13 +241,6 @@ static inline zx_u8 zx_bit_width_u32(zx_u32 i) {
 static inline zx_u8 zx_bit_width_u64(zx_u64 i) {
   return (zx_u8){64} - zx_clz_u64(i);
 }
-
-#define ZX_BIT_WIDTH_G(i)                                                      \
-  _Generic((i),                                                                \
-      zx_u8: zx_bit_width_u8,                                                  \
-      zx_u16: zx_bit_width_u16,                                                \
-      zx_u32: zx_bit_width_u32,                                                \
-      zx_u64: zx_bit_width_u64)((i))
 
 static inline zx_u8 zx_chk_shl_u8(zx_u8 a, zx_u8 b) {
   ZX_ASSERT((b < 8));
@@ -347,13 +270,6 @@ static inline zx_u64 zx_chk_shl_u64(zx_u64 a, zx_u8 b) {
   return a << b;
 }
 
-#define ZX_CHK_SHL_G(a, b)                                                     \
-  _Generic((a),                                                                \
-      zx_u8: zx_chk_shl_u8,                                                    \
-      zx_u16: zx_chk_shl_u16,                                                  \
-      zx_u32: zx_chk_shl_u32,                                                  \
-      zx_u64: zx_chk_shl_u64)((a), (b))
-
 static inline zx_u8 zx_chk_shr_u8(zx_u8 a, zx_u8 b) {
   ZX_ASSERT((b < 8));
   return a >> b;
@@ -373,13 +289,6 @@ static inline zx_u64 zx_chk_shr_u64(zx_u64 a, zx_u8 b) {
   ZX_ASSERT((b < 64));
   return a >> b;
 }
-
-#define ZX_CHK_SHR_G(a, b)                                                     \
-  _Generic((a),                                                                \
-      zx_u8: zx_chk_shr_u8,                                                    \
-      zx_u16: zx_chk_shr_u16,                                                  \
-      zx_u32: zx_chk_shr_u32,                                                  \
-      zx_u64: zx_chk_shr_u64)((a), (b))
 
 static inline zx_u8 zx_next_pow_two_u8(zx_u8 i) {
   if (i == 0) {
@@ -413,13 +322,6 @@ static inline zx_u64 zx_next_pow_two_u64(zx_u64 i) {
   return zx_chk_shl_u64(1, shift);
 }
 
-#define ZX_NEXT_POW_TWO_G(i)                                                   \
-  _Generic((i),                                                                \
-      zx_u8: zx_next_pow_two_u8,                                               \
-      zx_u16: zx_next_pow_two_u16,                                             \
-      zx_u32: zx_next_pow_two_u32,                                             \
-      zx_u64: zx_next_pow_two_u64)((i))
-
 static inline bool zx_is_pow_two_u8(zx_u8 i) {
   return __builtin_popcountg(i) == 1;
 }
@@ -435,13 +337,5 @@ static inline bool zx_is_pow_two_u64(zx_u64 i) {
 static inline bool zx_is_pow_two_usize(zx_usize i) {
   return __builtin_popcountg(i) == 1;
 }
-
-#define ZX_IS_POW_TWO_G(i)                                                     \
-  _Generic((i),                                                                \
-      zx_u8: zx_is_pow_two_u8,                                                 \
-      zx_u16: zx_is_pow_two_u16,                                               \
-      zx_u32: zx_is_pow_two_u32,                                               \
-      zx_u64: zx_is_pow_two_u64,                                               \
-      zx_usize: zx_is_pow_two_usize)((i))
 
 #endif

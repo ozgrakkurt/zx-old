@@ -8,7 +8,7 @@ ZXStatus zx_fuzz_setup(void **usr_ctx, ZXErrStack *err_stack) {
 }
 
 ZXStatus zx_fuzz_one(void *usr_ctx, zx_u8 const *fuzz_input,
-                     zx_usize fuzz_input_len, zx_usize *n_consumed,
+                     zx_u32 fuzz_input_len, zx_u32 *n_consumed,
                      ZXErrStack *err_stack) {
   (void)fuzz_input;
   (void)fuzz_input_len;

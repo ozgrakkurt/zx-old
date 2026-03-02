@@ -59,7 +59,6 @@ static inline void ZXFuzzInputs_reset_(ZXFuzzInputs *inputs) {
 }
 
 static inline bool ZXFuzzInputs_has_enough_cap_(ZXFuzzInputs const *inputs,
-                                                zx_u8 const *fuzz_input,
                                                 zx_u32 fuzz_input_len) {
   bool const have_sig_cap = ZXHashtable_capacity_left(&inputs->signatures) > 0;
   bool const have_data_cap =
@@ -86,7 +85,7 @@ static inline bool ZXFuzzInputs_append_or_reset(ZXFuzzInputs *inputs,
                                                 zx_u64 signature) {
   bool did_reset = false;
   // do reset if we don't have enough capacity
-  if (!ZXFuzzInputs_has_enough_cap_(inputs, fuzz_input, fuzz_input_len)) {
+  if (!ZXFuzzInputs_has_enough_cap_(inputs, fuzz_input_len)) {
     ZXFuzzInputs_reset_(inputs);
     did_reset = true;
   }
@@ -94,11 +93,11 @@ static inline bool ZXFuzzInputs_append_or_reset(ZXFuzzInputs *inputs,
   // Make sure we now have enough capacity
   // There is something really wrong if a single input is bigger than our whole
   // cap.
-  ZX_ASSERT((ZXFuzzInputs_has_enough_cap_(inputs, fuzz_input, fuzz_input_len)));
+  ZX_ASSERT((ZXFuzzInputs_has_enough_cap_(inputs, fuzz_input_len)));
 
-  bool const is_uniq =
-      !ZXHashtable_insert(&inputs->signatures, signature, &signature,
-                          sizeof(signature), nullptr, zx_fuzz_signatures_eql);
+  bool const is_uniq = !ZXHashtable_insert(
+      &inputs->signatures, signature, &signature, sizeof(signature), nullptr,
+      ZXFuzzInputs_signatures_eql);
   if (is_uniq) {
     __builtin_memcpy(&inputs->data[inputs->data_size], fuzz_input,
                      fuzz_input_len);
