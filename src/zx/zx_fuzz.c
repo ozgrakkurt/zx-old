@@ -15,6 +15,14 @@
 #include <zx/zx_sys.h>
 #include <zx/zx_xoshiro256.h>
 
+typedef enum ZXFuzzMut : unsigned char {
+  ZX_FUZZ_MUT_BYTE = 0,
+  ZX_FUZZ_MUT_BIT = 1,
+  ZX_FUZZ_MUT_INCREMENT = 2,
+  ZX_FUZZ_MUT_DECREMENT = 3,
+  ZX_FUZZ_MUT_ ZX_FUZZ_MUT_NOOP,
+} ZXFuzzMutOp;
+
 static ZXStatus zx_fuzz_print_counts(ZXFuzzLinkerSet const *state,
                                      ZXFmtBuf *fmt_buf, ZXErrStack *err_stack) {
   ZX_ERR_TRY((ZXFmtBuf_format_cstr(fmt_buf, "Found:\n\t MARKERS: ", err_stack)),
