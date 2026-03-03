@@ -129,6 +129,7 @@ int main(void) {
 
   zx_u64 prev_score = 0;
   zx_u64 prev_best_score = 0;
+  zx_u8 prev_byte = 0;
   zx_u64 reselect_stall = 0;
   zx_u64 random_stall = 0;
   zx_u32 mut_byte_idx =
@@ -189,14 +190,15 @@ int main(void) {
       random_stall += 1;
     }
 
-    if (score > prev_score) {
-      fuzz_input[mut_byte_idx] = (zx_u8)ZXXoshiro256_next(&rand);
+    if (score < prev_score) {
+      fuzz_input[mut_byte_idx] = prev_byte;
     } else {
-      mut_byte_idx =
-          zx_rand_mod_u32((zx_u32)ZXXoshiro256_next(&rand), fuzz_input_len);
-      fuzz_input[mut_byte_idx] = (zx_u8)ZXXoshiro256_next(&rand);
+      prev_score = score;
     }
-    prev_score = score;
+
+    mut_byte_idx =
+        zx_rand_mod_u32((zx_u32)ZXXoshiro256_next(&rand), fuzz_input_len);
+    fuzz_input[mut_byte_idx] = (zx_u8)ZXXoshiro256_next(&rand);
 
     if (reselect_stall >= STALL_RESELECT_THRESHOLD &&
         ZXFuzzInputs_count(&inputs) > 0) {
