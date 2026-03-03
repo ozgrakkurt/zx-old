@@ -2,9 +2,12 @@
 #define ZX_FUZZ_INPUTS_H
 
 #include <zx/zx_alloc.h>
+#include <zx/zx_assert.h>
 #include <zx/zx_def.h>
 #include <zx/zx_err.h>
 #include <zx/zx_hashtable.h>
+#include <zx/zx_int.h>
+#include <zx/zx_xoshiro256.h>
 
 // Used for saving fuzz input history
 typedef struct ZXFuzzInputs {
@@ -16,6 +19,26 @@ typedef struct ZXFuzzInputs {
   zx_u8 *data;
   zx_u32 *input_ends;
 } ZXFuzzInputs;
+
+static inline zx_u32 ZXFuzzInputs_count(ZXFuzzInputs const *inputs) {
+  return inputs->n_inputs;
+}
+
+static inline void ZXFuzzInputs_select_random(ZXFuzzInputs const *inputs,
+                                              ZXXoshiro256 *rand,
+                                              zx_u8 const **fuzz_input,
+                                              zx_u32 *fuzz_input_len) {
+  ZX_ASSERT((inputs->n_inputs > 0));
+
+  zx_u32 const choice =
+      zx_rand_mod_u32((zx_u32)ZXXoshiro256_next(rand), inputs->n_inputs);
+
+  zx_u32 const fi_start = inputs->input_ends[choice];
+  zx_u32 const fi_end = inputs->input_ends[choice + 1];
+
+  *fuzz_input = &inputs->data[fi_start];
+  *fuzz_input_len = zx_chk_sub_u32(fi_end, fi_start);
+}
 
 static inline ZXStatus ZXFuzzInputs_init(ZXAlloc *alloc, zx_u32 n_inputs_cap,
                                          zx_u32 data_size_cap,

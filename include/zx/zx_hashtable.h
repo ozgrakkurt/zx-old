@@ -52,7 +52,7 @@ static inline ZXStatus ZXHashtable_init(ZXAlloc *alloc, zx_u32 capacity,
 
   zx_u32 cap = zx_next_pow_two_u32(capacity * (zx_u32){100wbu} /
                                    ZX_HASHTABLE_LOAD_FACTOR_);
-  cap = zx_chk_add_u32(ZX_HASHTABLE_GROUP_SIZE_, cap);
+  cap = zx_int_max_u32(ZX_HASHTABLE_GROUP_SIZE_, cap);
   ZX_ASSERT((cap > capacity));
   ZX_ASSERT((cap > 0));
   // check it is a power of two
@@ -191,12 +191,6 @@ ZXHashtable_find_idx_(ZXHashtable const *const table, zx_u64 const hash,
     }
 
     // Should have found an empty slot by now
-    //
-    // Keep in mind if we have a hashtable that is at it's capacity and we do a
-    // _get operation on it, it would hit this assert and abort. But our
-    // "capacity" is different from "cap". Cap is always bigger than capacity,
-    // so even in this case, we will find an empty slot and return like that
-    // before we abort on this assert.
     ZX_ASSERT((stride <= cap_mask));
 
     stride += ZX_HASHTABLE_GROUP_SIZE_;
