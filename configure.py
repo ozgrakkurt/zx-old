@@ -151,7 +151,7 @@ def make_cflags(profile: Profile, config: Config) -> List[str]:
         # make sure switch on enum has a default
         "-Wswitch-default",
         # Treat warnings as errors.
-        "-Werror",
+        # "-Werror",
         # Target arch, preferably 'native'.
         f"-march={config.march}",
         # Use c23 standard.

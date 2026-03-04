@@ -99,6 +99,7 @@ static ZXStatus zx_fuzz_main(ZXFuzzLinkerSet const *state, ZXFmtBuf *fmt_buf,
                              zx_u64 *fuzz_input, zx_u32 fuzz_input_len,
                              ZXErrStack *err_stack) {
   ZX_ERR_TRY((zx_fuzz_print_counts(state, fmt_buf, err_stack)), err_stack);
+  (void)fmt_buf;
 
   void *usr_ctx = nullptr;
   ZX_ERR_TRACE_TRY_ABORT((zx_fuzz_setup(usr_ctx, err_stack)), err_stack);
