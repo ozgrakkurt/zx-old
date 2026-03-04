@@ -3,6 +3,7 @@
 
 #ifdef ZX_FUZZING_ENABLED
 
+#include <zx/zx_alloc.h>
 #include <zx/zx_def.h>
 #include <zx/zx_err.h>
 
@@ -38,9 +39,11 @@ static inline zx_u32 ZXFuzzInput_consumed_count(ZXFuzzInput const *input) {
   return input->consumed_count;
 }
 
-ZXStatus zx_fuzz_setup(void **usr_ctx, ZXErrStack *err_stack);
-ZXStatus zx_fuzz_one(void *usr_ctx, ZXFuzzInput *fuzz_input,
-                     ZXErrStack *err_stack);
+typedef ZXStatus (*zx_fuzz_one_fn)(void *usr_ctx, ZXFuzzInput *fuzz_input,
+                                   ZXErrStack *err_stack);
+
+ZXStatus zx_fuzz_main(ZXAlloc *alloc, void *usr_ctx, zx_fuzz_one_fn fuzz_one,
+                      ZXErrStack *err_stack);
 
 #endif // ifdef ZX_FUZZING_ENABLED
 
