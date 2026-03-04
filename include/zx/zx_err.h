@@ -54,7 +54,7 @@ typedef enum [[nodiscard]] ZXStatus : unsigned char {
   ZXStatus_ShortWrite,
   ZXStatus_LongWrite,
   ZXStatus_SysErrUnexpected,
-  ZXStatus_FuzzInputTooShort,
+  ZXStatus_OutOfInput,
 } ZXStatus;
 
 constexpr zx_u32 ZX_ERR_STACK_CAP_ = 64;

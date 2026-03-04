@@ -1,6 +1,5 @@
 #ifdef ZX_FUZZING_ENABLED
 
-#include "./zx_fuzz_inputs.h"
 #include "./zx_fuzz_linker_set.h"
 #include <zx/zx_alloc.h>
 #include <zx/zx_assert.h>
@@ -38,20 +37,6 @@ static ZXStatus zx_fuzz_print_counts(ZXFuzzLinkerSet const *state,
   return ZXStatus_Ok;
 }
 
-static ZXStatus zx_fuzz_print_input_reset_warning(ZXFmtBuf *fmt_buf,
-                                                  ZXErrStack *err_stack) {
-  ZX_ERR_TRY(
-      (ZXFmtBuf_format_cstr(
-          fmt_buf,
-          "WARNING: Resetting input history becuase it ran out of capacity.\n",
-          err_stack)),
-      err_stack);
-  ZX_ERR_TRY((ZXFmtBuf_write(fmt_buf, ZX_STDERR, err_stack)), err_stack);
-  ZXFmtBuf_reset(fmt_buf);
-
-  return ZXStatus_Ok;
-}
-
 static void zx_fuzz_clear_state(ZXFuzzLinkerSet const *state) {
   __builtin_memset(state->marker_hit, 0, state->n_markers);
   __builtin_memset(state->err_hit, 0, state->n_errs);
@@ -82,16 +67,86 @@ static zx_u64 zx_fuzz_calculate_signature(ZXFuzzLinkerSet const *state) {
   return zx_rapidhash_v3((zx_u8 const *)&marker_hash, sizeof(zx_u64), err_hash);
 }
 
+typedef struct ZXFuzzRunResult {
+  zx_u64 score;
+  zx_u64 signature;
+  zx_u32 consumed_count;
+} ZXFuzzRunResult;
+
+static ZXStatus zx_fuzz_do_one_run(ZXFuzzLinkerSet const *state, void *usr_ctx,
+                                   zx_u64 *fuzz_input, zx_u32 fuzz_input_len,
+                                   ZXFuzzRunResult *result,
+                                   ZXErrStack *err_stack) {
+  ZXFuzzInput input = ZXFuzzInput_init(fuzz_input, fuzz_input_len);
+
+  zx_fuzz_clear_state(state);
+
+  ZX_ERR_TRY((zx_fuzz_one(usr_ctx, &input, err_stack)), err_stack);
+
+  zx_u64 const signature = zx_fuzz_calculate_signature(state);
+  zx_u64 const score = zx_fuzz_calculate_score(state);
+
+  *result = (ZXFuzzRunResult){
+      .score = score,
+      .signature = signature,
+      .consumed_count = ZXFuzzInput_consumed_count(&input),
+  };
+
+  return ZXStatus_Ok;
+}
+
+static ZXStatus zx_fuzz_main(ZXFuzzLinkerSet const *state, ZXFmtBuf *fmt_buf,
+                             zx_u64 *fuzz_input, zx_u32 fuzz_input_len,
+                             ZXErrStack *err_stack) {
+  ZX_ERR_TRY((zx_fuzz_print_counts(state, fmt_buf, err_stack)), err_stack);
+
+  void *usr_ctx = nullptr;
+  ZX_ERR_TRACE_TRY_ABORT((zx_fuzz_setup(usr_ctx, err_stack)), err_stack);
+
+  ZXXoshiro256 rand = ZXXoshiro256_init(0);
+
+  // random seed the input
+  ZXXoshiro256_fill(&rand, (zx_u8 *)fuzz_input, fuzz_input_len * sizeof(zx_u64));
+
+  // do a baseline run
+  ZXFuzzRunResult baseline_result = {0};
+  ZX_ERR_TRY((zx_fuzz_do_one_run(state, usr_ctx, fuzz_input, fuzz_input_len,
+                                 &baseline_result, err_stack)),
+             err_stack);
+  while (true) {
+    // select a random position to mutate
+    zx_u32 const mut_idx =
+        zx_rand_mod_u32((zx_u32)ZXXoshiro256_next(&rand), fuzz_input_len);
+
+    // try some different values in this position
+    // change to a different position if we can't improve for some number of
+    // iterations
+    constexpr zx_u32 MAX_STALL = 1024;
+    zx_u32 stall = 0;
+    while (stall < MAX_STALL) {
+      zx_u64 const new_val = ZXXoshiro256_next(&rand);
+      fuzz_input[mut_idx] = new_val;
+
+      ZXFuzzRunResult result = {0};
+      ZX_ERR_TRY((zx_fuzz_do_one_run(state, usr_ctx, fuzz_input, fuzz_input_len,
+                                     &result, err_stack)),
+                 err_stack);
+
+      if (result.score > baseline_result.score) {
+        stall = 0;
+      } else {
+        stall += 1;
+      }
+    }
+  }
+
+  return ZXStatus_Ok;
+}
+
 int main(void) {
   constexpr zx_usize MEM_CAP = 1 << 30;
   constexpr zx_u32 FMT_BUF_CAP = 1 << 14;
-  constexpr zx_u32 INPUT_CAP = 1 << 19;
-  constexpr zx_u32 INPUT_INCREMENT_STEP = 1 << 9;
-  constexpr zx_u64 STALL_RESELECT_THRESHOLD = 1 << 20;
-  constexpr zx_u64 STALL_RANDOM_THRESHOLD = 1 << 25;
-
-  constexpr zx_u32 INPUT_HISTORY_COUNT_CAP = 1 << 14;
-  constexpr zx_u32 INPUT_HISTORY_SIZE_CAP = 1 << 24;
+  constexpr zx_u32 INPUT_LEN = 1 << 19;
 
   ZXFuzzLinkerSet const state = ZXFuzzLinkerSet_load();
 
@@ -100,14 +155,11 @@ int main(void) {
 
   ZXErrStack err_stack = ZXErrStack_init();
 
-  ZXXoshiro256 rand = ZXXoshiro256_init(0);
-
-  zx_u8 *fuzz_input = nullptr;
-  ZX_ERR_TRACE_TRY_ABORT(
-      (ZXAlloc_alloc(&alloc, INPUT_CAP, (void **)&fuzz_input, &err_stack)),
-      &err_stack);
-  ZXXoshiro256_fill(&rand, fuzz_input, INPUT_CAP);
-  zx_u32 fuzz_input_len = zx_int_min_u32(1 << 12, INPUT_CAP);
+  zx_u64 *fuzz_input = nullptr;
+  ZX_ERR_TRACE_TRY_ABORT((ZXAlloc_alloc(&alloc, INPUT_LEN * sizeof(zx_u64),
+                                        (void **)&fuzz_input, &err_stack)),
+                         &err_stack);
+  __builtin_memset(fuzz_input, 0, INPUT_LEN * sizeof(zx_u64));
 
   char *fmt_buf_alloc = nullptr;
   ZX_ERR_TRACE_TRY_ABORT(
@@ -115,116 +167,10 @@ int main(void) {
       &err_stack);
   ZXFmtBuf fmt_buf = ZXFmtBuf_init(fmt_buf_alloc, FMT_BUF_CAP);
 
-  ZX_ERR_TRACE_TRY_ABORT((zx_fuzz_print_counts(&state, &fmt_buf, &err_stack)),
-                         &err_stack);
-
-  ZXFuzzInputs inputs;
+  // initiate main loop
   ZX_ERR_TRACE_TRY_ABORT(
-      (ZXFuzzInputs_init(&alloc, INPUT_HISTORY_COUNT_CAP,
-                         INPUT_HISTORY_SIZE_CAP, &inputs, &err_stack)),
+      (zx_fuzz_main(&state, &fmt_buf, fuzz_input, INPUT_LEN, &err_stack)),
       &err_stack);
-
-  void *usr_ctx = nullptr;
-  ZX_ERR_TRACE_TRY_ABORT((zx_fuzz_setup(&usr_ctx, &err_stack)), &err_stack);
-
-  zx_u64 prev_score = 0;
-  zx_u64 prev_best_score = 0;
-  zx_u8 prev_byte = 0;
-  zx_u64 reselect_stall = 0;
-  zx_u64 random_stall = 0;
-  zx_u32 mut_byte_idx =
-      zx_rand_mod_u32((zx_u32)ZXXoshiro256_next(&rand), fuzz_input_len);
-  while (true) {
-    zx_fuzz_clear_state(&state);
-
-    zx_u32 n_consumed = 0;
-    ZXStatus const fuzz_one_status = zx_fuzz_one(
-        usr_ctx, fuzz_input, fuzz_input_len, &n_consumed, &err_stack);
-
-    // do these before doing anything else so we don't taint the instrumentation
-    // state.
-    zx_u64 const signature = zx_fuzz_calculate_signature(&state);
-    zx_u64 const score = zx_fuzz_calculate_score(&state);
-
-    if (ZXStatus_Ok == fuzz_one_status) {
-      // shrink so we don't save unused input tail
-      // keep input size at least 1
-      fuzz_input_len = n_consumed | (zx_u32){1wbu};
-    }
-
-    bool const resetted = ZXFuzzInputs_append_or_reset(
-        &inputs, fuzz_input, fuzz_input_len, signature);
-    if (resetted) {
-      ZX_ERR_TRACE_TRY_ABORT(
-          (zx_fuzz_print_input_reset_warning(&fmt_buf, &err_stack)),
-          &err_stack);
-    }
-
-    // error handling
-    if (ZXStatus_Ok != fuzz_one_status) {
-      switch (fuzz_one_status) {
-      case ZXStatus_FuzzInputTooShort: {
-        ZX_ASSERT((fuzz_input_len < INPUT_CAP));
-        zx_usize const max_inc = INPUT_CAP - fuzz_input_len;
-        fuzz_input_len += zx_int_min_usize(max_inc, INPUT_INCREMENT_STEP);
-        // continue main fuzzing loop
-        continue;
-        break;
-      }
-      default: {
-        // this will abort for sure
-        ZX_ERR_TRACE_TRY_ABORT((fuzz_one_status), &err_stack);
-        // never will be reached
-        ZX_ASSERT((false));
-        break;
-      }
-      }
-    }
-
-    if (score > prev_best_score) {
-      reselect_stall = 0;
-      random_stall = 0;
-      prev_best_score = score;
-    } else {
-      reselect_stall += 1;
-      random_stall += 1;
-    }
-
-    if (score < prev_score) {
-      fuzz_input[mut_byte_idx] = prev_byte;
-    } else {
-      prev_score = score;
-    }
-
-    mut_byte_idx =
-        zx_rand_mod_u32((zx_u32)ZXXoshiro256_next(&rand), fuzz_input_len);
-    fuzz_input[mut_byte_idx] = (zx_u8)ZXXoshiro256_next(&rand);
-
-    if (reselect_stall >= STALL_RESELECT_THRESHOLD &&
-        ZXFuzzInputs_count(&inputs) > 0) {
-      // reselect and old input
-      zx_u8 const *src = nullptr;
-      zx_u32 src_len = 0;
-      ZXFuzzInputs_select_random(&inputs, &rand, &src, &src_len);
-      ZX_ASSERT((src_len <= INPUT_CAP));
-      __builtin_memcpy(fuzz_input, src, src_len);
-      fuzz_input_len = src_len;
-
-      // mutate random byte
-      mut_byte_idx =
-          zx_rand_mod_u32((zx_u32)ZXXoshiro256_next(&rand), fuzz_input_len);
-      fuzz_input[mut_byte_idx] = (zx_u8)ZXXoshiro256_next(&rand);
-
-      reselect_stall = 0;
-    }
-
-    if (random_stall >= STALL_RANDOM_THRESHOLD) {
-      ZXXoshiro256_fill(&rand, fuzz_input, fuzz_input_len);
-      random_stall = 0;
-    }
-
-    // conditionally do output printing for user
-  }
 
   zx_page_alloc_free(mem, MEM_CAP);
   return ZX_SYS_EXIT_SUCCESS;
