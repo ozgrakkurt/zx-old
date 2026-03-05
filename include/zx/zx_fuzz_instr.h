@@ -10,7 +10,8 @@
     static zx_u8 zx_fuzz_marker_hit_                                           \
         __attribute__((section("zx_fuzz_marker_hit"), used)) = 0;              \
     static char const *zx_fuzz_marker_filename_                                \
-        __attribute__((section("zx_fuzz_marker_filename"), used)) = __FILE__;  \
+        __attribute__((section("zx_fuzz_marker_filename"), used)) =            \
+            __FILE_NAME__;                                                     \
     static int zx_fuzz_marker_lineno_                                          \
         __attribute__((section("zx_fuzz_marker_lineno"), used)) = __LINE__;    \
     (void)zx_fuzz_marker_filename_;                                            \
@@ -24,7 +25,8 @@
     static zx_u8 zx_fuzz_err_hit_                                              \
         __attribute__((section("zx_fuzz_err_hit"), used)) = 0;                 \
     static char const *zx_fuzz_err_filename_                                   \
-        __attribute__((section("zx_fuzz_err_filename"), used)) = __FILE__;     \
+        __attribute__((section("zx_fuzz_err_filename"), used)) =               \
+            __FILE_NAME__;                                                     \
     static int zx_fuzz_err_lineno_                                             \
         __attribute__((section("zx_fuzz_err_lineno"), used)) = __LINE__;       \
     (void)zx_fuzz_err_filename_;                                               \
@@ -36,7 +38,8 @@
 #define ZX_FUZZ_ABORT_MARKER                                                   \
   do {                                                                         \
     static char const *zx_fuzz_abort_filename_                                 \
-        __attribute__((section("zx_fuzz_abort_filename"), used)) = __FILE__;   \
+        __attribute__((section("zx_fuzz_abort_filename"), used)) =             \
+            __FILE_NAME__;                                                     \
     static int zx_fuzz_abort_lineno_                                           \
         __attribute__((section("zx_fuzz_abort_lineno"), used)) = __LINE__;     \
     (void)zx_fuzz_abort_filename_;                                             \

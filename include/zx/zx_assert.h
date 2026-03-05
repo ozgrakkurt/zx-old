@@ -8,7 +8,7 @@
 #define ZX_ASSERT_TO_STRING_(x) ZX_ASSERT_STRINGIFY_(x)
 
 #define ZX_ASSERT_INFO_(expr)                                                  \
-  "\tFILE=" __FILE__ "; LINE=" ZX_ASSERT_TO_STRING_(                           \
+  "\tFILE=" __FILE_NAME__ "; LINE=" ZX_ASSERT_TO_STRING_(                      \
       __LINE__) "; EXPR=(" ZX_ASSERT_TO_STRING_(expr) ");\n"
 
 #define ZX_ASSERT(expr)                                                        \

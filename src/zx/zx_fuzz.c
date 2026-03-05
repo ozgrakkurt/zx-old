@@ -236,7 +236,8 @@ static ZXStatus ZXFuzzer_fuzz(ZXFuzzer *fuzzer, ZXFmtBuf *fmt_buf,
   ZX_ERR_TRY((zx_fuzz_print_counts(&fuzzer->linker_set, fmt_buf, err_stack)),
              err_stack);
 
-  constexpr zx_u64 MAGIC[] = {0, ZX_U64_MAX};
+  constexpr zx_u64 MAGIC[] = {0, ZX_U64_MAX, ZX_U64_MAX / 2, ZX_U32_MAX,
+                              ~ZX_U32_MAX};
   constexpr zx_usize N_MAGIC = sizeof(MAGIC) / sizeof(MAGIC[0]);
 
   ZXXoshiro256 rand = ZXXoshiro256_init(0);

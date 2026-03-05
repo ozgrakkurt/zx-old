@@ -9,7 +9,7 @@
 #define ZX_ERR_STRINGIFY_(x) #x
 #define ZX_ERR_TO_STRING_(x) ZX_ERR_STRINGIFY_(x)
 #define ZX_ERR_INFO_(expr)                                                     \
-  "\tFILE=" __FILE__ "; LINE=" ZX_ERR_TO_STRING_(                              \
+  "\tFILE=" __FILE_NAME__ "; LINE=" ZX_ERR_TO_STRING_(                         \
       __LINE__) "; EXPR=(" ZX_ERR_TO_STRING_(expr) ");\n"
 
 #define ZX_ERR_TRY(expr, stack_var)                                            \
