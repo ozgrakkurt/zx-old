@@ -202,9 +202,18 @@ int main(void) {
       .cap = FUZZ_MEM_CAP,
   };
 
+  char const *tgt_file_filter = "hashtable";
+
+  ZXFuzzParams const params = {
+      .usr_ctx = (void *)&ctx,
+      .fuzz_one = fuzz_one,
+      .tgt_file_filter = tgt_file_filter,
+      .tgt_file_filter_len = __builtin_strlen(tgt_file_filter),
+  };
+
   // initiate main loop
-  ZX_ERR_TRACE_TRY_ABORT(
-      (zx_fuzz_main(&alloc, (void *)&ctx, fuzz_one, &err_stack)), &err_stack);
+  ZX_ERR_TRACE_TRY_ABORT((zx_fuzz_main(&alloc, &params, &err_stack)),
+                         &err_stack);
 
   zx_page_alloc_free(mem, MEM_CAP);
   return ZX_SYS_EXIT_SUCCESS;

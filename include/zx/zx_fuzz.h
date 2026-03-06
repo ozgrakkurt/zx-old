@@ -42,7 +42,14 @@ static inline zx_u32 ZXFuzzInput_consumed_count(ZXFuzzInput const *input) {
 typedef ZXStatus (*zx_fuzz_one_fn)(void *usr_ctx, ZXFuzzInput *fuzz_input,
                                    ZXErrStack *err_stack);
 
-ZXStatus zx_fuzz_main(ZXAlloc *alloc, void *usr_ctx, zx_fuzz_one_fn fuzz_one,
+typedef struct ZXFuzzParams {
+  void *usr_ctx;
+  zx_fuzz_one_fn fuzz_one;
+  char const *tgt_file_filter;
+  zx_usize tgt_file_filter_len;
+} ZXFuzzParams;
+
+ZXStatus zx_fuzz_main(ZXAlloc *alloc, ZXFuzzParams const *params,
                       ZXErrStack *err_stack);
 
 #endif // ifdef ZX_FUZZING_ENABLED

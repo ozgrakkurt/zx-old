@@ -131,7 +131,7 @@ static inline void ZXHashtable_load_(void const *restrict group_ptr, zx_u8 tag,
                    "vpmovmskb %%xmm0, %1\n\t" // empty match
                    : "=r"(tm), "=r"(em)
                    : "r"(gp), "r"(tg)
-                   : "xmm0", "xmm1");
+                   : "xmm0", "xmm1", "memory");
 
   *tag_match = (zx_u16)tm;
   *empty_match = (zx_u16)em;
