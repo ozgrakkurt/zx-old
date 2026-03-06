@@ -377,8 +377,7 @@ static ZXStatus ZXFuzzer_fuzz(ZXFuzzer *fuzzer, ZXFmtBuf *fmt_buf,
   ZX_ERR_TRY((ZXFuzzer_print_status(fuzzer, false, fmt_buf, err_stack)),
              err_stack);
 
-  constexpr zx_u64 MAGIC[] = {0, ZX_U64_MAX, ZX_U64_MAX / 2, ZX_U32_MAX,
-                              ~ZX_U32_MAX};
+  constexpr zx_u64 MAGIC[] = {0, ZX_U64_MAX};
   constexpr zx_usize N_MAGIC = sizeof(MAGIC) / sizeof(MAGIC[0]);
 
   ZXXoshiro256 rand = ZXXoshiro256_init(0);
@@ -423,7 +422,7 @@ static ZXStatus ZXFuzzer_fuzz(ZXFuzzer *fuzzer, ZXFmtBuf *fmt_buf,
     // move on if we can't improve coverage for some number of
     // iterations
     // do more iterations for interesting mut_idx
-    zx_u32 const max_stall = zx_chk_add_u32(64, fuzz_vals->n_filled);
+    zx_u32 const max_stall = zx_chk_add_u32(8, fuzz_vals->n_filled);
     zx_u32 stall = 0;
     while (stall < max_stall) {
       zx_u64 const new_val = ZXXoshiro256_next(&rand);

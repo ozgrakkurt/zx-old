@@ -30,8 +30,9 @@ ZXStatus zx_err_trace_collect(ZXAlloc *alloc, ZXErrStack const *stack,
                               char const **trace, zx_usize *trace_len,
                               ZXErrStack *err_stack);
 
-static inline void zx_err_trace_abort_(char const *info, zx_usize info_len,
-                                       ZXErrStack const *stack) {
+[[noreturn]] static inline void zx_err_trace_abort_(char const *info,
+                                                    zx_usize info_len,
+                                                    ZXErrStack const *stack) {
   zx_usize n_written = 0;
   zx_usize const w_status = zx_sys_write(ZX_STDERR, info, info_len, &n_written);
   (void)w_status;
