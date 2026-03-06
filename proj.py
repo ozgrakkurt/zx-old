@@ -36,22 +36,8 @@ ZX: Library = Library(
     },
 )
 
-XORF: Library = Library(
-    source_files=set(["xorf.c"]),
-    test_targets={
-        "xorf_test": set([]),
-    },
-    fuzz_targets={
-        "xorf_fuzz": set([]),
-    },
-    bench_targets={
-        "xorf_bench": set([]),
-    },
-)
-
 PROJECT: Project = Project(
     libraries={
         "zx": ZX,
-        "xorf": XORF,
     },
 )
