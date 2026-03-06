@@ -268,43 +268,42 @@ static ZXStatus ZXFuzzer_print_status(ZXFuzzer *fuzzer, bool clear_lines,
   }
 
   ZX_ERR_TRY(
-      (ZXFmtBuf_format_cstr(fmt_buf, "FUZZ STATUS:\n\t MARKERS: ", err_stack)),
+      (ZXFmtBuf_format_cstr(fmt_buf, "FUZZ STATUS:\n\tMARKERS: ", err_stack)),
       err_stack);
   ZX_ERR_TRY((ZXFmtBuf_format_u64(fmt_buf, marker_cov, err_stack)), err_stack);
   ZX_ERR_TRY((ZXFmtBuf_format_cstr(fmt_buf, " / ", err_stack)), err_stack);
   ZX_ERR_TRY(
       (ZXFmtBuf_format_u64(fmt_buf, fuzzer->linker_set.n_markers, err_stack)),
       err_stack);
-  ZX_ERR_TRY((ZXFmtBuf_format_cstr(fmt_buf, "\n\t ERRS: ", err_stack)),
+  ZX_ERR_TRY((ZXFmtBuf_format_cstr(fmt_buf, "\n\tERRS: ", err_stack)),
              err_stack);
   ZX_ERR_TRY((ZXFmtBuf_format_u64(fmt_buf, err_cov, err_stack)), err_stack);
   ZX_ERR_TRY((ZXFmtBuf_format_cstr(fmt_buf, " / ", err_stack)), err_stack);
   ZX_ERR_TRY(
       (ZXFmtBuf_format_u64(fmt_buf, fuzzer->linker_set.n_errs, err_stack)),
       err_stack);
-  ZX_ERR_TRY((ZXFmtBuf_format_cstr(fmt_buf, "\n\t ABORTS: ", err_stack)),
+  ZX_ERR_TRY((ZXFmtBuf_format_cstr(fmt_buf, "\n\tABORTS: ", err_stack)),
              err_stack);
   ZX_ERR_TRY(
       (ZXFmtBuf_format_u64(fmt_buf, fuzzer->linker_set.n_aborts, err_stack)),
       err_stack);
-  ZX_ERR_TRY(
-      (ZXFmtBuf_format_cstr(fmt_buf, "\n\t TARGET_MARKERS: ", err_stack)),
-      err_stack);
+  ZX_ERR_TRY((ZXFmtBuf_format_cstr(fmt_buf, "\n\tTARGET_MARKERS: ", err_stack)),
+             err_stack);
   ZX_ERR_TRY((ZXFmtBuf_format_u64(fmt_buf, tgt_marker_cov, err_stack)),
              err_stack);
   ZX_ERR_TRY((ZXFmtBuf_format_cstr(fmt_buf, " / ", err_stack)), err_stack);
   ZX_ERR_TRY(
       (ZXFmtBuf_format_u64(fmt_buf, fuzzer->tgt_marker_count, err_stack)),
       err_stack);
-  ZX_ERR_TRY((ZXFmtBuf_format_cstr(fmt_buf, "\n\t TARGET_ERRS: ", err_stack)),
+  ZX_ERR_TRY((ZXFmtBuf_format_cstr(fmt_buf, "\n\tTARGET_ERRS: ", err_stack)),
              err_stack);
   ZX_ERR_TRY((ZXFmtBuf_format_u64(fmt_buf, tgt_err_cov, err_stack)), err_stack);
   ZX_ERR_TRY((ZXFmtBuf_format_cstr(fmt_buf, " / ", err_stack)), err_stack);
   ZX_ERR_TRY((ZXFmtBuf_format_u64(fmt_buf, fuzzer->tgt_err_count, err_stack)),
              err_stack);
-  ZX_ERR_TRY(
-      (ZXFmtBuf_format_cstr(fmt_buf, "\n UNCOVERED_MARKERS:\n\t", err_stack)),
-      err_stack);
+  ZX_ERR_TRY((ZXFmtBuf_format_cstr(fmt_buf, "\n\tUNCOVERED_MARKERS:\n\t\t",
+                                   err_stack)),
+             err_stack);
   ZX_ERR_TRY(
       (zx_fuzz_print_tgt_uncoverage(
           fmt_buf, fuzzer->linker_set.marker_filename,
@@ -312,7 +311,7 @@ static ZXStatus ZXFuzzer_print_status(ZXFuzzer *fuzzer, bool clear_lines,
           fuzzer->marker_coverage, fuzzer->linker_set.n_markers, err_stack)),
       err_stack);
   ZX_ERR_TRY(
-      (ZXFmtBuf_format_cstr(fmt_buf, "\n UNCOVERED_ERRS:\n\t", err_stack)),
+      (ZXFmtBuf_format_cstr(fmt_buf, "\n\tUNCOVERED_ERRS:\n\t\t", err_stack)),
       err_stack);
   ZX_ERR_TRY((zx_fuzz_print_tgt_uncoverage(
                  fmt_buf, fuzzer->linker_set.err_filename,
