@@ -260,7 +260,6 @@ static ZXStatus ZXFuzzer_print_status(ZXFuzzer *fuzzer, bool clear_lines,
       fuzzer->err_is_tgt, fuzzer->err_coverage, fuzzer->linker_set.n_errs);
 
   if (clear_lines) {
-    // clear terminal
     ZX_ERR_TRY((ZXFmtBuf_format_cstr(fmt_buf,
                                      "\033[2J"
                                      "\033[H",
@@ -282,6 +281,11 @@ static ZXStatus ZXFuzzer_print_status(ZXFuzzer *fuzzer, bool clear_lines,
   ZX_ERR_TRY((ZXFmtBuf_format_cstr(fmt_buf, " / ", err_stack)), err_stack);
   ZX_ERR_TRY(
       (ZXFmtBuf_format_u64(fmt_buf, fuzzer->linker_set.n_errs, err_stack)),
+      err_stack);
+  ZX_ERR_TRY((ZXFmtBuf_format_cstr(fmt_buf, "\n\t ABORTS: ", err_stack)),
+             err_stack);
+  ZX_ERR_TRY(
+      (ZXFmtBuf_format_u64(fmt_buf, fuzzer->linker_set.n_aborts, err_stack)),
       err_stack);
   ZX_ERR_TRY(
       (ZXFmtBuf_format_cstr(fmt_buf, "\n\t TARGET_MARKERS: ", err_stack)),
@@ -445,7 +449,7 @@ static ZXStatus ZXFuzzer_fuzz(ZXFuzzer *fuzzer, ZXFmtBuf *fmt_buf,
       fuzzer->fuzz_input[mut_idx] = ZXXoshiro256_next(&rand);
     }
 
-    if (fuzz_iter_no % (1 << 20) == 0) {
+    if ((fuzz_iter_no % 1024) == 0) {
       ZX_ERR_TRY((ZXFuzzer_print_status(fuzzer, true, fmt_buf, err_stack)),
                  err_stack);
     }

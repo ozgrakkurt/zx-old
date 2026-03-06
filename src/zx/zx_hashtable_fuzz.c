@@ -93,6 +93,9 @@ static ZXStatus fuzz_one(void *usr_ctx, ZXFuzzInput *fuzz_input,
   zx_u32 const MAX_N_OPS = 1024;
   zx_u32 const n_ops = ((zx_u32)fuzz_in) % MAX_N_OPS;
 
+  ZX_ERR_TRY((ZXFuzzInput_next(fuzz_input, &fuzz_in, err_stack)), err_stack);
+  bool const do_hash = (fuzz_in & 1) > 0;
+
   ZXHashtable hashtable;
   ZX_ERR_TRY((ZXHashtable_init(&alloc, capacity, alignof(KeyVal),
                                sizeof(KeyVal), &hashtable, err_stack)),
@@ -126,7 +129,8 @@ static ZXStatus fuzz_one(void *usr_ctx, ZXFuzzInput *fuzz_input,
     __builtin_memcpy(&kv, &fuzz_in, sizeof(zx_u64));
 
     zx_u64 const hash =
-        zx_rapidhash_v3((zx_u8 const *)&kv.key, sizeof(key_type), 0);
+        do_hash ? zx_rapidhash_v3((zx_u8 const *)&kv.key, sizeof(key_type), 0)
+                : kv.key;
 
     switch (op) {
     case 0: {
