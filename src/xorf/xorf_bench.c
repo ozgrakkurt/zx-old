@@ -3,6 +3,7 @@
 #include <zx/zx_def.h>
 #include <zx/zx_err.h>
 #include <zx/zx_err_trace.h>
+#include <zx/zx_fmt.h>
 #include <zx/zx_hashtable.h>
 #include <zx/zx_page_alloc.h>
 #include <zx/zx_rapidhash_v3.h>
@@ -10,7 +11,7 @@
 #include <zx/zx_xoshiro256.h>
 
 constexpr zx_usize MEMORY_SIZE = 1 << 30;
-constexpr zx_u32 LEN = 1 << 18;
+constexpr zx_u32 LEN = 1 << 20;
 
 typedef zx_u256 key_type;
 
@@ -22,6 +23,14 @@ static inline bool u64_eql(void const *ctx, void const *a, void const *b) {
 }
 
 static ZXStatus benchy(ZXAlloc *alloc, ZXErrStack *err_stack) {
+  constexpr zx_usize fmt_buf_cap = 1 << 12;
+  char *fmt_buf_buf = nullptr;
+  ZX_ERR_TRY(
+      (ZXAlloc_alloc(alloc, fmt_buf_cap, (void **)&fmt_buf_buf, err_stack)),
+      err_stack);
+
+  ZXFmtBuf fmt_buf = ZXFmtBuf_init(fmt_buf_buf, fmt_buf_cap);
+
   zx_u32 const num_keys = LEN;
 
   key_type *keys = nullptr;
@@ -59,8 +68,11 @@ static ZXStatus benchy(ZXAlloc *alloc, ZXErrStack *err_stack) {
     }
   }
 
-  fprintf(stderr, "DeDup in %" PRId64 " ticks\n",
-          (uint64_t){ZXTimer_lap(&timer)});
+  zx_u64 const dedup_time = ZXTimer_lap(&timer);
+  ZX_ERR_TRY((ZXFmtBuf_format_cstr(&fmt_buf, "Dedup: ", err_stack)), err_stack);
+  ZX_ERR_TRY((ZXFmtBuf_format_u64(&fmt_buf, dedup_time, err_stack)), err_stack);
+  ZX_ERR_TRY((ZXFmtBuf_format_cstr(&fmt_buf, " ticks\n", err_stack)),
+             err_stack);
 
   XorfHeader header = {0};
   zx_u16 *fingerprints = nullptr;
@@ -68,18 +80,29 @@ static ZXStatus benchy(ZXAlloc *alloc, ZXErrStack *err_stack) {
                              &fingerprints, err_stack)),
              err_stack);
 
-  fprintf(stderr, "Construct in %" PRId64 " ticks\n",
-          (uint64_t){ZXTimer_lap(&timer)});
+  zx_u64 const construct_time = ZXTimer_lap(&timer);
+  ZX_ERR_TRY((ZXFmtBuf_format_cstr(&fmt_buf, "Construct: ", err_stack)),
+             err_stack);
+  ZX_ERR_TRY((ZXFmtBuf_format_u64(&fmt_buf, construct_time, err_stack)),
+             err_stack);
+  ZX_ERR_TRY((ZXFmtBuf_format_cstr(&fmt_buf, " ticks\n", err_stack)),
+             err_stack);
 
   for (zx_usize i = 0; i < num_hashes; i++) {
     zx_u64 const hash = hashes[i];
     ZX_ERR_ASSERT((xorf_check(&header, fingerprints, hash)), err_stack);
   }
 
-  zx_f64 const query_ticks_per_elem =
-      (zx_f64)ZXTimer_lap(&timer) / (zx_f64)num_hashes;
-  fprintf(stderr, "Query: %.3f ticks per element\n",
-          (double){query_ticks_per_elem});
+  zx_u64 const query_ticks_per_elem =
+      (zx_u64)ZXTimer_lap(&timer) / (zx_u64)num_hashes;
+  ZX_ERR_TRY((ZXFmtBuf_format_cstr(&fmt_buf, "Query: ", err_stack)), err_stack);
+  ZX_ERR_TRY((ZXFmtBuf_format_u64(&fmt_buf, query_ticks_per_elem, err_stack)),
+             err_stack);
+  ZX_ERR_TRY(
+      (ZXFmtBuf_format_cstr(&fmt_buf, " ticks per element.\n", err_stack)),
+      err_stack);
+
+  ZX_ERR_TRY((ZXFmtBuf_write(&fmt_buf, ZX_STDERR, err_stack)), err_stack);
 
   return ZXStatus_Ok;
 }
@@ -92,8 +115,8 @@ int main(void) {
   ZXAlloc alloc = ZXAlloc_init(page, MEMORY_SIZE);
 
   for (zx_u8 i = 0; i < 5; i++) {
-    ZX_ERR_TRACE_ABORT((benchy(&alloc, &err_stack)), &err_stack);
-    ZX_ERR_TRACE_ABORT((ZXAlloc_reset(&alloc, &err_stack)), &err_stack);
+    ZX_ERR_TRACE_TRY_ABORT((benchy(&alloc, &err_stack)), &err_stack);
+    ZXAlloc_reset(&alloc);
   }
 
   zx_page_alloc_free(page, MEMORY_SIZE);
