@@ -21,18 +21,12 @@ static inline ZXFuzzInput ZXFuzzInput_init(zx_u64 *input, zx_u32 input_len) {
   };
 }
 
-static inline ZXStatus ZXFuzzInput_next(ZXFuzzInput *input, zx_u64 *out,
-                                        ZXErrStack *err_stack) {
+static inline zx_u64 ZXFuzzInput_next(ZXFuzzInput *input) {
   zx_u32 const offset = input->consumed_count;
-
-  if (input->input_len == offset) {
-    ZX_ERR_RETURN((ZXStatus_OutOfInput), err_stack);
-  }
-
+  ZX_ASSERT((input->input_len > offset));
   input->consumed_count = offset + 1;
-  *out = input->input[offset];
 
-  return ZXStatus_Ok;
+  return input->input[offset];
 }
 
 static inline zx_u32 ZXFuzzInput_consumed_count(ZXFuzzInput const *input) {

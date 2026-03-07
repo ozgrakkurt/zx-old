@@ -84,17 +84,13 @@ static ZXStatus fuzz_one(void *usr_ctx, ZXFuzzInput *fuzz_input,
   FuzzCtx const *ctx = (FuzzCtx const *)usr_ctx;
   ZXAlloc alloc = ZXAlloc_init(ctx->mem, ctx->cap);
 
-  zx_u64 fuzz_in = 0;
-  ZX_ERR_TRY((ZXFuzzInput_next(fuzz_input, &fuzz_in, err_stack)), err_stack);
   zx_u32 const MAX_CAP = 1024;
-  zx_u32 const capacity = ((zx_u32)fuzz_in) % MAX_CAP;
+  zx_u32 const capacity = ((zx_u32)ZXFuzzInput_next(fuzz_input)) % MAX_CAP;
 
-  ZX_ERR_TRY((ZXFuzzInput_next(fuzz_input, &fuzz_in, err_stack)), err_stack);
   zx_u32 const MAX_N_OPS = 1024;
-  zx_u32 const n_ops = ((zx_u32)fuzz_in) % MAX_N_OPS;
+  zx_u32 const n_ops = ((zx_u32)ZXFuzzInput_next(fuzz_input)) % MAX_N_OPS;
 
-  ZX_ERR_TRY((ZXFuzzInput_next(fuzz_input, &fuzz_in, err_stack)), err_stack);
-  bool const do_hash = (fuzz_in & 1) > 0;
+  bool const do_hash = (ZXFuzzInput_next(fuzz_input) & 1) > 0;
 
   ZXHashtable hashtable;
   ZX_ERR_TRY((ZXHashtable_init(&alloc, capacity, alignof(KeyVal),
@@ -113,20 +109,16 @@ static ZXStatus fuzz_one(void *usr_ctx, ZXFuzzInput *fuzz_input,
         ((capacity - ZXHashtable_capacity_left(&hashtable)) == ref_data_len),
         err_stack);
 
-    zx_u64 fuzz_in = 0;
-    ZX_ERR_TRY((ZXFuzzInput_next(fuzz_input, &fuzz_in, err_stack)), err_stack);
-
-    zx_u8 op = (zx_u8)((zx_u8)fuzz_in % 3wbu);
+    zx_u8 op = (zx_u8)((zx_u8)ZXFuzzInput_next(fuzz_input) % 3wbu);
     if (zx_chk_sub_u32(capacity, ref_data_len) == 0) {
       ZX_ERR_ASSERT((ZXHashtable_capacity_left(&hashtable) == 0), err_stack);
       op = 0;
     }
 
-    ZX_ERR_TRY((ZXFuzzInput_next(fuzz_input, &fuzz_in, err_stack)), err_stack);
-
     KeyVal kv = {0};
     static_assert(sizeof(KeyVal) == sizeof(zx_u64));
-    __builtin_memcpy(&kv, &fuzz_in, sizeof(zx_u64));
+    zx_u64 const kv_raw = ZXFuzzInput_next(fuzz_input);
+    __builtin_memcpy(&kv, &kv_raw, sizeof(zx_u64));
 
     zx_u64 const hash =
         do_hash ? zx_rapidhash_v3((zx_u8 const *)&kv.key, sizeof(key_type), 0)

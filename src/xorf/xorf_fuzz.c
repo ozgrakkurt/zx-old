@@ -1,29 +1,18 @@
-#include <stdint.h>
-#include <stdlib.h>
-#include <string.h>
 #include <xorf/xorf.h>
 #include <zx/zx_alloc.h>
 #include <zx/zx_def.h>
 #include <zx/zx_err.h>
 #include <zx/zx_err_trace.h>
+#include <zx/zx_fuzz.h>
 #include <zx/zx_hashtable.h>
 #include <zx/zx_page_alloc.h>
 #include <zx/zx_rapidhash_v3.h>
+#include <zx/zx_xoshiro256.h>
 
-constexpr zx_usize MEM_ALIGN = 1 << 21;
-constexpr zx_u32 MAX_N = 2048;
-constexpr zx_usize MEM_SIZE =
-    (sizeof(zx_u32) * MAX_N + MEM_ALIGN - 1) / MEM_ALIGN * MEM_ALIGN;
-
-static void *MEM;
-
-int LLVMFuzzerInitialize(int *argc, char ***argv) {
-  (void)argc;
-  (void)argv;
-
-  MEM = zx_page_alloc_thp_2mb(MEM_SIZE);
-  return 0;
-}
+typedef struct FuzzCtx {
+  void *mem;
+  zx_u32 cap;
+} FuzzCtx;
 
 static inline bool u64_eql(void const *ctx, void const *a, void const *b) {
   (void)ctx;
@@ -73,39 +62,78 @@ static ZXStatus test_one(ZXAlloc *alloc, zx_u256 const *keys, zx_u32 num_keys,
   return ZXStatus_Ok;
 }
 
-int LLVMFuzzerTestOneInput(uint8_t const *fuzz_input, size_t fuzz_input_len) {
-  constexpr zx_u32 HEAD_SIZE = sizeof(zx_u32);
+static ZXStatus fuzz_one(void *usr_ctx, ZXFuzzInput *fuzz_input,
+                         ZXErrStack *err_stack) {
+  constexpr zx_u32 MAX_NUM_KEYS = 4096;
 
-  if (fuzz_input_len < HEAD_SIZE) {
-    return 0;
-  }
+  FuzzCtx const *ctx = (FuzzCtx const *)usr_ctx;
+  ZXAlloc alloc = ZXAlloc_init(ctx->mem, ctx->cap);
 
-  zx_u32 const max_input_size = ((zx_u32)fuzz_input_len) - HEAD_SIZE;
-  zx_u32 const max_input_len = max_input_size / sizeof(zx_u256);
+  zx_u32 const num_keys = (zx_u32)(ZXFuzzInput_next(fuzz_input) % MAX_NUM_KEYS);
 
-  zx_u32 len = 0;
-  memcpy(&len, fuzz_input, sizeof(zx_u32));
-
-  if (max_input_len > 0) {
-    len %= ZX_MIN(max_input_len, MAX_N);
-  } else {
-    len = 0;
-  }
-
-  zx_u32 const num_keys = len;
-
-  ZXErrStack err_stack = ZXErrStack_init();
-  ZXAlloc alloc = ZXAlloc_init(MEM, MEM_SIZE);
+  zx_u8 const distribution = (zx_u8)(ZXFuzzInput_next(fuzz_input) % 3);
 
   zx_u256 *keys = nullptr;
-  ZX_ERR_TRACE_ABORT((ZXAlloc_alloc(&alloc, sizeof(zx_u256) * num_keys,
-                                    (void **)&keys, &err_stack)),
-                     &err_stack);
+  ZX_ERR_TRY((ZXAlloc_alloc(&alloc, sizeof(zx_u256) * num_keys, (void **)&keys,
+                            err_stack)),
+             err_stack);
 
-  memcpy(keys, &fuzz_input[HEAD_SIZE], num_keys * sizeof(zx_u256));
+  switch (distribution) {
+  case 0: {
+    __builtin_memset(keys, 0, sizeof(zx_u256) * num_keys);
+    break;
+  }
+  case 1: {
+    __builtin_memset(keys, ~0, sizeof(zx_u256) * num_keys);
+    break;
+  }
+  case 2: {
+    ZXXoshiro256 rand = ZXXoshiro256_init(0);
+    ZXXoshiro256_fill(&rand, (zx_u8 *)keys, sizeof(zx_u256) * num_keys);
+    break;
+  }
+  default: {
+    ZX_ASSERT((false));
+    break;
+  }
+  }
 
-  ZX_ERR_TRACE_ABORT((test_one(&alloc, keys, num_keys, &err_stack)),
-                     &err_stack);
+  ZX_ERR_TRY((test_one(&alloc, keys, num_keys, err_stack)), err_stack);
 
-  return 0;
+  return ZXStatus_Ok;
+}
+
+int main(void) {
+  constexpr zx_usize MEM_CAP = (zx_usize){1} << 30;
+  constexpr zx_usize FUZZ_MEM_CAP = (zx_usize){1} << 29;
+
+  void *mem = zx_page_alloc_thp_2mb(MEM_CAP);
+  ZXAlloc alloc = ZXAlloc_init(mem, MEM_CAP);
+
+  ZXErrStack err_stack = ZXErrStack_init();
+
+  void *fuzz_mem = nullptr;
+  ZX_ERR_TRACE_TRY_ABORT(
+      ZXAlloc_alloc(&alloc, FUZZ_MEM_CAP, &fuzz_mem, &err_stack), &err_stack);
+
+  FuzzCtx const ctx = {
+      .mem = fuzz_mem,
+      .cap = FUZZ_MEM_CAP,
+  };
+
+  char const *tgt_file_filter = "xorf";
+
+  ZXFuzzParams const params = {
+      .usr_ctx = (void *)&ctx,
+      .fuzz_one = fuzz_one,
+      .tgt_file_filter = tgt_file_filter,
+      .tgt_file_filter_len = __builtin_strlen(tgt_file_filter),
+  };
+
+  // initiate main loop
+  ZX_ERR_TRACE_TRY_ABORT((zx_fuzz_main(&alloc, &params, &err_stack)),
+                         &err_stack);
+
+  zx_page_alloc_free(mem, MEM_CAP);
+  return ZX_SYS_EXIT_SUCCESS;
 }
