@@ -161,6 +161,7 @@ def make_cflags(profile: Profile, config: Config) -> List[str]:
         # Required for correctness.
         # Use 'restrict'/'register' in performance-critical code.
         "-fno-strict-aliasing",
+        "-fno-math-errno",
         # Use pipes instead of temporary files in compilation.
         "-pipe",
         f"-O{profile.opt_level}",

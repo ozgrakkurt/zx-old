@@ -20,6 +20,7 @@ ZX: Library = Library(
             "zx_err_trace.c",
             "zx_start.c",
             "zx_fuzz.c",
+            "zx_math_log.c",
         ]
     ),
     test_targets={

@@ -40,13 +40,13 @@ int main(void) {
   ZXAlloc alloc = ZXAlloc_init(page, MEMORY_SIZE / 2);
   ZXAlloc scratch_alloc = ZXAlloc_init(&page[MEMORY_SIZE / 2], MEMORY_SIZE / 2);
 
-  ZX_ERR_TRACE_ABORT((smoke_test(&alloc, &scratch_alloc, 699, &err_stack)),
-                     &err_stack);
-  ZX_ERR_TRACE_ABORT((ZXAlloc_reset(&alloc, &err_stack)), &err_stack);
-  ZX_ERR_TRACE_ABORT((ZXAlloc_reset(&scratch_alloc, &err_stack)), &err_stack);
+  ZX_ERR_TRACE_TRY_ABORT((smoke_test(&alloc, &scratch_alloc, 699, &err_stack)),
+                         &err_stack);
+  ZXAlloc_reset(&alloc);
+  ZXAlloc_reset(&scratch_alloc);
 
-  ZX_ERR_TRACE_ABORT((smoke_test(&alloc, &scratch_alloc, 0, &err_stack)),
-                     &err_stack);
+  ZX_ERR_TRACE_TRY_ABORT((smoke_test(&alloc, &scratch_alloc, 0, &err_stack)),
+                         &err_stack);
 
   zx_page_alloc_free(page, MEMORY_SIZE);
   return 0;

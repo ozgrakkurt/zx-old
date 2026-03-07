@@ -52,6 +52,11 @@ static inline zx_u64 ZXXoshiro256_next(ZXXoshiro256 *restrict rand) {
 static inline void ZXXoshiro256_fill(ZXXoshiro256 *restrict rand,
                                      zx_u8 *restrict out, zx_usize len) {
   ZX_ASSERT((rand != nullptr));
+
+  if (len == 0) {
+    return;
+  }
+
   ZX_ASSERT((out != nullptr));
 
   zx_usize const n_blocks = len / sizeof(zx_u64);

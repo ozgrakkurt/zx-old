@@ -1,13 +1,15 @@
+// THIS CODE IS ADAPTED FROM
+// https://github.com/Nicoshev/rapidhash/blob/rapidhash_v3/rapidhash.h
+// Specifically the "Nano" version, which is optimized for code size and small
+// inputs, is used here.
+// Original code is licensed under MIT:
+// https://github.com/Nicoshev/rapidhash/blob/rapidhash_v3/LICENSE
+
 #ifndef ZX_RAPIDHASH_V3_H
 #define ZX_RAPIDHASH_V3_H
 
 #include <zx/zx_assert.h>
 #include <zx/zx_def.h>
-
-// THIS CODE IS PORTED FROM
-// https://github.com/Nicoshev/rapidhash/blob/rapidhash_v3/rapidhash.h
-// Specifically the "Nano" version, which is optimized for code size and small
-// inputs, is used here.
 
 #ifndef __LITTLE_ENDIAN__
 #error "Only little-endian targets are supported"

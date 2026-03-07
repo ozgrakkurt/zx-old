@@ -2,6 +2,8 @@
 #include <zx/zx_alloc.h>
 #include <zx/zx_def.h>
 #include <zx/zx_err.h>
+#include <zx/zx_flt.h>
+#include <zx/zx_int.h>
 #include <zx/zx_xoshiro256.h>
 
 typedef struct XorfBuilder_ {
@@ -25,21 +27,21 @@ static inline XorfHeader xorf_builder_to_header_(XorfBuilder_ const *builder) {
 
 static inline zx_u32 xorf_calculate_segment_length_(zx_u32 const size) {
   zx_f64 const sz = (zx_f64)size;
-  zx_u32 const base =
-      (zx_u32)__builtin_floor(__builtin_log(sz) / __builtin_log(3.33) + 2.25);
+  zx_u32 const base = (zx_u32)__builtin_floor(
+      __builtin_elementwise_log(sz) / __builtin_elementwise_log(3.33) + 2.25);
   return (zx_u32){1wbu} << base;
 }
 
 static inline zx_f64 xorf_calculate_size_factor_(zx_u32 const size) {
   zx_f64 const sz = (zx_f64)size;
-  zx_f64 const result =
-      0.875 + 0.25 * __builtin_log(1000000.0) / __builtin_log(sz);
-  return ZX_MAX(result, ((zx_f64){1.125}));
+  zx_f64 const result = 0.875 + 0.25 * __builtin_elementwise_log(1000000.0) /
+                                    __builtin_elementwise_log(sz);
+  return zx_flt_max_f64(result, ((zx_f64){1.125}));
 }
 
 static inline XorfBuilder_ xorf_calculate_builder_(zx_u32 const num_keys) {
   zx_u32 const size = num_keys;
-  zx_u32 const segment_length = ZX_MIN(
+  zx_u32 const segment_length = zx_int_min_u32(
       ((size == 0) ? (zx_u32){4wbu} : xorf_calculate_segment_length_(size)),
       (zx_u32){262144wbu});
   zx_f64 const size_factor =
