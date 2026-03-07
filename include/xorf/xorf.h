@@ -21,6 +21,20 @@ static inline zx_u64 xorf_apply_seed_(zx_u64 hash, zx_u64 seed) {
   return zx_rapidhash_v3((zx_u8 const *)&hash, sizeof(zx_u64), seed);
 }
 
+static inline zx_u64 xorf_apply_seed_(zx_u64 hash, zx_u64 seed) {
+  // Incorporate the seed
+  zx_u64 h = hash ^ seed;
+
+  // MurmurHash3 64-bit mixer (fmix64)
+  h ^= h >> 33;
+  h *= 0xff51afd7ed558ccdULL;
+  h ^= h >> 33;
+  h *= 0xc4ceb9fe1a85ec53ULL;
+  h ^= h >> 33;
+
+  return h;
+}
+
 static inline zx_u16 xorf_make_fingerprint_(zx_u64 hash) {
   return (zx_u16)(hash ^ (hash >> 32));
 }

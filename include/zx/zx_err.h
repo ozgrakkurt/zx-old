@@ -37,7 +37,7 @@
 
 #define ZX_ERR_ASSERT(expr, stack_var)                                         \
   do {                                                                         \
-    char const *zx_err_assert_info_ = ZX_ERR_INFO_(ZX_ASSERT_RETURN(expr));    \
+    char const *zx_err_assert_info_ = ZX_ERR_INFO_(ZX_ERR_ASSERT(expr));       \
     if (!zx_err_assert_((expr), zx_err_assert_info_,                           \
                         __builtin_strlen(zx_err_assert_info_), (stack_var))) { \
       ZX_FUZZ_ERR_MARKER;                                                      \

@@ -44,7 +44,7 @@ static ZXStatus test_one(ZXAlloc *alloc, zx_u256 const *keys, zx_u32 num_keys,
 
     if (!existed_before) {
       hashes[num_hashes] = hash;
-      num_hashes += 1wbu;
+      num_hashes += 1;
     }
   }
 
@@ -64,7 +64,7 @@ static ZXStatus test_one(ZXAlloc *alloc, zx_u256 const *keys, zx_u32 num_keys,
 
 static ZXStatus fuzz_one(void *usr_ctx, ZXFuzzInput *fuzz_input,
                          ZXErrStack *err_stack) {
-  constexpr zx_u32 MAX_NUM_KEYS = 4096;
+  constexpr zx_u32 MAX_NUM_KEYS = 40000;
 
   FuzzCtx const *ctx = (FuzzCtx const *)usr_ctx;
   ZXAlloc alloc = ZXAlloc_init(ctx->mem, ctx->cap);
@@ -72,6 +72,8 @@ static ZXStatus fuzz_one(void *usr_ctx, ZXFuzzInput *fuzz_input,
   zx_u32 const num_keys = (zx_u32)(ZXFuzzInput_next(fuzz_input) % MAX_NUM_KEYS);
 
   zx_u8 const distribution = (zx_u8)(ZXFuzzInput_next(fuzz_input) % 3);
+
+  zx_u64 const rand_seed = ZXFuzzInput_next(fuzz_input);
 
   zx_u256 *keys = nullptr;
   ZX_ERR_TRY((ZXAlloc_alloc(&alloc, sizeof(zx_u256) * num_keys, (void **)&keys,
@@ -88,7 +90,7 @@ static ZXStatus fuzz_one(void *usr_ctx, ZXFuzzInput *fuzz_input,
     break;
   }
   case 2: {
-    ZXXoshiro256 rand = ZXXoshiro256_init(0);
+    ZXXoshiro256 rand = ZXXoshiro256_init(rand_seed);
     ZXXoshiro256_fill(&rand, (zx_u8 *)keys, sizeof(zx_u256) * num_keys);
     break;
   }

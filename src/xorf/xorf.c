@@ -27,15 +27,15 @@ static inline XorfHeader xorf_builder_to_header_(XorfBuilder_ const *builder) {
 
 static inline zx_u32 xorf_calculate_segment_length_(zx_u32 const size) {
   zx_f64 const sz = (zx_f64)size;
-  zx_u32 const base = (zx_u32)__builtin_floor(
-      __builtin_elementwise_log(sz) / __builtin_elementwise_log(3.33) + 2.25);
+  zx_u32 const base =
+      (zx_u32)__builtin_floor(__builtin_log(sz) / __builtin_log(3.33) + 2.25);
   return (zx_u32){1wbu} << base;
 }
 
 static inline zx_f64 xorf_calculate_size_factor_(zx_u32 const size) {
   zx_f64 const sz = (zx_f64)size;
-  zx_f64 const result = 0.875 + 0.25 * __builtin_elementwise_log(1000000.0) /
-                                    __builtin_elementwise_log(sz);
+  zx_f64 const result =
+      0.875 + 0.25 * __builtin_log(1000000.0) / __builtin_log(sz);
   return zx_flt_max_f64(result, ((zx_f64){1.125}));
 }
 
