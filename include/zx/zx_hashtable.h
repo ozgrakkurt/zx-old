@@ -44,8 +44,7 @@ constexpr zx_u8 ZX_HASHTABLE_TAG_EMPTY = 0b11111111wbu;
 constexpr zx_u32 ZX_HASHTABLE_LOAD_FACTOR_ = 80;
 
 static inline ZXStatus ZXHashtable_init(ZXAlloc *alloc, zx_u32 capacity,
-                                        zx_u16 entry_align, zx_u32 entry_size,
-                                        ZXHashtable *table,
+                                        zx_u32 entry_size, ZXHashtable *table,
                                         ZXErrStack *err_stack) {
   ZX_ASSERT((alloc != nullptr));
   ZX_ASSERT((table != nullptr));
@@ -60,24 +59,19 @@ static inline ZXStatus ZXHashtable_init(ZXAlloc *alloc, zx_u32 capacity,
   ZX_ASSERT((zx_is_pow_two_u32(cap)));
   zx_u32 const cap_mask = zx_chk_sub_u32(cap, 1);
 
-  // align to cachline because why not?
-  constexpr zx_u16 ALIGN = 64;
-
   // allocate extra sizeof(simd) bytes so we can do simd loads on any byte index
   // also have to mirror the first group with the extra group at the end to have
   // simple read path.
   zx_u32 const metadata_size = zx_chk_add_u32(cap, ZX_HASHTABLE_GROUP_SIZE_);
   zx_u8 *metadata = nullptr;
-  ZX_ERR_TRY((ZXAlloc_aligned_alloc(alloc, ALIGN, metadata_size,
-                                    (void **)&metadata, err_stack)),
-             err_stack);
+  ZX_ERR_TRY(
+      (ZXAlloc_alloc(alloc, metadata_size, (void **)&metadata, err_stack)),
+      err_stack);
   __builtin_memset(metadata, ZX_HASHTABLE_TAG_EMPTY, metadata_size);
 
   zx_u64 const entries_size = zx_chk_mul_u64(entry_size, cap);
-  zx_u64 const entries_align = zx_int_max_u64(entry_align, ALIGN);
   void *entries = nullptr;
-  ZX_ERR_TRY((ZXAlloc_aligned_alloc(alloc, entries_align, entries_size,
-                                    &entries, err_stack)),
+  ZX_ERR_TRY((ZXAlloc_alloc(alloc, entries_size, &entries, err_stack)),
              err_stack);
 
   *table = (ZXHashtable){

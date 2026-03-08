@@ -18,8 +18,8 @@ void ZXAlloc_reset(ZXAlloc *self) {
   self->offset = 0;
 }
 
-ZXStatus ZXAlloc_aligned_alloc(ZXAlloc *self, zx_u64 align, zx_u64 size,
-                               void **ptr, ZXErrStack *err_stack) {
+static ZXStatus ZXAlloc_aligned_alloc(ZXAlloc *self, zx_u64 align, zx_u64 size,
+                                      void **ptr, ZXErrStack *err_stack) {
   ZX_ASSERT((err_stack != nullptr));
   ZX_ASSERT((self != nullptr));
   ZX_ASSERT((ptr != nullptr));

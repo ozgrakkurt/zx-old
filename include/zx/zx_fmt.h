@@ -13,10 +13,10 @@ typedef struct ZXFmt {
   char *buf;
   zx_u32 capacity;
   zx_u32 offset;
-} ZXFmtBuf;
+} ZXFmt;
 
 static inline ZXFmt ZXFmt_init(char *buf, zx_u32 capacity) {
-  return (ZXFmtBuf){
+  return (ZXFmt){
       .buf = buf,
       .capacity = capacity,
       .offset = 0,
@@ -29,7 +29,7 @@ static inline void ZXFmt_reset(ZXFmt *fmt) { fmt->offset = 0; }
 
 static inline void ZXFmt_format_str(ZXFmt *fmt, ZXFmtStr str) {
   zx_u32 const capacity_left = fmt->capacity - fmt->offset;
-  zx_usize const n_write = zx_int_min_usize(capacity_left, str->len);
+  zx_u64 const n_write = zx_int_min_u64(capacity_left, str->len);
   __builtin_memcpy(&fmt->buf[fmt->offset], str->str, n_write);
   fmt->offset += n_write;
 }
@@ -86,6 +86,7 @@ static inline void ZXFmt_format_ch(ZXFmt *fmt, char ch) {
       zx_i64: ZXFmt_format_i64,                                                \
       char: ZXFmt_format_ch,                                                   \
       const char *: ZXFmt_format_cstr,                                         \
+      char *: ZXFmt_format_cstr,                                               \
       ZXFmtStr: ZXFmt_format_str)((fmt), (v))
 
 #define ZX_FMT_1_(fmt, v) ZX_FMT_FORMAT_G_(fmt, v)

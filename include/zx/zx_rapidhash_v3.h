@@ -93,7 +93,7 @@ static inline zx_u64 zx_rapidhash_v3_long(zx_u8 const *key, zx_u32 len,
   zx_u64 s = seed;
 
   zx_u8 const *p = key;
-  zx_isize i = len;
+  zx_i64 i = len;
 
   s ^= zx_rapidhash_v3_mix(s ^ ZX_RAPIDHASH_V3_SECRET[2],
                            ZX_RAPIDHASH_V3_SECRET[1]);

@@ -140,37 +140,37 @@ constexpr zx_sys_reg ZX_SYSCALL_MUNMAP = 11;
 constexpr zx_sys_reg ZX_SYSCALL_MADVISE = 28;
 constexpr zx_sys_reg ZX_SYSCALL_EXIT_GROUP = 231;
 
-ZXStatus zx_sys_read(zx_i32 fd, void *buf, zx_usize size, zx_usize *n_read,
+ZXStatus zx_sys_read(zx_i32 fd, void *buf, zx_u64 size, zx_u64 *n_read,
                      ZXErrStack *err_stack) {
-  constexpr zx_usize MAX = 0x7ffff000wbu;
-  zx_usize const read_len = (MAX <= size) ? MAX : size;
+  constexpr zx_u64 MAX = 0x7ffff000wbu;
+  zx_u64 const read_len = (MAX <= size) ? MAX : size;
 
   zx_sys_reg const ret = zx_syscall3(ZX_SYSCALL_READ, (zx_sys_reg)fd,
                                      (zx_sys_reg)buf, (zx_sys_reg)read_len);
 
   ZX_ERR_TRY((zx_sys_status(ret)), err_stack);
-  *n_read = (zx_usize){ret};
+  *n_read = (zx_u64){ret};
 
   return ZXStatus_Ok;
 }
 
-ZXStatus zx_sys_write(zx_i32 fd, void const *buf, zx_usize size,
-                      zx_usize *n_written, ZXErrStack *err_stack) {
-  constexpr zx_usize MAX = 0x7ffff000wbu;
-  zx_usize const write_len = (MAX <= size) ? MAX : size;
+ZXStatus zx_sys_write(zx_i32 fd, void const *buf, zx_u64 size,
+                      zx_u64 *n_written, ZXErrStack *err_stack) {
+  constexpr zx_u64 MAX = 0x7ffff000wbu;
+  zx_u64 const write_len = (MAX <= size) ? MAX : size;
 
   zx_sys_reg const ret = zx_syscall3(ZX_SYSCALL_WRITE, (zx_sys_reg)fd,
                                      (zx_sys_reg)buf, (zx_sys_reg)write_len);
 
   ZX_ERR_TRY((zx_sys_status(ret)), err_stack);
-  *n_written = (zx_usize){ret};
+  *n_written = (zx_u64){ret};
 
   return ZXStatus_Ok;
 }
 
 [[noreturn]]
 void zx_sys_abort(void) {
-  zx_usize const status =
+  zx_u64 const status =
       zx_sys_errno(zx_syscall1(ZX_SYSCALL_EXIT_GROUP, (zx_sys_reg){127}));
   (void)status;
   __builtin_unreachable();
@@ -178,13 +178,13 @@ void zx_sys_abort(void) {
 
 [[noreturn]]
 void zx_sys_exit(int code) {
-  zx_usize const status =
+  zx_u64 const status =
       zx_sys_errno(zx_syscall1(ZX_SYSCALL_EXIT_GROUP, (zx_sys_reg)code));
   (void)status;
   __builtin_unreachable();
 }
 
-ZXStatus zx_sys_mmap(void *address, zx_usize length, zx_i32 prot, zx_i32 flags,
+ZXStatus zx_sys_mmap(void *address, zx_u64 length, zx_i32 prot, zx_i32 flags,
                      zx_i32 fd, zx_i64 offset, void **mem,
                      ZXErrStack *err_stack) {
   zx_sys_reg const ret = zx_syscall6(
@@ -197,7 +197,7 @@ ZXStatus zx_sys_mmap(void *address, zx_usize length, zx_i32 prot, zx_i32 flags,
   return ZXStatus_Ok;
 }
 
-ZXStatus zx_sys_munmap(void *mem, zx_usize length, ZXErrStack *err_stack) {
+ZXStatus zx_sys_munmap(void *mem, zx_u64 length, ZXErrStack *err_stack) {
   zx_sys_reg const ret =
       zx_syscall2(ZX_SYSCALL_MUNMAP, (zx_sys_reg)mem, (zx_sys_reg)length);
   ZX_ERR_TRY((zx_sys_status(ret)), err_stack);
@@ -205,7 +205,7 @@ ZXStatus zx_sys_munmap(void *mem, zx_usize length, ZXErrStack *err_stack) {
   return ZXStatus_Ok;
 }
 
-ZXStatus zx_sys_madvise(void *mem, zx_usize length, zx_i32 advice,
+ZXStatus zx_sys_madvise(void *mem, zx_u64 length, zx_i32 advice,
                         ZXErrStack *err_stack) {
   zx_sys_reg const ret = zx_syscall3(ZX_SYSCALL_MADVISE, (zx_sys_reg)mem,
                                      (zx_sys_reg)length, (zx_sys_reg)advice);

@@ -1,12 +1,11 @@
 #include <zx/zx_alloc.h>
 #include <zx/zx_err.h>
-#include <zx/zx_err_trace.h>
 #include <zx/zx_hashtable.h>
 #include <zx/zx_page_alloc.h>
 #include <zx/zx_rapidhash_v3.h>
 
-constexpr zx_usize MEMORY_SIZE = 1 << 20;
-constexpr zx_usize CAP = 3169;
+constexpr zx_u64 MEMORY_SIZE = 1 << 20;
+constexpr zx_u64 CAP = 3169;
 typedef zx_u256 key_type;
 
 static inline bool keys_eql(void const *ctx, void const *a, void const *b) {
@@ -18,11 +17,11 @@ static inline bool keys_eql(void const *ctx, void const *a, void const *b) {
 
 static inline ZXStatus smoke_test(ZXAlloc *alloc, ZXErrStack *err_stack) {
   ZXHashtable table;
-  ZX_ERR_TRY((ZXHashtable_init(alloc, CAP, alignof(key_type), sizeof(key_type),
-                               &table, err_stack)),
+  ZX_ERR_TRY((ZXHashtable_init(alloc, CAP, (zx_u16)alignof(key_type),
+                               sizeof(key_type), &table, err_stack)),
              err_stack);
 
-  for (zx_usize i = 0; i < CAP / 2; i++) {
+  for (zx_u64 i = 0; i < CAP / 2; i++) {
     key_type const key = i;
     zx_u64 const hash =
         zx_rapidhash_v3((zx_u8 const *)&key, sizeof(key_type), 0);
@@ -32,7 +31,7 @@ static inline ZXStatus smoke_test(ZXAlloc *alloc, ZXErrStack *err_stack) {
                   err_stack);
   }
 
-  for (zx_usize i = 0; i < CAP / 2; i++) {
+  for (zx_u64 i = 0; i < CAP / 2; i++) {
     key_type const key = i;
     zx_u64 const hash =
         zx_rapidhash_v3((zx_u8 const *)&key, sizeof(key_type), 0);
@@ -45,7 +44,7 @@ static inline ZXStatus smoke_test(ZXAlloc *alloc, ZXErrStack *err_stack) {
     ZX_ERR_ASSERT(((*entry_key_ptr) == key), err_stack);
   }
 
-  for (zx_usize i = CAP / 2; i < CAP; i++) {
+  for (zx_u64 i = CAP / 2; i < CAP; i++) {
     key_type const key = i;
     zx_u64 const hash =
         zx_rapidhash_v3((zx_u8 const *)&key, sizeof(key_type), 0);
@@ -55,7 +54,7 @@ static inline ZXStatus smoke_test(ZXAlloc *alloc, ZXErrStack *err_stack) {
     ZX_ERR_ASSERT((entry == nullptr), err_stack);
   }
 
-  for (zx_usize i = 0; i < CAP / 2; i++) {
+  for (zx_u64 i = 0; i < CAP / 2; i++) {
     key_type const key = i;
     zx_u64 const hash =
         zx_rapidhash_v3((zx_u8 const *)&key, sizeof(key_type), 0);
@@ -70,7 +69,7 @@ static inline ZXStatus smoke_test(ZXAlloc *alloc, ZXErrStack *err_stack) {
     ZX_ERR_ASSERT(((*entry_key_ptr) == key), err_stack);
   }
 
-  for (zx_usize i = CAP / 2; i < CAP; i++) {
+  for (zx_u64 i = CAP / 2; i < CAP; i++) {
     key_type const key = i;
     zx_u64 const hash =
         zx_rapidhash_v3((zx_u8 const *)&key, sizeof(key_type), 0);
@@ -90,8 +89,8 @@ static inline ZXStatus smoke_test(ZXAlloc *alloc, ZXErrStack *err_stack) {
 
 static inline ZXStatus zero_size_test(ZXAlloc *alloc, ZXErrStack *err_stack) {
   ZXHashtable table;
-  ZX_ERR_TRY((ZXHashtable_init(alloc, 0, alignof(key_type), sizeof(key_type),
-                               &table, err_stack)),
+  ZX_ERR_TRY((ZXHashtable_init(alloc, 0, (zx_u16)alignof(key_type),
+                               sizeof(key_type), &table, err_stack)),
              err_stack);
 
   return ZXStatus_Ok;
