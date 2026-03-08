@@ -4,9 +4,6 @@
 #include <zx/zx_def.h>
 #include <zx/zx_err.h>
 
-static constexpr zx_u64 ZX_ALLOC_MIN_ALIGN = 64;
-static_assert(ZX_ALLOC_MIN_ALIGN >= alignof(zx_u256));
-
 typedef struct ZXAlloc {
   zx_u64 const capacity;
   zx_u64 offset;

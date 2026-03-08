@@ -4,6 +4,9 @@
 #include <zx/zx_err.h>
 #include <zx/zx_int.h>
 
+static constexpr zx_u8 ALIGN = 64;
+static_assert(ALIGN >= alignof(zx_u256));
+
 ZXAlloc ZXAlloc_init(zx_u8 *buf, zx_u64 capacity) {
   ZX_ASSERT((buf != nullptr || capacity == 0));
   return (ZXAlloc){
@@ -18,24 +21,21 @@ void ZXAlloc_reset(ZXAlloc *self) {
   self->offset = 0;
 }
 
-static ZXStatus ZXAlloc_aligned_alloc(ZXAlloc *self, zx_u64 align, zx_u64 size,
-                                      void **ptr, ZXErrStack *err_stack) {
+ZXStatus ZXAlloc_alloc(ZXAlloc *self, zx_u64 size, void **ptr,
+                       ZXErrStack *err_stack) {
   ZX_ASSERT((err_stack != nullptr));
   ZX_ASSERT((self != nullptr));
   ZX_ASSERT((ptr != nullptr));
   ZX_ASSERT((*ptr == nullptr));
-  ZX_ASSERT((align <= (1 << 12)));
-  ZX_ASSERT((zx_is_pow_two_u64(align)));
 
   if (size == 0) {
     *ptr = nullptr;
     return ZXStatus_Ok;
   }
 
-  zx_u64 const alloc_align = zx_int_max_u64(align, ZX_ALLOC_MIN_ALIGN);
-
   ZXAlloc const state = *self;
 
+  static_assert(sizeof(void *) <= sizeof(zx_u64));
   zx_u64 const addr = (zx_u64)(&state.buf[state.offset]);
   zx_u64 const aligned_addr = zx_next_multiple_of_u64(addr, alloc_align);
   ZX_ASSERT((aligned_addr % alloc_align == 0));

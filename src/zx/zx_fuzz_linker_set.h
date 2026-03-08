@@ -1,10 +1,6 @@
 #ifndef ZX_FUZZ_LINKER_SET_H
 #define ZX_FUZZ_LINKER_SET_H
 
-#ifndef __x86_64__
-#error "only x86_64 is supported"
-#endif
-
 #include <zx/zx_def.h>
 #include <zx/zx_int.h>
 
@@ -39,6 +35,8 @@ typedef struct ZXFuzzLinkerSet {
 } ZXFuzzLinkerSet;
 
 static ZXFuzzLinkerSet ZXFuzzLinkerSet_load(void) {
+  static_assert(sizeof(void *) <= sizeof(zx_u64));
+
   zx_u64 const n_markers = (((zx_u64)&__stop_zx_fuzz_marker_filename) -
                             ((zx_u64)&__start_zx_fuzz_marker_filename)) /
                            sizeof(__start_zx_fuzz_marker_filename);

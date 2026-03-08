@@ -3,13 +3,10 @@
 
 #include <zx/zx_def.h>
 
-#ifndef __x86_64__
-#error "only x86_64 is supported"
-#endif
+static_assert(sizeof(void *) == sizeof(zx_u64));
 
-static inline zx_u8 const *zx_memmem(zx_u8 const *haystack,
-                                     zx_u64 haystack_size, zx_u8 const *needle,
-                                     zx_u64 needle_size) {
+static inline zx_u8 const *zx_memmem(void const *haystack, zx_u64 haystack_size,
+                                     void const *needle, zx_u64 needle_size) {
   if (needle_size == 0) {
     return haystack;
   } else if (haystack_size < needle_size) {
