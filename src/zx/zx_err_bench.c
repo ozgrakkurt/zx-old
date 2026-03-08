@@ -2,7 +2,6 @@
 #include <zx/zx_assert.h>
 #include <zx/zx_def.h>
 #include <zx/zx_err.h>
-#include <zx/zx_err_trace.h>
 #include <zx/zx_fmt.h>
 #include <zx/zx_page_alloc.h>
 #include <zx/zx_sys.h>
@@ -24,43 +23,24 @@ static inline ZXStatus err_func(zx_usize depth, ZXErrStack *err_stack) {
   return ZXStatus_Ok;
 }
 
-static inline ZXStatus print_timing(ZXAlloc *alloc, const char *head,
-                                    zx_u64 timing, const char *tail,
+static inline ZXStatus recurse_func(ZXAlloc *alloc, ZXFmt *fmt,
                                     ZXErrStack *err_stack) {
-  constexpr zx_usize fmt_buf_size = 1 << 12;
-  char *fmt_buf_alloc = nullptr;
-  ZX_ERR_TRY(
-      (ZXAlloc_alloc(alloc, fmt_buf_size, (void **)&fmt_buf_alloc, err_stack)),
-      err_stack);
-
-  ZXFmtBuf fmt_buf = ZXFmtBuf_init(fmt_buf_alloc, fmt_buf_size);
-  ZX_ERR_TRY((ZXFmtBuf_format_cstr(&fmt_buf, head, err_stack)), err_stack);
-  ZX_ERR_TRY((ZXFmtBuf_format_u64(&fmt_buf, timing, err_stack)), err_stack);
-  ZX_ERR_TRY((ZXFmtBuf_format_cstr(&fmt_buf, tail, err_stack)), err_stack);
-
-  ZX_ERR_TRY((ZXFmtBuf_write(&fmt_buf, ZX_STDERR, err_stack)), err_stack);
-
-  return ZXStatus_Ok;
-}
-
-static inline ZXStatus recurse_func(ZXAlloc *alloc, ZXErrStack *err_stack) {
   (void)alloc;
 
   ZXTimer timer = ZXTimer_init();
   ZXStatus const status = err_func(1, err_stack);
   zx_u64 const elapsed = ZXTimer_lap(&timer);
 
-  ZX_ERR_TRY((print_timing(alloc, "recurse_func elapsed: ", elapsed, " ticks\n",
-                           err_stack)),
-             err_stack);
+  ZX_FMT(fmt, "recurse_func elapsed: ", elapsed, " ticks\n");
 
   ZX_ERR_TRY(status, err_stack);
 
   return ZXStatus_Ok;
 }
 
-static inline ZXStatus do_bench(ZXAlloc *alloc, ZXErrStack *err_stack) {
-  ZXStatus const status = recurse_func(alloc, err_stack);
+static inline ZXStatus do_bench(ZXAlloc *alloc, ZXFmt *fmt,
+                                ZXErrStack *err_stack) {
+  ZXStatus const status = recurse_func(alloc, fmt, err_stack);
 
   if (status != ZXStatus_Ok) {
     char const *trace = nullptr;
@@ -75,9 +55,7 @@ static inline ZXStatus do_bench(ZXAlloc *alloc, ZXErrStack *err_stack) {
                &collect_stack);
     zx_u64 const elapsed = ZXTimer_lap(&timer);
 
-    ZX_ERR_TRY((print_timing(alloc, "collect func elapsed: ", elapsed,
-                             " ticks\n", err_stack)),
-               err_stack);
+    ZX_FMT(fmt, "collect func elapsed: ", elapsed, " ticks\n");
 
     // zx_usize n_written = 0;
     // zx_sys_write(ZX_STDERR, trace, trace_size, &n_written);
@@ -93,6 +71,7 @@ static inline ZXStatus do_bench(ZXAlloc *alloc, ZXErrStack *err_stack) {
 }
 
 constexpr zx_usize MEMORY_SIZE = 1 << 16;
+constexpr zx_usize FMT_BUF_SIZE = 1 << 12;
 
 int main(void) {
   void *const page = zx_page_alloc_4kb(MEMORY_SIZE);
@@ -100,10 +79,21 @@ int main(void) {
   ZXErrStack err_stack = ZXErrStack_init();
   ZXAlloc alloc = ZXAlloc_init(page, MEMORY_SIZE);
 
+  char fmt_buf[FMT_BUF_SIZE] = {0};
+  ZXFmt fmt = ZXFmt_init(fmt_buf, FMT_BUF_SIZE);
+
   for (zx_usize i = 0; i < 50; i++) {
     ZXAlloc_reset(&alloc);
-    ZX_ERR_TRACE_TRY_ABORT((do_bench(&alloc, &err_stack)), &err_stack);
+    ZXFmt_reset(&fmt);
+    ZX_ERR_TRY_FATAL((do_bench(&alloc, &fmt, &err_stack)), &err_stack);
   }
+
+  zx_u64 const to_write = ZXFmt_n_written(&fmt);
+  zx_u64 n_written = 0;
+  ZX_ERR_TRY_FATAL(
+      (zx_sys_write(ZX_STDERR, fmt_buf, to_write, &n_written, &err_stack)),
+      &err_stack);
+  ZX_ASSERT((n_written == to_write));
 
   zx_page_alloc_free(page, MEMORY_SIZE);
   return 0;

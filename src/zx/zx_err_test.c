@@ -2,7 +2,6 @@
 #include <zx/zx_assert.h>
 #include <zx/zx_def.h>
 #include <zx/zx_err.h>
-#include <zx/zx_err_trace.h>
 #include <zx/zx_page_alloc.h>
 #include <zx/zx_sys.h>
 
@@ -47,9 +46,9 @@ int main(void) {
     // secondary error stack for tracking errors happening while collecting the
     // error trace
     ZXErrStack collect_stack = ZXErrStack_init();
-    ZX_ERR_TRACE_TRY_ABORT((zx_err_trace_collect(&alloc, &err_stack, &trace,
-                                                 &trace_size, &collect_stack)),
-                           &collect_stack);
+    ZX_ERR_TRY_FATAL((zx_err_trace_collect(&alloc, &err_stack, &trace,
+                                           &trace_size, &collect_stack)),
+                     &collect_stack);
 
     // zx_usize n_written = 0;
     // zx_sys_write(ZX_STDERR, trace, trace_size, &n_written);
