@@ -15,13 +15,4 @@ typedef _BitInt(64) zx_i64;
 typedef _BitInt(128) zx_i128;
 typedef _BitInt(256) zx_i256;
 
-typedef _Float16 zx_f16;
-static_assert(sizeof(zx_f16) == 2);
-
-typedef float zx_f32;
-static_assert(sizeof(zx_f32) == 4);
-
-typedef double zx_f64;
-static_assert(sizeof(zx_f64) == 8);
-
 #endif
