@@ -4,7 +4,7 @@
 #include <zx/zx_err_trace.h>
 #include <zx/zx_page_alloc.h>
 
-constexpr zx_usize MEMORY_SIZE = 1 << 16;
+constexpr zx_u64 MEMORY_SIZE = 1 << 16;
 
 ZXStatus test_allocator(ZXAlloc *alloc, ZXErrStack *err_stack) {
   ZXAlloc_reset(alloc);
@@ -14,19 +14,19 @@ ZXStatus test_allocator(ZXAlloc *alloc, ZXErrStack *err_stack) {
                             err_stack)),
              err_stack);
   ZX_ERR_ASSERT((slice != nullptr), err_stack);
-  ZX_ERR_ASSERT((((zx_usize)slice) % alignof(zx_i32 *) == 0), err_stack);
+  ZX_ERR_ASSERT((((zx_u64)slice) % alignof(zx_i32 *) == 0), err_stack);
 
-  for (zx_usize i = 0; i < 100; i++) {
+  for (zx_u64 i = 0; i < 100; i++) {
     slice[i] = nullptr;
     ZX_ERR_TRY(
         (ZXAlloc_alloc(alloc, sizeof(zx_i32), (void **)&slice[i], err_stack)),
         err_stack);
     ZX_ERR_ASSERT((slice[i] != nullptr), err_stack);
-    ZX_ERR_ASSERT((((zx_usize)slice[i]) % alignof(zx_i32) == 0), err_stack);
+    ZX_ERR_ASSERT((((zx_u64)slice[i]) % alignof(zx_i32) == 0), err_stack);
     *(slice[i]) = (zx_i32)i;
   }
 
-  for (zx_usize i = 0; i < 100; i++) {
+  for (zx_u64 i = 0; i < 100; i++) {
     ZX_ERR_ASSERT((*(slice[i]) == (zx_i32)i), err_stack);
   }
 
@@ -61,20 +61,20 @@ ZXStatus test_allocator(ZXAlloc *alloc, ZXErrStack *err_stack) {
 ZXStatus test_allocator_aligned(ZXAlloc *alloc, ZXErrStack *err_stack) {
   ZXAlloc_reset(alloc);
 
-  zx_usize const alignments[] = {1, 2, 4, 8, 16, 32, 64};
+  zx_u64 const alignments[] = {1, 2, 4, 8, 16, 32, 64};
 
   zx_u8 *ptr = nullptr;
 
-  for (zx_usize i = 0; i < sizeof(alignments) / sizeof(alignments[0]); i++) {
-    zx_usize const alignment = alignments[i];
+  for (zx_u64 i = 0; i < sizeof(alignments) / sizeof(alignments[0]); i++) {
+    zx_u64 const alignment = alignments[i];
 
     ptr = nullptr;
     ZX_ERR_TRY(
         (ZXAlloc_aligned_alloc(alloc, alignment, 69, (void **)&ptr, err_stack)),
         err_stack);
     ZX_ERR_ASSERT((ptr != nullptr), err_stack);
-    ZX_ERR_ASSERT((((zx_usize)ptr) % alignment == 0), err_stack);
-    ZX_ERR_ASSERT((((zx_usize)ptr) % alignof(zx_u256) == 0), err_stack);
+    ZX_ERR_ASSERT((((zx_u64)ptr) % alignment == 0), err_stack);
+    ZX_ERR_ASSERT((((zx_u64)ptr) % alignof(zx_u256) == 0), err_stack);
   }
 
   return ZXStatus_Ok;

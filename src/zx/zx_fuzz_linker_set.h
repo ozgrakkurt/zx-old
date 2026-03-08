@@ -1,6 +1,10 @@
 #ifndef ZX_FUZZ_LINKER_SET_H
 #define ZX_FUZZ_LINKER_SET_H
 
+#ifndef __x86_64__
+#error "only x86_64 is supported"
+#endif
+
 #include <zx/zx_def.h>
 #include <zx/zx_int.h>
 
@@ -35,15 +39,15 @@ typedef struct ZXFuzzLinkerSet {
 } ZXFuzzLinkerSet;
 
 static ZXFuzzLinkerSet ZXFuzzLinkerSet_load(void) {
-  zx_usize const n_markers = (((zx_usize)&__stop_zx_fuzz_marker_filename) -
-                              ((zx_usize)&__start_zx_fuzz_marker_filename)) /
-                             sizeof(__start_zx_fuzz_marker_filename);
-  zx_usize const n_errs = (((zx_usize)&__stop_zx_fuzz_err_filename) -
-                           ((zx_usize)&__start_zx_fuzz_err_filename)) /
-                          sizeof(__start_zx_fuzz_err_filename);
-  zx_usize const n_aborts = (((zx_usize)&__stop_zx_fuzz_abort_filename) -
-                             ((zx_usize)&__start_zx_fuzz_abort_filename)) /
-                            sizeof(__start_zx_fuzz_abort_filename);
+  zx_u64 const n_markers = (((zx_u64)&__stop_zx_fuzz_marker_filename) -
+                            ((zx_u64)&__start_zx_fuzz_marker_filename)) /
+                           sizeof(__start_zx_fuzz_marker_filename);
+  zx_u64 const n_errs = (((zx_u64)&__stop_zx_fuzz_err_filename) -
+                         ((zx_u64)&__start_zx_fuzz_err_filename)) /
+                        sizeof(__start_zx_fuzz_err_filename);
+  zx_u64 const n_aborts = (((zx_u64)&__stop_zx_fuzz_abort_filename) -
+                           ((zx_u64)&__start_zx_fuzz_abort_filename)) /
+                          sizeof(__start_zx_fuzz_abort_filename);
 
   ZX_ASSERT((n_markers <= ZX_U32_MAX));
   ZX_ASSERT((n_errs <= ZX_U32_MAX));

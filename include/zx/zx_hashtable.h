@@ -44,7 +44,7 @@ constexpr zx_u8 ZX_HASHTABLE_TAG_EMPTY = 0b11111111wbu;
 constexpr zx_u32 ZX_HASHTABLE_LOAD_FACTOR_ = 80;
 
 static inline ZXStatus ZXHashtable_init(ZXAlloc *alloc, zx_u32 capacity,
-                                        zx_usize entry_align, zx_u32 entry_size,
+                                        zx_u16 entry_align, zx_u32 entry_size,
                                         ZXHashtable *table,
                                         ZXErrStack *err_stack) {
   ZX_ASSERT((alloc != nullptr));
@@ -61,20 +61,20 @@ static inline ZXStatus ZXHashtable_init(ZXAlloc *alloc, zx_u32 capacity,
   zx_u32 const cap_mask = zx_chk_sub_u32(cap, 1);
 
   // align to cachline because why not?
-  constexpr zx_usize ALIGN = 64;
+  constexpr zx_u16 ALIGN = 64;
 
   // allocate extra sizeof(simd) bytes so we can do simd loads on any byte index
   // also have to mirror the first group with the extra group at the end to have
   // simple read path.
-  zx_usize const metadata_size = zx_chk_add_u32(cap, ZX_HASHTABLE_GROUP_SIZE_);
+  zx_u32 const metadata_size = zx_chk_add_u32(cap, ZX_HASHTABLE_GROUP_SIZE_);
   zx_u8 *metadata = nullptr;
   ZX_ERR_TRY((ZXAlloc_aligned_alloc(alloc, ALIGN, metadata_size,
                                     (void **)&metadata, err_stack)),
              err_stack);
   __builtin_memset(metadata, ZX_HASHTABLE_TAG_EMPTY, metadata_size);
 
-  zx_usize const entries_size = zx_chk_mul_usize(entry_size, cap);
-  zx_usize const entries_align = zx_int_max_usize(entry_align, ALIGN);
+  zx_u64 const entries_size = zx_chk_mul_u64(entry_size, cap);
+  zx_u64 const entries_align = zx_int_max_u64(entry_align, ALIGN);
   void *entries = nullptr;
   ZX_ERR_TRY((ZXAlloc_aligned_alloc(alloc, entries_align, entries_size,
                                     &entries, err_stack)),
@@ -94,7 +94,7 @@ static inline ZXStatus ZXHashtable_init(ZXAlloc *alloc, zx_u32 capacity,
 static inline void ZXHashtable_reset(ZXHashtable *table) {
   ZX_ASSERT((table != nullptr));
   zx_u32 const cap = zx_chk_add_u32(table->cap_mask, 1);
-  zx_usize const metadata_size = zx_chk_add_u32(cap, ZX_HASHTABLE_GROUP_SIZE_);
+  zx_u32 const metadata_size = zx_chk_add_u32(cap, ZX_HASHTABLE_GROUP_SIZE_);
   __builtin_memset(table->metadata, ZX_HASHTABLE_TAG_EMPTY, metadata_size);
   table->capacity_left = table->capacity;
 }

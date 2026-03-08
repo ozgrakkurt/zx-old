@@ -8,7 +8,6 @@ constexpr zx_u8 ZX_U8_MAX = ~((zx_u8){0wbu});
 constexpr zx_u16 ZX_U16_MAX = ~((zx_u16){0wbu});
 constexpr zx_u32 ZX_U32_MAX = ~((zx_u32){0wbu});
 constexpr zx_u64 ZX_U64_MAX = ~((zx_u64){0wbu});
-constexpr zx_usize ZX_USIZE_MAX = ~((zx_usize){0wbu});
 
 static inline zx_u8 zx_chk_add_u8(zx_u8 a, zx_u8 b) {
   zx_u16 const ret = (zx_u16){a} + (zx_u16){b};
@@ -34,13 +33,6 @@ static inline zx_u64 zx_chk_add_u64(zx_u64 a, zx_u64 b) {
   return (zx_u64)ret;
 }
 
-static inline zx_usize zx_chk_add_usize(zx_usize a, zx_usize b) {
-  typedef unsigned _BitInt(sizeof(zx_usize) * 8 * 2) wide;
-  wide const ret = (wide){a} + (wide){b};
-  ZX_ASSERT((ret <= ZX_USIZE_MAX));
-  return (zx_usize)ret;
-}
-
 static inline zx_u8 zx_chk_sub_u8(zx_u8 a, zx_u8 b) {
   ZX_ASSERT((a >= b));
   return a - b;
@@ -57,11 +49,6 @@ static inline zx_u32 zx_chk_sub_u32(zx_u32 a, zx_u32 b) {
 }
 
 static inline zx_u64 zx_chk_sub_u64(zx_u64 a, zx_u64 b) {
-  ZX_ASSERT((a >= b));
-  return a - b;
-}
-
-static inline zx_usize zx_chk_sub_usize(zx_usize a, zx_usize b) {
   ZX_ASSERT((a >= b));
   return a - b;
 }
@@ -90,13 +77,6 @@ static inline zx_u64 zx_chk_mul_u64(zx_u64 a, zx_u64 b) {
   return (zx_u64)ret;
 }
 
-static inline zx_usize zx_chk_mul_usize(zx_usize a, zx_usize b) {
-  typedef unsigned _BitInt(sizeof(zx_usize) * 8 * 2) wide;
-  wide const ret = (wide){a} * (wide){b};
-  ZX_ASSERT((ret <= ZX_USIZE_MAX));
-  return (zx_usize)ret;
-}
-
 static inline zx_u8 zx_chk_div_u8(zx_u8 a, zx_u8 b) {
   ZX_ASSERT((b > 0));
   return a / b;
@@ -113,11 +93,6 @@ static inline zx_u32 zx_chk_div_u32(zx_u32 a, zx_u32 b) {
 }
 
 static inline zx_u64 zx_chk_div_u64(zx_u64 a, zx_u64 b) {
-  ZX_ASSERT((b > 0));
-  return a / b;
-}
-
-static inline zx_usize zx_chk_div_usize(zx_usize a, zx_usize b) {
   ZX_ASSERT((b > 0));
   return a / b;
 }
@@ -142,11 +117,6 @@ static inline zx_u64 zx_next_multiple_of_u64(zx_u64 a, zx_u64 b) {
   return (zx_chk_add_u64(a, b) - (zx_u64){1}) / b * b;
 }
 
-static inline zx_usize zx_next_multiple_of_usize(zx_usize a, zx_usize b) {
-  ZX_ASSERT((b > 0));
-  return (zx_chk_add_usize(a, b) - (zx_usize){1}) / b * b;
-}
-
 static inline zx_u8 zx_int_min_u8(zx_u8 a, zx_u8 b) { return a > b ? b : a; }
 static inline zx_u16 zx_int_min_u16(zx_u16 a, zx_u16 b) {
   return a > b ? b : a;
@@ -155,9 +125,6 @@ static inline zx_u32 zx_int_min_u32(zx_u32 a, zx_u32 b) {
   return a > b ? b : a;
 }
 static inline zx_u64 zx_int_min_u64(zx_u64 a, zx_u64 b) {
-  return a > b ? b : a;
-}
-static inline zx_usize zx_int_min_usize(zx_usize a, zx_usize b) {
   return a > b ? b : a;
 }
 
@@ -169,9 +136,6 @@ static inline zx_u32 zx_int_max_u32(zx_u32 a, zx_u32 b) {
   return a < b ? b : a;
 }
 static inline zx_u64 zx_int_max_u64(zx_u64 a, zx_u64 b) {
-  return a < b ? b : a;
-}
-static inline zx_usize zx_int_max_usize(zx_usize a, zx_usize b) {
   return a < b ? b : a;
 }
 
@@ -187,15 +151,6 @@ static inline zx_u32 zx_rand_mod_u32(zx_u32 a, zx_u32 b) {
 static inline zx_u64 zx_rand_mod_u64(zx_u64 a, zx_u64 b) {
   zx_u128 const mul = (zx_u128){a} * (zx_u128){b};
   return (zx_u64)(mul >> 64);
-}
-
-// faster alternative for doing modulo on random numbers.
-// basically same as doing `rand() % b` if rand is uniformly random.
-static inline zx_usize zx_rand_mod_usize(zx_usize a, zx_usize b) {
-  constexpr zx_usize BIT_SIZE = sizeof(zx_usize) * 8;
-  typedef unsigned _BitInt(BIT_SIZE * 2) wide;
-  wide const mul = (wide){a} * (wide){b};
-  return (zx_usize)(mul >> BIT_SIZE);
 }
 
 static inline zx_u8 zx_ctz_u8(zx_u8 i) { return (zx_u8)__builtin_ctzg(i, 8); }
@@ -332,9 +287,6 @@ static inline bool zx_is_pow_two_u32(zx_u32 i) {
   return __builtin_popcountg(i) == 1;
 }
 static inline bool zx_is_pow_two_u64(zx_u64 i) {
-  return __builtin_popcountg(i) == 1;
-}
-static inline bool zx_is_pow_two_usize(zx_usize i) {
   return __builtin_popcountg(i) == 1;
 }
 

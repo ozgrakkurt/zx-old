@@ -26,13 +26,13 @@ ZXStatus zx_sys_write(zx_i32 fd, void const *buf, zx_u64 size,
 void zx_sys_abort(void);
 
 // returns the resulting pointer through `mem` argument
-ZXStatus zx_sys_mmap(void *address, zx_usize length, zx_i32 prot, zx_i32 flags,
+ZXStatus zx_sys_mmap(void *address, zx_u64 length, zx_i32 prot, zx_i32 flags,
                      zx_i32 fd, zx_i64 offset, void **mem,
                      ZXErrStack *err_stack);
 
-ZXStatus zx_sys_munmap(void *mem, zx_usize length, ZXErrStack *err_stack);
+ZXStatus zx_sys_munmap(void *mem, zx_u64 length, ZXErrStack *err_stack);
 
-ZXStatus zx_sys_madvise(void *mem, zx_usize length, zx_i32 advice,
+ZXStatus zx_sys_madvise(void *mem, zx_u64 length, zx_i32 advice,
                         ZXErrStack *err_stack);
 
 // echo '#include <sys/mman.h>' | gcc -E - -dM | grep "#define MAP_"

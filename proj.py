@@ -14,13 +14,14 @@ PROFILES: Dict[str, Profile] = {
 ZX: Library = Library(
     source_files=set(
         [
-            "zx_sys.c",
+            "zx_alloc.c",
+            "zx_assert.c",
+            "zx_err.c",
+            "zx_fuzz.c",
             "zx_mem.c",
             "zx_page_alloc.c",
-            "zx_err.c",
             "zx_start.c",
-            "zx_fuzz.c",
-            "zx_assert.c",
+            "zx_sys.c",
         ]
     ),
     test_targets={

@@ -4,6 +4,11 @@
 #include <zx/zx_def.h>
 #include <zx/zx_int.h>
 
+typedef struct ZXFmtStr {
+  char const *str;
+  zx_u32 len;
+} ZXFmtStr;
+
 typedef struct ZXFmt {
   char *buf;
   zx_u32 capacity;
@@ -22,16 +27,15 @@ static inline zx_u32 ZXFmt_n_written(ZXFmt const *fmt) { return fmt->offset; }
 
 static inline void ZXFmt_reset(ZXFmt *fmt) { fmt->offset = 0; }
 
-static inline void ZXFmt_format_str(ZXFmt *fmt, char const *str,
-                                    zx_u32 str_len) {
+static inline void ZXFmt_format_str(ZXFmt *fmt, ZXFmtStr str) {
   zx_u32 const capacity_left = fmt->capacity - fmt->offset;
-  zx_usize const n_write = zx_int_min_usize(capacity_left, str_len);
-  __builtin_memcpy(&fmt->buf[fmt->offset], str, n_write);
+  zx_usize const n_write = zx_int_min_usize(capacity_left, str->len);
+  __builtin_memcpy(&fmt->buf[fmt->offset], str->str, n_write);
   fmt->offset += n_write;
 }
 
 static inline void ZXFmt_format_cstr(ZXFmt *fmt, char const *cstr) {
-  ZXFmt_format_str(fmt, cstr, __builtin_strlen(cstr));
+  ZXFmt_format_str(fmt, (ZXFmtStr){.str = cstr, .len = __builtin_strlen(cstr)});
 }
 
 static inline void ZXFmt_format_u64(ZXFmt *fmt, zx_u64 val) {
@@ -46,7 +50,7 @@ static inline void ZXFmt_format_u64(ZXFmt *fmt, zx_u64 val) {
   } while (val > 0);
   zx_u32 const len = MAX_NUM_DIGITS - pos;
 
-  ZXFmt_format_str(fmt, digits, len);
+  ZXFmt_format_str(fmt, (ZXFmtStr){.str = digits, .len = len});
 }
 
 static inline void ZXFmt_format_i64(ZXFmt *fmt, zx_i64 val) {
@@ -81,7 +85,8 @@ static inline void ZXFmt_format_ch(ZXFmt *fmt, char ch) {
       zx_i32: ZXFmt_format_i64,                                                \
       zx_i64: ZXFmt_format_i64,                                                \
       char: ZXFmt_format_ch,                                                   \
-      const char *: ZXFmt_format_cstr)((fmt), (v))
+      const char *: ZXFmt_format_cstr,                                         \
+      ZXFmtStr: ZXFmt_format_str)((fmt), (v))
 
 #define ZX_FMT_1_(fmt, v) ZX_FMT_FORMAT_G_(fmt, v)
 #define ZX_FMT_2_(fmt, v, ...)                                                 \
@@ -114,6 +119,6 @@ static inline void ZXFmt_format_ch(ZXFmt *fmt, char ch) {
   ZX_FMT_FORMAT_G_(fmt, v) __VA_OPT__(; ZX_FMT_14_(fmt, __VA_ARGS__))
 #define ZX_FMT_16_(fmt, v, ...)                                                \
   ZX_FMT_FORMAT_G_(fmt, v) __VA_OPT__(; ZX_FMT_15_(fmt, __VA_ARGS__))
-#define ZX_FMT_FMT(fmt, v, ...) ZX_FMT_16_(fmt, v, __VA_ARGS__)
+#define ZX_FMT(fmt, v, ...) ZX_FMT_16_(fmt, v, __VA_ARGS__)
 
 #endif

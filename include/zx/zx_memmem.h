@@ -3,10 +3,13 @@
 
 #include <zx/zx_def.h>
 
+#ifndef __x86_64__
+#error "only x86_64 is supported"
+#endif
+
 static inline zx_u8 const *zx_memmem(zx_u8 const *haystack,
-                                     zx_usize haystack_size,
-                                     zx_u8 const *needle,
-                                     zx_usize needle_size) {
+                                     zx_u64 haystack_size, zx_u8 const *needle,
+                                     zx_u64 needle_size) {
   if (needle_size == 0) {
     return haystack;
   } else if (haystack_size < needle_size) {
@@ -19,7 +22,7 @@ static inline zx_u8 const *zx_memmem(zx_u8 const *haystack,
     }
   }
 
-  for (zx_usize i = 0; i < haystack_size - needle_size; i++) {
+  for (zx_u64 i = 0; i < haystack_size - needle_size; i++) {
     if (__builtin_memcmp(&haystack[i], needle, needle_size) == 0) {
       return &haystack[i];
     }

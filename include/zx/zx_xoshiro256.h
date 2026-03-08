@@ -16,7 +16,7 @@ static inline ZXXoshiro256 ZXXoshiro256_init(zx_u64 seed) {
   zx_u64 state = seed;
   ZXXoshiro256 rand;
 
-  for (zx_usize i = 0; i < 4; i++) {
+  for (zx_u8 i = 0; i < 4; i++) {
     state += PHI;
     zx_u64 z = state;
     z = (z ^ (z >> 30)) * 0xbf58476d1ce4e5bawbu,
@@ -50,7 +50,7 @@ static inline zx_u64 ZXXoshiro256_next(ZXXoshiro256 *restrict rand) {
 }
 
 static inline void ZXXoshiro256_fill(ZXXoshiro256 *restrict rand,
-                                     zx_u8 *restrict out, zx_usize len) {
+                                     zx_u8 *restrict out, zx_u64 len) {
   ZX_ASSERT((rand != nullptr));
 
   if (len == 0) {
@@ -59,14 +59,14 @@ static inline void ZXXoshiro256_fill(ZXXoshiro256 *restrict rand,
 
   ZX_ASSERT((out != nullptr));
 
-  zx_usize const n_blocks = len / sizeof(zx_u64);
+  zx_u64 const n_blocks = len / sizeof(zx_u64);
 
-  for (zx_usize i = 0; i < n_blocks; i++) {
+  for (zx_u64 i = 0; i < n_blocks; i++) {
     zx_u64 const next = ZXXoshiro256_next(rand);
     __builtin_memcpy(&out[i * sizeof(zx_u64)], &next, sizeof(zx_u64));
   }
 
-  zx_usize const blocks_end = sizeof(zx_u64) * n_blocks;
+  zx_u64 const blocks_end = sizeof(zx_u64) * n_blocks;
   if (blocks_end < len) {
     zx_u64 const next = ZXXoshiro256_next(rand);
     __builtin_memcpy(&out[blocks_end], &next, len - blocks_end);
