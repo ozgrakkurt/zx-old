@@ -8,18 +8,12 @@ typedef unsigned _BitInt(64) zx_u64;
 typedef unsigned _BitInt(128) zx_u128;
 typedef unsigned _BitInt(256) zx_u256;
 
-typedef unsigned _BitInt(sizeof(void *) * 8) zx_usize;
-static_assert(sizeof(zx_usize) == sizeof(void *));
-
 typedef _BitInt(8) zx_i8;
 typedef _BitInt(16) zx_i16;
 typedef _BitInt(32) zx_i32;
 typedef _BitInt(64) zx_i64;
 typedef _BitInt(128) zx_i128;
 typedef _BitInt(256) zx_i256;
-
-typedef _BitInt(sizeof(void *) * 8) zx_isize;
-static_assert(sizeof(zx_isize) == sizeof(void *));
 
 typedef _Float16 zx_f16;
 static_assert(sizeof(zx_f16) == 2);

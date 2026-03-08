@@ -10,31 +10,30 @@
 #endif
 
 #include <zx/zx_def.h>
+#include <zx/zx_err.h>
 
 constexpr zx_i32 ZX_STDIN = 0;
 constexpr zx_i32 ZX_STDOUT = 1;
 constexpr zx_i32 ZX_STDERR = 2;
 
-constexpr zx_usize ZX_SYS_STATUS_SUCCESS = 0;
+ZXStatus zx_sys_read(zx_i32 fd, void *buf, zx_u64 size, zx_u64 *n_read,
+                     ZXErrStack *err_stack);
 
-zx_usize zx_sys_read(zx_i32 fd, void *buf, zx_usize size, zx_usize *n_read);
-
-zx_usize zx_sys_write(zx_i32 fd, void const *buf, zx_usize size,
-                      zx_usize *n_written);
+ZXStatus zx_sys_write(zx_i32 fd, void const *buf, zx_u64 size,
+                      zx_u64 *n_written, ZXErrStack *err_stack);
 
 [[noreturn]]
 void zx_sys_abort(void);
 
-[[noreturn]]
-void zx_sys_exit(int code);
-
 // returns the resulting pointer through `mem` argument
-zx_usize zx_sys_mmap(void *address, zx_usize length, zx_i32 prot, zx_i32 flags,
-                     zx_i32 fd, zx_i64 offset, void **mem);
+ZXStatus zx_sys_mmap(void *address, zx_usize length, zx_i32 prot, zx_i32 flags,
+                     zx_i32 fd, zx_i64 offset, void **mem,
+                     ZXErrStack *err_stack);
 
-zx_usize zx_sys_munmap(void *mem, zx_usize length);
+ZXStatus zx_sys_munmap(void *mem, zx_usize length, ZXErrStack *err_stack);
 
-zx_usize zx_sys_madvise(void *mem, zx_usize length, zx_i32 advice);
+ZXStatus zx_sys_madvise(void *mem, zx_usize length, zx_i32 advice,
+                        ZXErrStack *err_stack);
 
 // echo '#include <sys/mman.h>' | gcc -E - -dM | grep "#define MAP_"
 constexpr int ZX_SYS_MAP_PRIVATE = 0x02;
@@ -50,8 +49,5 @@ constexpr int ZX_SYS_MADV_HUGEPAGE = 14;
 
 constexpr int ZX_SYS_PROT_READ = 0x1;
 constexpr int ZX_SYS_PROT_WRITE = 0x2;
-
-constexpr int ZX_SYS_EXIT_SUCCESS = 0;
-constexpr int ZX_SYS_EXIT_FAILURE = 1;
 
 #endif

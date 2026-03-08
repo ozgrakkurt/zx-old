@@ -17,42 +17,28 @@ ZX: Library = Library(
             "zx_sys.c",
             "zx_mem.c",
             "zx_page_alloc.c",
-            "zx_err_trace.c",
+            "zx_err.c",
             "zx_start.c",
             "zx_fuzz.c",
-            "zx_math_log.c",
+            "zx_assert.c",
         ]
     ),
     test_targets={
         "zx_hashtable_test": set([]),
         "zx_alloc_test": set([]),
-        "zx_err_trace_test": set([]),
+        "zx_err_test": set([]),
     },
     bench_targets={
         "zx_hashtable_bench": set([]),
-        "zx_err_trace_bench": set([]),
+        "zx_err_bench": set([]),
     },
     fuzz_targets={
         "zx_hashtable_fuzz": set([]),
     },
 )
 
-XORF: Library = Library(
-    source_files=set(["xorf.c"]),
-    test_targets={
-        "xorf_test": set([]),
-    },
-    fuzz_targets={
-        "xorf_fuzz": set([]),
-    },
-    bench_targets={
-        "xorf_bench": set([]),
-    },
-)
-
 PROJECT: Project = Project(
     libraries={
         "zx": ZX,
-        "xorf": XORF,
     },
 )

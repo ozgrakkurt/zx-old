@@ -1,25 +1,37 @@
 #ifndef ZX_ERR_H
 #define ZX_ERR_H
 
-#include <zx/zx_assert.h>
+#include <zx/zx_branch.h>
 #include <zx/zx_def.h>
 #include <zx/zx_fuzz_instr.h>
-#include <zx/zx_sys.h>
-
-#define ZX_ERR_STRINGIFY_(x) #x
-#define ZX_ERR_TO_STRING_(x) ZX_ERR_STRINGIFY_(x)
-#define ZX_ERR_INFO_(expr)                                                     \
-  "\tFILE=" __FILE_NAME__ "; LINE=" ZX_ERR_TO_STRING_(                         \
-      __LINE__) "; EXPR=(" ZX_ERR_TO_STRING_(expr) ");\n"
 
 #define ZX_ERR_TRY(expr, stack_var)                                            \
   do {                                                                         \
     ZXStatus const zx_err_try_status_ = (expr);                                \
-    char const *zx_err_try_info_ = ZX_ERR_INFO_(ZX_ERR_TRY(expr));             \
-    if (zx_err_try_(zx_err_try_status_, zx_err_try_info_,                      \
-                    __builtin_strlen(zx_err_try_info_), (stack_var))) {        \
-      return zx_err_try_status_;                                               \
+    if (zx_unlikely(zx_err_try_status_ != ZXStatus_Ok)) {                      \
+      zx_err_stack_append_(                                                    \
+          (ZXErrStackEntry_){.file_name = __FILE_NAME__,                       \
+                             .file_name_len = __builtin_strlen(__FILE_NAME__), \
+                             .line_no = __LINE__},                             \
+          (stack_var));                                                        \
       ZX_FUZZ_ERR_MARKER;                                                      \
+      return zx_err_try_status_;                                               \
+    }                                                                          \
+    ZX_FUZZ_MARKER;                                                            \
+  } while (false)
+
+#define ZX_ERR_TRY_FATAL(expr, stack_var)                                      \
+  do {                                                                         \
+    ZXStatus const zx_err_try_fatal_status_ = (expr);                          \
+    ZXErrStack *zx_err_try_fatal_stack_ = (stack_var);                         \
+    if (zx_unlikely(zx_err_try_fatal_status_ != ZXStatus_Ok)) {                \
+      zx_err_stack_append_(                                                    \
+          (ZXErrStackEntry_){.file_name = __FILE_NAME__,                       \
+                             .file_name_len = __builtin_strlen(__FILE_NAME__), \
+                             .line_no = __LINE__},                             \
+          zx_err_try_fatal_stack_);                                            \
+      ZX_FUZZ_ABORT_MARKER;                                                    \
+      zx_err_abort_(zx_err_try_fatal_stack_);                                  \
     }                                                                          \
     ZX_FUZZ_MARKER;                                                            \
   } while (false)
@@ -27,19 +39,28 @@
 #define ZX_ERR_RETURN(expr, stack_var)                                         \
   do {                                                                         \
     ZXStatus const zx_err_return_status_ = (expr);                             \
-    ZX_ASSERT((zx_err_return_status_ != ZXStatus_Ok));                         \
-    char const *zx_err_return_info_ = ZX_ERR_INFO_(ZX_ERR_RETURN(expr));       \
-    zx_err_return_(zx_err_return_info_, __builtin_strlen(zx_err_return_info_), \
-                   (stack_var));                                               \
+    ZXErrStack *zx_err_return_stack_ = (stack_var);                            \
+    zx_err_return_stack_->depth = 0;                                           \
+    zx_err_stack_append_(                                                      \
+        (ZXErrStackEntry_){.file_name = __FILE_NAME__,                         \
+                           .file_name_len = __builtin_strlen(__FILE_NAME__),   \
+                           .line_no = __LINE__},                               \
+        zx_err_return_stack_);                                                 \
     ZX_FUZZ_ERR_MARKER;                                                        \
     return zx_err_return_status_;                                              \
   } while (false)
 
 #define ZX_ERR_ASSERT(expr, stack_var)                                         \
   do {                                                                         \
-    char const *zx_err_assert_info_ = ZX_ERR_INFO_(ZX_ERR_ASSERT(expr));       \
-    if (!zx_err_assert_((expr), zx_err_assert_info_,                           \
-                        __builtin_strlen(zx_err_assert_info_), (stack_var))) { \
+    bool const zx_err_assert_success_ = (expr);                                \
+    if (zx_unlikely(!zx_err_assert_success_)) {                                \
+      ZXErrStack *zx_err_assert_stack_ = (stack_var);                          \
+      zx_err_assert_stack_->depth = 0;                                         \
+      zx_err_stack_append_(                                                    \
+          (ZXErrStackEntry_){.file_name = __FILE_NAME__,                       \
+                             .file_name_len = __builtin_strlen(__FILE_NAME__), \
+                             .line_no = __LINE__},                             \
+          zx_err_assert_stack_);                                               \
       ZX_FUZZ_ERR_MARKER;                                                      \
       return ZXStatus_AssertFail;                                              \
     }                                                                          \
@@ -56,63 +77,38 @@ typedef enum [[nodiscard]] ZXStatus : unsigned char {
   ZXStatus_SysErrUnexpected,
 } ZXStatus;
 
-constexpr zx_u32 ZX_ERR_STACK_CAP_ = 64;
+constexpr zx_u16 ZX_ERR_STACK_CAP_ = 64;
+
+typedef struct ZXErrStackEntry_ {
+  char const *file_name;
+  zx_u16 line_no;
+  zx_u8 file_name_len;
+  zx_u8 padding_[5];
+} ZXErrStackEntry_;
+static_assert(sizeof(ZXErrStackEntry_) == 2 * sizeof(void *));
 
 typedef struct ZXErrStack {
-  char const *infos[ZX_ERR_STACK_CAP_];
-  zx_u32 depth;
-  zx_u16 info_lengths[ZX_ERR_STACK_CAP_];
+  zx_u16 depth;
+  ZXErrStackEntry_ entries[ZX_ERR_STACK_CAP_];
 } ZXErrStack;
+static_assert(sizeof(ZXErrStack) ==
+              sizeof(ZXErrStackEntry_) * ZX_ERR_STACK_CAP_ + sizeof(void *));
+// make sure it is small enough since it is expected to be allocated on stack
+static_assert(sizeof(ZXErrStack) == 1032);
 
-static inline ZXErrStack ZXErrStack_init() {
-  return (ZXErrStack){
-      .infos = {0},
-      .info_lengths = {0},
-      .depth = 0wbu,
-  };
+static inline ZXErrStack ZXErrStack_init() { return (ZXErrStack){0}; }
+
+static inline void zx_err_stack_append_(ZXErrStackEntry_ entry,
+                                        ZXErrStack *stack) {
+  constexpr zx_u16 MAX_WRITE_IDX = ZX_ERR_STACK_CAP_ - 1;
+
+  zx_u16 const depth = stack->depth;
+  zx_u16 const write_idx = (depth < MAX_WRITE_IDX) ? depth : MAX_WRITE_IDX;
+  stack->entries[write_idx] = entry;
+  stack->depth = write_idx + 1;
 }
 
-static inline bool zx_err_try_(ZXStatus status, char const *info,
-                               zx_usize info_len, ZXErrStack *stack) {
-  if (status != ZXStatus_Ok) {
-    zx_u32 const depth = stack->depth;
-    zx_u32 const write_idx =
-        (depth == ZX_ERR_STACK_CAP_) ? (ZX_ERR_STACK_CAP_ - 1) : depth;
-    stack->info_lengths[write_idx] = (zx_u16)info_len;
-    stack->infos[write_idx] = info;
-    stack->depth = write_idx + 1;
-    return true;
-  } else {
-    return false;
-  }
-}
-
-static inline void zx_err_return_(char const *info, zx_usize info_len,
-                                  ZXErrStack *stack) {
-  stack->info_lengths[0] = (zx_u16)info_len;
-  stack->infos[0] = info;
-  stack->depth = 1;
-}
-
-static inline bool zx_err_assert_(bool success, char const *info,
-                                  zx_usize info_len, ZXErrStack *stack) {
-  if (!success) {
-    stack->info_lengths[0] = (zx_u16)info_len;
-    stack->infos[0] = info;
-    stack->depth = 1;
-  }
-  return success;
-}
-
-static inline ZXStatus zx_err_convert_sys_status(zx_usize status) {
-  switch (status) {
-  case ZX_SYS_STATUS_SUCCESS: {
-    return ZXStatus_Ok;
-  }
-  default: {
-    return ZXStatus_SysErrUnexpected;
-  }
-  }
-}
+// Formats the error stack to stderr and aborts the program
+[[noreturn]] void zx_err_abort_(ZXErrStack const *err_stack);
 
 #endif

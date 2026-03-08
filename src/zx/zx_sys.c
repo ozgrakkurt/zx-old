@@ -7,6 +7,7 @@
 #endif
 
 #include <zx/zx_def.h>
+#include <zx/zx_err.h>
 #include <zx/zx_sys.h>
 
 typedef unsigned long zx_sys_reg;
@@ -109,13 +110,26 @@ static zx_sys_reg zx_syscall6(zx_sys_reg num, zx_sys_reg arg1, zx_sys_reg arg2,
   return ret;
 }
 
-static zx_usize zx_sys_errno(zx_sys_reg ret) {
+constexpr zx_u64 ZX_SYS_STATUS_SUCCESS = 0;
+
+static zx_u64 zx_sys_errno(zx_sys_reg ret) {
   static_assert(sizeof(zx_sys_reg) == sizeof(zx_i64));
   zx_i64 const sgnd = (zx_i64)ret;
   if (sgnd > -4096 && sgnd < 0) {
     return (zx_u64)-sgnd;
   } else {
     return ZX_SYS_STATUS_SUCCESS;
+  }
+}
+
+static ZXStatus zx_sys_status(zx_sys_reg ret) {
+  switch (zx_sys_errno(ret)) {
+  case ZX_SYS_STATUS_SUCCESS: {
+    return ZXStatus_Ok;
+  }
+  default: {
+    return ZXStatus_SysErrUnexpected;
+  }
   }
 }
 
@@ -126,39 +140,32 @@ constexpr zx_sys_reg ZX_SYSCALL_MUNMAP = 11;
 constexpr zx_sys_reg ZX_SYSCALL_MADVISE = 28;
 constexpr zx_sys_reg ZX_SYSCALL_EXIT_GROUP = 231;
 
-zx_usize zx_sys_read(zx_i32 fd, void *buf, zx_usize size, zx_usize *n_read) {
+ZXStatus zx_sys_read(zx_i32 fd, void *buf, zx_usize size, zx_usize *n_read,
+                     ZXErrStack *err_stack) {
   constexpr zx_usize MAX = 0x7ffff000wbu;
   zx_usize const read_len = (MAX <= size) ? MAX : size;
 
   zx_sys_reg const ret = zx_syscall3(ZX_SYSCALL_READ, (zx_sys_reg)fd,
                                      (zx_sys_reg)buf, (zx_sys_reg)read_len);
-  zx_usize const status = zx_sys_errno(ret);
 
-  if (status == ZX_SYS_STATUS_SUCCESS) {
-    *n_read = (zx_usize){ret};
-  } else {
-    *n_read = 0;
-  }
+  ZX_ERR_TRY((zx_sys_status(ret)), err_stack);
+  *n_read = (zx_usize){ret};
 
-  return status;
+  return ZXStatus_Ok;
 }
 
-zx_usize zx_sys_write(zx_i32 fd, void const *buf, zx_usize size,
-                      zx_usize *n_written) {
+ZXStatus zx_sys_write(zx_i32 fd, void const *buf, zx_usize size,
+                      zx_usize *n_written, ZXErrStack *err_stack) {
   constexpr zx_usize MAX = 0x7ffff000wbu;
   zx_usize const write_len = (MAX <= size) ? MAX : size;
 
   zx_sys_reg const ret = zx_syscall3(ZX_SYSCALL_WRITE, (zx_sys_reg)fd,
                                      (zx_sys_reg)buf, (zx_sys_reg)write_len);
-  zx_usize const status = zx_sys_errno(ret);
 
-  if (status == ZX_SYS_STATUS_SUCCESS) {
-    *n_written = (zx_usize){ret};
-  } else {
-    *n_written = 0;
-  }
+  ZX_ERR_TRY((zx_sys_status(ret)), err_stack);
+  *n_written = (zx_usize){ret};
 
-  return status;
+  return ZXStatus_Ok;
 }
 
 [[noreturn]]
@@ -177,28 +184,33 @@ void zx_sys_exit(int code) {
   __builtin_unreachable();
 }
 
-zx_usize zx_sys_mmap(void *address, zx_usize length, zx_i32 prot, zx_i32 flags,
-                     zx_i32 fd, zx_i64 offset, void **mem) {
+ZXStatus zx_sys_mmap(void *address, zx_usize length, zx_i32 prot, zx_i32 flags,
+                     zx_i32 fd, zx_i64 offset, void **mem,
+                     ZXErrStack *err_stack) {
   zx_sys_reg const ret = zx_syscall6(
       ZX_SYSCALL_MMAP, (zx_sys_reg)address, (zx_sys_reg)length,
       (zx_sys_reg)prot, (zx_sys_reg)flags, (zx_sys_reg)fd, (zx_sys_reg)offset);
-  zx_usize const status = zx_sys_errno(ret);
 
-  if (status == ZX_SYS_STATUS_SUCCESS) {
-    *mem = (void *)ret;
-  } else {
-    *mem = nullptr;
-  }
+  ZX_ERR_TRY((zx_sys_status(ret)), err_stack);
+  *mem = (void *)ret;
 
-  return status;
+  return ZXStatus_Ok;
 }
 
-zx_usize zx_sys_munmap(void *mem, zx_usize length) {
-  return zx_sys_errno(
-      zx_syscall2(ZX_SYSCALL_MUNMAP, (zx_sys_reg)mem, (zx_sys_reg)length));
+ZXStatus zx_sys_munmap(void *mem, zx_usize length, ZXErrStack *err_stack) {
+  zx_sys_reg const ret =
+      zx_syscall2(ZX_SYSCALL_MUNMAP, (zx_sys_reg)mem, (zx_sys_reg)length);
+  ZX_ERR_TRY((zx_sys_status(ret)), err_stack);
+
+  return ZXStatus_Ok;
 }
 
-zx_usize zx_sys_madvise(void *mem, zx_usize length, zx_i32 advice) {
-  return zx_sys_errno(zx_syscall3(ZX_SYSCALL_MADVISE, (zx_sys_reg)mem,
-                                  (zx_sys_reg)length, (zx_sys_reg)advice));
+ZXStatus zx_sys_madvise(void *mem, zx_usize length, zx_i32 advice,
+                        ZXErrStack *err_stack) {
+  zx_sys_reg const ret = zx_syscall3(ZX_SYSCALL_MADVISE, (zx_sys_reg)mem,
+                                     (zx_sys_reg)length, (zx_sys_reg)advice);
+
+  ZX_ERR_TRY((zx_sys_status(ret)), err_stack);
+
+  return ZXStatus_Ok;
 }

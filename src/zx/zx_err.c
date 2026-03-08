@@ -1,13 +1,17 @@
-#include <zx/zx_alloc.h>
 #include <zx/zx_def.h>
 #include <zx/zx_err.h>
-#include <zx/zx_err_trace.h>
-#include <zx/zx_page_alloc.h>
 #include <zx/zx_sys.h>
 
-ZXStatus zx_err_trace_collect(ZXAlloc *alloc, ZXErrStack const *stack,
-                              char const **trace, zx_usize *trace_len,
-                              ZXErrStack *err_stack) {
+static inline zx_usize
+zx_err_trace_format_entry_(char *buf, zx_usize buf_capacity,
+                           ZXErrStackEntry_ const *entry) {
+  zx_usize off = *offset;
+  *offset = off;
+}
+
+// Formats the trace into buf and returns the number of bytes written
+static inline zx_usize zx_err_format_(ZXErrStack const *err_stack, char *buf,
+                                      zx_usize buf_capacity) {
   zx_usize const depth = stack->depth;
   char const *const *infos = stack->infos;
   zx_u16 const *info_lengths = stack->info_lengths;
@@ -46,26 +50,16 @@ ZXStatus zx_err_trace_collect(ZXAlloc *alloc, ZXErrStack const *stack,
   return ZXStatus_Ok;
 }
 
-// Outputs the trace to stderr and aborts the program
-[[noreturn]] void zx_err_trace_abort(ZXErrStack const *stack) {
-  ZX_ASSERT((stack != nullptr));
+[[noreturn]] void zx_err_abort_(ZXErrStack const *err_stack) {
+  constexpr zx_usize BUF_CAP = 1 << 12;
+  char buf[BUF_CAP] = {0};
 
-  constexpr zx_usize TRACE_CAP = 1 << 12;
-  void *trace_mem = zx_page_alloc_4kb(TRACE_CAP);
+  zx_usize const buf_len = zx_err_format_(err_stack, buf, BUF_CAP);
 
-  ZXErrStack dummy_stack = ZXErrStack_init();
-  ZXAlloc alloc = ZXAlloc_init(trace_mem, TRACE_CAP);
-  char const *trace = nullptr;
-  zx_usize trace_len = 0;
-  ZXStatus const status =
-      zx_err_trace_collect(&alloc, stack, &trace, &trace_len, &dummy_stack);
-  ZX_ASSERT((status == ZXStatus_Ok));
-
-  if (trace_len > 0) {
-    zx_usize nw = 0;
-    zx_usize const status = zx_sys_write(ZX_STDERR, trace, trace_len, &nw);
-    (void)status;
-  }
+  zx_usize n_written = 0;
+  zx_usize const status = zx_sys_write(ZX_STDERR, buf, buf_len, &n_written);
+  (void)status;
+  (void)n_written;
 
   zx_sys_abort();
 }

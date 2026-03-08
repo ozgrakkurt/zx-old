@@ -1,105 +1,16 @@
 #ifndef ZX_FMT_H
 #define ZX_FMT_H
 
-#include <zx/zx_assert.h>
 #include <zx/zx_def.h>
-#include <zx/zx_err.h>
 #include <zx/zx_int.h>
-#include <zx/zx_sys.h>
 
-static inline ZXStatus zx_fmt_format_u64(char *buf, zx_usize capacity,
-                                         zx_usize *offset, zx_u64 val,
-                                         ZXErrStack *err_stack) {
-  constexpr zx_usize MAX_NUM_DIGITS = 22;
-  char digits[MAX_NUM_DIGITS];
-
-  zx_usize pos = MAX_NUM_DIGITS;
-  do {
-    pos--;
-    digits[pos] = '0' + (char)(val % 10);
-    val /= 10;
-  } while (val > 0);
-  zx_usize const len = MAX_NUM_DIGITS - pos;
-
-  zx_usize const off = *offset;
-  zx_usize new_offset = zx_chk_add_usize(off, len);
-  ZX_ERR_ASSERT((new_offset < capacity), err_stack);
-
-  __builtin_memcpy(&buf[off], &digits[pos], len);
-  buf[new_offset] = 0;
-  *offset = new_offset;
-
-  return ZXStatus_Ok;
-}
-
-static inline ZXStatus zx_fmt_format_i64(char *buf, zx_usize capacity,
-                                         zx_usize *offset, zx_i64 val,
-                                         ZXErrStack *err_stack) {
-  if (val >= 0) {
-    ZX_ERR_TRY(
-        (zx_fmt_format_u64(buf, capacity, offset, (zx_u64)val, err_stack)),
-        err_stack);
-  } else {
-    zx_usize const off = *offset;
-    zx_usize const new_offset = zx_chk_add_usize(off, 1);
-    ZX_ERR_ASSERT((new_offset < capacity), err_stack);
-
-    buf[off] = '-';
-    buf[new_offset] = 0;
-    *offset = new_offset;
-
-    ZX_ERR_TRY(
-        (zx_fmt_format_u64(buf, capacity, offset, (zx_u64)-val, err_stack)),
-        err_stack);
-  }
-
-  return ZXStatus_Ok;
-}
-
-static inline ZXStatus zx_fmt_format_str(char *buf, zx_usize capacity,
-                                         zx_usize *offset, char const *str,
-                                         zx_usize len, ZXErrStack *err_stack) {
-  zx_usize const off = *offset;
-  zx_usize new_offset = zx_chk_add_usize(off, len);
-  ZX_ERR_ASSERT((new_offset < capacity), err_stack);
-
-  __builtin_memcpy(&buf[off], str, len);
-  buf[new_offset] = 0;
-  *offset = new_offset;
-
-  return ZXStatus_Ok;
-}
-
-static inline ZXStatus zx_fmt_format_cstr(char *buf, zx_usize capacity,
-                                          zx_usize *offset, char const *str,
-                                          ZXErrStack *err_stack) {
-  ZX_ERR_TRY((zx_fmt_format_str(buf, capacity, offset, str,
-                                __builtin_strlen(str), err_stack)),
-             err_stack);
-  return ZXStatus_Ok;
-}
-
-static inline ZXStatus zx_fmt_format_char(char *buf, zx_usize capacity,
-                                          zx_usize *offset, char ch,
-                                          ZXErrStack *err_stack) {
-  zx_usize const off = *offset;
-  zx_usize new_offset = zx_chk_add_usize(off, 1);
-  ZX_ERR_ASSERT((new_offset < capacity), err_stack);
-
-  buf[off] = ch;
-  buf[new_offset] = 0;
-  *offset = new_offset;
-
-  return ZXStatus_Ok;
-}
-
-typedef struct ZXFmtBuf {
+typedef struct ZXFmt {
   char *buf;
-  zx_usize capacity;
-  zx_usize offset;
+  zx_u32 capacity;
+  zx_u32 offset;
 } ZXFmtBuf;
 
-static inline ZXFmtBuf ZXFmtBuf_init(char *buf, zx_usize capacity) {
+static inline ZXFmt ZXFmt_init(char *buf, zx_u32 capacity) {
   return (ZXFmtBuf){
       .buf = buf,
       .capacity = capacity,
@@ -107,68 +18,102 @@ static inline ZXFmtBuf ZXFmtBuf_init(char *buf, zx_usize capacity) {
   };
 }
 
-static inline ZXStatus ZXFmtBuf_write(ZXFmtBuf const *fmt, zx_i32 fd,
-                                      ZXErrStack *err_stack) {
-  ZX_ASSERT((fmt->offset < fmt->capacity));
-  ZX_ASSERT((fmt->buf[fmt->offset] == 0));
+static inline zx_u32 ZXFmt_n_written(ZXFmt const *fmt) { return fmt->offset; }
 
-  zx_usize n_written = 0;
-  zx_usize const status = zx_sys_write(fd, fmt->buf, fmt->offset, &n_written);
+static inline void ZXFmt_reset(ZXFmt *fmt) { fmt->offset = 0; }
 
-  if (status != ZX_SYS_STATUS_SUCCESS) {
-    ZX_ERR_RETURN((zx_err_convert_sys_status(status)), err_stack);
-  }
+static inline void ZXFmt_format_str(ZXFmt *fmt, char const *str,
+                                    zx_u32 str_len) {
+  zx_u32 const capacity_left = fmt->capacity - fmt->offset;
+  zx_usize const n_write = zx_int_min_usize(capacity_left, str_len);
+  __builtin_memcpy(&fmt->buf[fmt->offset], str, n_write);
+  fmt->offset += n_write;
+}
 
-  if (n_written < fmt->offset) {
-    ZX_ERR_RETURN((ZXStatus_ShortWrite), err_stack);
-  } else if (n_written > fmt->offset) {
-    ZX_ERR_RETURN((ZXStatus_LongWrite), err_stack);
+static inline void ZXFmt_format_cstr(ZXFmt *fmt, char const *cstr) {
+  ZXFmt_format_str(fmt, cstr, __builtin_strlen(cstr));
+}
+
+static inline void ZXFmt_format_u64(ZXFmt *fmt, zx_u64 val) {
+  constexpr zx_u32 MAX_NUM_DIGITS = 20;
+  char digits[MAX_NUM_DIGITS];
+
+  zx_u32 pos = MAX_NUM_DIGITS;
+  do {
+    pos--;
+    digits[pos] = '0' + (char)(val % 10);
+    val /= 10;
+  } while (val > 0);
+  zx_u32 const len = MAX_NUM_DIGITS - pos;
+
+  ZXFmt_format_str(fmt, digits, len);
+}
+
+static inline void ZXFmt_format_i64(ZXFmt *fmt, zx_i64 val) {
+  if (val >= 0) {
+    ZXFmt_format_u64(fmt, (zx_u64)val);
   } else {
-    return ZXStatus_Ok;
+    zx_u32 const capacity_left = fmt->capacity - fmt->offset;
+    if (capacity_left > 0) {
+      fmt->buf[fmt->offset] = '-';
+      fmt->offset += 1;
+      ZXFmt_format_u64(fmt, (zx_u64)-val);
+    }
   }
 }
 
-static inline void ZXFmtBuf_reset(ZXFmtBuf *fmt) { fmt->offset = 0; }
-
-static inline ZXStatus ZXFmtBuf_format_u64(ZXFmtBuf *fmt, zx_u64 val,
-                                           ZXErrStack *err_stack) {
-  ZX_ERR_TRY(
-      zx_fmt_format_u64(fmt->buf, fmt->capacity, &fmt->offset, val, err_stack),
-      err_stack);
-  return ZXStatus_Ok;
+static inline void ZXFmt_format_ch(ZXFmt *fmt, char ch) {
+  zx_u32 const capacity_left = fmt->capacity - fmt->offset;
+  if (capacity_left > 0) {
+    fmt->buf[fmt->offset] = ch;
+    fmt->offset += 1;
+  }
 }
 
-static inline ZXStatus ZXFmtBuf_format_i64(ZXFmtBuf *fmt, zx_i64 val,
-                                           ZXErrStack *err_stack) {
-  ZX_ERR_TRY(
-      zx_fmt_format_i64(fmt->buf, fmt->capacity, &fmt->offset, val, err_stack),
-      err_stack);
-  return ZXStatus_Ok;
-}
+#define ZX_FMT_FORMAT_G_(fmt, v)                                               \
+  _Generic((v),                                                                \
+      zx_u8: ZXFmt_format_u64,                                                 \
+      zx_u16: ZXFmt_format_u64,                                                \
+      zx_u32: ZXFmt_format_u64,                                                \
+      zx_u64: ZXFmt_format_u64,                                                \
+      zx_i8: ZXFmt_format_i64,                                                 \
+      zx_i16: ZXFmt_format_i64,                                                \
+      zx_i32: ZXFmt_format_i64,                                                \
+      zx_i64: ZXFmt_format_i64,                                                \
+      char: ZXFmt_format_ch,                                                   \
+      const char *: ZXFmt_format_cstr)((fmt), (v))
 
-static inline ZXStatus ZXFmtBuf_format_str(ZXFmtBuf *fmt, char const *str,
-                                           zx_usize len,
-                                           ZXErrStack *err_stack) {
-  ZX_ERR_TRY(zx_fmt_format_str(fmt->buf, fmt->capacity, &fmt->offset, str, len,
-                               err_stack),
-             err_stack);
-  return ZXStatus_Ok;
-}
-
-static inline ZXStatus ZXFmtBuf_format_cstr(ZXFmtBuf *fmt, char const *str,
-                                            ZXErrStack *err_stack) {
-  ZX_ERR_TRY(
-      zx_fmt_format_cstr(fmt->buf, fmt->capacity, &fmt->offset, str, err_stack),
-      err_stack);
-  return ZXStatus_Ok;
-}
-
-static inline ZXStatus ZXFmtBuf_format_char(ZXFmtBuf *fmt, char ch,
-                                            ZXErrStack *err_stack) {
-  ZX_ERR_TRY(
-      zx_fmt_format_char(fmt->buf, fmt->capacity, &fmt->offset, ch, err_stack),
-      err_stack);
-  return ZXStatus_Ok;
-}
+#define ZX_FMT_1_(fmt, v) ZX_FMT_FORMAT_G_(fmt, v)
+#define ZX_FMT_2_(fmt, v, ...)                                                 \
+  ZX_FMT_FORMAT_G_(fmt, v) __VA_OPT__(; ZX_FMT_1_(fmt, __VA_ARGS__))
+#define ZX_FMT_3_(fmt, v, ...)                                                 \
+  ZX_FMT_FORMAT_G_(fmt, v) __VA_OPT__(; ZX_FMT_2_(fmt, __VA_ARGS__))
+#define ZX_FMT_4_(fmt, v, ...)                                                 \
+  ZX_FMT_FORMAT_G_(fmt, v) __VA_OPT__(; ZX_FMT_3_(fmt, __VA_ARGS__))
+#define ZX_FMT_5_(fmt, v, ...)                                                 \
+  ZX_FMT_FORMAT_G_(fmt, v) __VA_OPT__(; ZX_FMT_4_(fmt, __VA_ARGS__))
+#define ZX_FMT_6_(fmt, v, ...)                                                 \
+  ZX_FMT_FORMAT_G_(fmt, v) __VA_OPT__(; ZX_FMT_5_(fmt, __VA_ARGS__))
+#define ZX_FMT_7_(fmt, v, ...)                                                 \
+  ZX_FMT_FORMAT_G_(fmt, v) __VA_OPT__(; ZX_FMT_6_(fmt, __VA_ARGS__))
+#define ZX_FMT_8_(fmt, v, ...)                                                 \
+  ZX_FMT_FORMAT_G_(fmt, v) __VA_OPT__(; ZX_FMT_7_(fmt, __VA_ARGS__))
+#define ZX_FMT_9_(fmt, v, ...)                                                 \
+  ZX_FMT_FORMAT_G_(fmt, v) __VA_OPT__(; ZX_FMT_8_(fmt, __VA_ARGS__))
+#define ZX_FMT_10_(fmt, v, ...)                                                \
+  ZX_FMT_FORMAT_G_(fmt, v) __VA_OPT__(; ZX_FMT_9_(fmt, __VA_ARGS__))
+#define ZX_FMT_11_(fmt, v, ...)                                                \
+  ZX_FMT_FORMAT_G_(fmt, v) __VA_OPT__(; ZX_FMT_10_(fmt, __VA_ARGS__))
+#define ZX_FMT_12_(fmt, v, ...)                                                \
+  ZX_FMT_FORMAT_G_(fmt, v) __VA_OPT__(; ZX_FMT_11_(fmt, __VA_ARGS__))
+#define ZX_FMT_13_(fmt, v, ...)                                                \
+  ZX_FMT_FORMAT_G_(fmt, v) __VA_OPT__(; ZX_FMT_12_(fmt, __VA_ARGS__))
+#define ZX_FMT_14_(fmt, v, ...)                                                \
+  ZX_FMT_FORMAT_G_(fmt, v) __VA_OPT__(; ZX_FMT_13_(fmt, __VA_ARGS__))
+#define ZX_FMT_15_(fmt, v, ...)                                                \
+  ZX_FMT_FORMAT_G_(fmt, v) __VA_OPT__(; ZX_FMT_14_(fmt, __VA_ARGS__))
+#define ZX_FMT_16_(fmt, v, ...)                                                \
+  ZX_FMT_FORMAT_G_(fmt, v) __VA_OPT__(; ZX_FMT_15_(fmt, __VA_ARGS__))
+#define ZX_FMT_FMT(fmt, v, ...) ZX_FMT_16_(fmt, v, __VA_ARGS__)
 
 #endif

@@ -15,6 +15,7 @@
 
 #include <zx/zx_alloc.h>
 #include <zx/zx_assert.h>
+#include <zx/zx_branch.h>
 #include <zx/zx_def.h>
 #include <zx/zx_err.h>
 #include <zx/zx_fuzz_instr.h>
@@ -166,7 +167,7 @@ ZXHashtable_find_idx_(ZXHashtable const *const table, zx_u64 const hash,
       zx_u32 const idx = (meta_idx + tag_pos) & cap_mask;
 
       void const *const entry_ptr = &entries[entry_size * idx];
-      if (key_eqfn(ctx, entry_ptr, entry)) {
+      if (zx_likely(key_eqfn(ctx, entry_ptr, entry))) {
         ZX_FUZZ_MARKER;
 
         return (ZXHashtableFindIdx){
