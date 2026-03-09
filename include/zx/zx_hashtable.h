@@ -138,13 +138,13 @@ typedef struct ZXHashtableFindIdx {
 } ZXHashtableFindIdx;
 
 static inline ZXHashtableFindIdx
-ZXHashtable_find_idx_(ZXHashtable const *const table, zx_u64 const hash,
-                      void const *const entry, zx_u32 const entry_size,
-                      void const *const ctx, zx_hashtable_key_eqfn key_eqfn) {
+ZXHashtable_find_idx_(ZXHashtable const *const table, zx_u8 const tag,
+                      zx_u64 const hash, void const *const entry,
+                      zx_u32 const entry_size, void const *const ctx,
+                      zx_hashtable_key_eqfn key_eqfn) {
   zx_u32 const cap_mask = table->cap_mask;
   zx_u32 stride = 0;
 
-  zx_u8 const tag = (zx_u8)(hash >> 57);
   zx_u32 meta_idx = cap_mask & ((zx_u32)(hash));
 
   zx_u8 const *const meta = table->metadata;
@@ -203,19 +203,11 @@ ZXHashtable_insert(ZXHashtable *const table, zx_u64 const hash,
                    void const *const ctx, zx_hashtable_key_eqfn key_eqfn) {
   zx_u8 const tag = (zx_u8)(hash >> 57);
   ZXHashtableFindIdx const find =
-      ZXHashtable_find_idx_(table, hash, entry, entry_size, ctx, key_eqfn);
+      ZXHashtable_find_idx_(table, tag, hash, entry, entry_size, ctx, key_eqfn);
 
-  zx_u32 const cap_mask = table->cap_mask;
-  zx_u32 const idx = find.idx & cap_mask;
-  zx_u32 const maybe_mirror_idx =
-      ZXHashtable_maybe_mirror_index_(cap_mask, find.idx);
-
-  zx_u8 *const meta = table->metadata;
   zx_u8 *const entries = (zx_u8 *)table->entries;
-  void *const entry_ptr = &entries[entry_size * idx];
+  void *const entry_ptr = &entries[entry_size * find.idx];
 
-  meta[idx] = tag;
-  meta[maybe_mirror_idx] = tag;
   __builtin_memcpy(entry_ptr, entry, entry_size);
 
   if (find.occupied) {
@@ -224,6 +216,13 @@ ZXHashtable_insert(ZXHashtable *const table, zx_u64 const hash,
   } else {
     ZX_ASSERT((table->capacity_left > 0));
     table->capacity_left -= 1;
+
+    zx_u8 *const meta = table->metadata;
+    zx_u32 const maybe_mirror_idx =
+        ZXHashtable_maybe_mirror_index_(table->cap_mask, find.idx);
+    meta[find.idx] = tag;
+    meta[maybe_mirror_idx] = tag;
+
     ZX_FUZZ_MARKER;
     return false;
   }
@@ -242,16 +241,10 @@ ZXHashtable_get_or_insert(ZXHashtable *const table, zx_u64 const hash,
                           zx_hashtable_key_eqfn key_eqfn) {
   zx_u8 const tag = (zx_u8)(hash >> 57);
   ZXHashtableFindIdx const find =
-      ZXHashtable_find_idx_(table, hash, entry, entry_size, ctx, key_eqfn);
+      ZXHashtable_find_idx_(table, tag, hash, entry, entry_size, ctx, key_eqfn);
 
-  zx_u32 const cap_mask = table->cap_mask;
-  zx_u32 const idx = find.idx & cap_mask;
-  zx_u32 const maybe_mirror_idx =
-      ZXHashtable_maybe_mirror_index_(cap_mask, find.idx);
-
-  zx_u8 *const meta = table->metadata;
   zx_u8 *const entries = (zx_u8 *)table->entries;
-  void *const entry_ptr = &entries[entry_size * idx];
+  void *const entry_ptr = &entries[entry_size * find.idx];
 
   if (find.occupied) {
     ZX_FUZZ_MARKER;
@@ -260,9 +253,13 @@ ZXHashtable_get_or_insert(ZXHashtable *const table, zx_u64 const hash,
     ZX_ASSERT((table->capacity_left > 0));
     table->capacity_left -= 1;
 
-    meta[idx] = tag;
-    meta[maybe_mirror_idx] = tag;
     __builtin_memcpy(entry_ptr, entry, entry_size);
+
+    zx_u8 *const meta = table->metadata;
+    zx_u32 const maybe_mirror_idx =
+        ZXHashtable_maybe_mirror_index_(table->cap_mask, find.idx);
+    meta[find.idx] = tag;
+    meta[maybe_mirror_idx] = tag;
 
     ZX_FUZZ_MARKER;
     return entry_ptr;
@@ -275,14 +272,13 @@ static inline void const *
 ZXHashtable_get(ZXHashtable const *const table, zx_u64 const hash,
                 void const *const entry, zx_u32 const entry_size,
                 void const *const ctx, zx_hashtable_key_eqfn key_eqfn) {
+  zx_u8 const tag = (zx_u8)(hash >> 57);
   ZXHashtableFindIdx const find =
-      ZXHashtable_find_idx_(table, hash, entry, entry_size, ctx, key_eqfn);
+      ZXHashtable_find_idx_(table, tag, hash, entry, entry_size, ctx, key_eqfn);
 
   if (find.occupied) {
-    zx_u32 const cap_mask = table->cap_mask;
-    zx_u32 const idx = find.idx & cap_mask;
     zx_u8 const *const entries = (zx_u8 const *)table->entries;
-    void const *const entry_ptr = &entries[entry_size * idx];
+    void const *const entry_ptr = &entries[entry_size * find.idx];
     ZX_FUZZ_MARKER;
     return entry_ptr;
   } else {
