@@ -1,7 +1,6 @@
 #include <zx/zx_alloc.h>
 #include <zx/zx_def.h>
 #include <zx/zx_err.h>
-#include <zx/zx_err_trace.h>
 #include <zx/zx_fmt.h>
 #include <zx/zx_hashtable.h>
 #include <zx/zx_page_alloc.h>
@@ -10,8 +9,8 @@
 #include <zx/zx_time.h>
 #include <zx/zx_xoshiro256.h>
 
-constexpr zx_usize MEMORY_SIZE = 1 << 30;
-constexpr zx_usize CAP = 40000;
+constexpr zx_u32 MEMORY_SIZE = 1 << 30;
+constexpr zx_u32 CAP = 40000;
 
 typedef zx_u256 key_type;
 
@@ -24,18 +23,17 @@ static inline bool keys_eql(void const *ctx, void const *a, void const *b) {
 
 static inline ZXStatus do_inserts(ZXAlloc *alloc, ZXErrStack *err_stack) {
 
-  constexpr zx_usize fmt_buf_cap = 1 << 12;
-  char *fmt_buf_buf = nullptr;
-  ZX_ERR_TRY(
-      (ZXAlloc_alloc(alloc, fmt_buf_cap, (void **)&fmt_buf_buf, err_stack)),
-      err_stack);
+  constexpr zx_u32 fmt_buf_cap = 1 << 12;
+  char *fmt_buf = nullptr;
+  ZX_ERR_TRY((ZXAlloc_alloc(alloc, fmt_buf_cap, (void **)&fmt_buf, err_stack)),
+             err_stack);
 
-  ZXFmtBuf fmt_buf = ZXFmtBuf_init(fmt_buf_buf, fmt_buf_cap);
+  ZXFmt fmt = ZXFmt_init(fmt_buf, fmt_buf_cap);
 
   ZXHashtable table;
-  ZX_ERR_TRY((ZXHashtable_init(alloc, CAP, alignof(key_type), sizeof(key_type),
-                               &table, err_stack)),
-             err_stack);
+  ZX_ERR_TRY(
+      (ZXHashtable_init(alloc, CAP, sizeof(key_type), &table, err_stack)),
+      err_stack);
 
   zx_u64 *hashes = nullptr;
   ZX_ERR_TRY(
@@ -43,11 +41,11 @@ static inline ZXStatus do_inserts(ZXAlloc *alloc, ZXErrStack *err_stack) {
       err_stack);
   ZX_ASSERT((hashes != nullptr));
 
-  for (zx_usize x = 0; x < 5; x++) {
+  for (zx_u32 x = 0; x < 5; x++) {
     ZXTimer timer = ZXTimer_init();
 
     ZXXoshiro256 rand = ZXXoshiro256_init(0);
-    for (zx_usize i = 0; i < CAP; i++) {
+    for (zx_u32 i = 0; i < CAP; i++) {
       key_type key = 0;
       ZXXoshiro256_fill(&rand, (zx_u8 *)&key, sizeof(key_type));
 
@@ -57,31 +55,18 @@ static inline ZXStatus do_inserts(ZXAlloc *alloc, ZXErrStack *err_stack) {
     }
 
     zx_u64 const hash_ticks_per_elem = ZXTimer_lap(&timer) / CAP;
-    ZX_ERR_TRY((ZXFmtBuf_format_cstr(&fmt_buf, "Hash: ", err_stack)),
-               err_stack);
-    ZX_ERR_TRY((ZXFmtBuf_format_u64(&fmt_buf, hash_ticks_per_elem, err_stack)),
-               err_stack);
-    ZX_ERR_TRY(
-        (ZXFmtBuf_format_cstr(&fmt_buf, " ticks per element\n", err_stack)),
-        err_stack);
+    ZX_FMT(&fmt, "Hash: ", hash_ticks_per_elem, " ticks per element.\n");
 
-    for (zx_usize i = 0; i < CAP; i++) {
+    for (zx_u32 i = 0; i < CAP; i++) {
       key_type const key = i;
       ZXHashtable_insert(&table, hashes[i], &key, sizeof(key_type), nullptr,
                          keys_eql);
     }
 
     zx_u64 const insert_ticks_per_elem = ZXTimer_lap(&timer) / CAP;
-    ZX_ERR_TRY((ZXFmtBuf_format_cstr(&fmt_buf, "Insert: ", err_stack)),
-               err_stack);
-    ZX_ERR_TRY(
-        (ZXFmtBuf_format_u64(&fmt_buf, insert_ticks_per_elem, err_stack)),
-        err_stack);
-    ZX_ERR_TRY(
-        (ZXFmtBuf_format_cstr(&fmt_buf, " ticks per element\n", err_stack)),
-        err_stack);
+    ZX_FMT(&fmt, "Insert: ", insert_ticks_per_elem, " ticks per element.\n");
 
-    for (zx_usize i = 0; i < CAP; i++) {
+    for (zx_u32 i = 0; i < CAP; i++) {
       key_type const key = i;
       ZX_ASSERT(
           (nullptr != ZXHashtable_get(&table, hashes[i], &key, sizeof(key_type),
@@ -89,27 +74,31 @@ static inline ZXStatus do_inserts(ZXAlloc *alloc, ZXErrStack *err_stack) {
     }
 
     zx_u64 const get_ticks_per_elem = ZXTimer_lap(&timer) / CAP;
-    ZX_ERR_TRY((ZXFmtBuf_format_cstr(&fmt_buf, "Get: ", err_stack)), err_stack);
-    ZX_ERR_TRY((ZXFmtBuf_format_u64(&fmt_buf, get_ticks_per_elem, err_stack)),
-               err_stack);
-    ZX_ERR_TRY(
-        (ZXFmtBuf_format_cstr(&fmt_buf, " ticks per element\n", err_stack)),
-        err_stack);
+    ZX_FMT(&fmt, "Get: ", get_ticks_per_elem, " ticks per element.\n");
   }
 
-  ZX_ERR_TRY((ZXFmtBuf_write(&fmt_buf, ZX_STDERR, err_stack)), err_stack);
+  zx_u64 n_written = 0;
+  ZX_ERR_TRY((zx_sys_write(ZX_STDERR, fmt_buf, ZXFmt_n_written(&fmt),
+                           &n_written, err_stack)),
+             err_stack);
+  (void)n_written;
 
   return ZXStatus_Ok;
 }
 
 int main(void) {
-  void *const page = zx_page_alloc_thp_2mb(MEMORY_SIZE);
-
   ZXErrStack err_stack = ZXErrStack_init();
-  ZXAlloc alloc = ZXAlloc_init(page, MEMORY_SIZE);
 
-  ZX_ERR_TRACE_TRY_ABORT((do_inserts(&alloc, &err_stack)), &err_stack);
+  void *mem = nullptr;
 
-  zx_page_alloc_free(page, MEMORY_SIZE);
+  ZX_ERR_TRY_FATAL((zx_page_alloc_thp_2mb(MEMORY_SIZE, &mem, &err_stack)),
+                   &err_stack);
+
+  ZXAlloc alloc = ZXAlloc_init(mem, MEMORY_SIZE);
+
+  ZX_ERR_TRY_FATAL((do_inserts(&alloc, &err_stack)), &err_stack);
+
+  ZX_ERR_TRY_FATAL((zx_page_alloc_free(mem, MEMORY_SIZE, &err_stack)),
+                   &err_stack);
   return 0;
 }
