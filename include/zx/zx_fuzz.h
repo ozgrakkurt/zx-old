@@ -4,6 +4,7 @@
 #ifdef ZX_FUZZING_ENABLED
 
 #include <zx/zx_alloc.h>
+#include <zx/zx_assert.h>
 #include <zx/zx_def.h>
 #include <zx/zx_err.h>
 
@@ -40,7 +41,7 @@ typedef struct ZXFuzzParams {
   void *usr_ctx;
   zx_fuzz_one_fn fuzz_one;
   char const *tgt_file_filter;
-  zx_usize tgt_file_filter_len;
+  zx_u16 tgt_file_filter_len;
 } ZXFuzzParams;
 
 ZXStatus zx_fuzz_main(ZXAlloc *alloc, ZXFuzzParams const *params,

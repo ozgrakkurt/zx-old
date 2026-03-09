@@ -1,7 +1,7 @@
 #include <zx/zx_alloc.h>
+#include <zx/zx_assert.h>
 #include <zx/zx_def.h>
 #include <zx/zx_err.h>
-#include <zx/zx_err_trace.h>
 #include <zx/zx_fuzz.h>
 #include <zx/zx_hashtable.h>
 #include <zx/zx_int.h>
@@ -93,8 +93,8 @@ static ZXStatus fuzz_one(void *usr_ctx, ZXFuzzInput *fuzz_input,
   bool const do_hash = (ZXFuzzInput_next(fuzz_input) & 1) > 0;
 
   ZXHashtable hashtable;
-  ZX_ERR_TRY((ZXHashtable_init(&alloc, capacity, alignof(KeyVal),
-                               sizeof(KeyVal), &hashtable, err_stack)),
+  ZX_ERR_TRY((ZXHashtable_init(&alloc, capacity, sizeof(KeyVal), &hashtable,
+                               err_stack)),
              err_stack);
 
   // define a simple array to be used for differential fuzzing
@@ -181,17 +181,20 @@ static ZXStatus fuzz_one(void *usr_ctx, ZXFuzzInput *fuzz_input,
 }
 
 int main(void) {
-  constexpr zx_usize MEM_CAP = (zx_usize){1} << 30;
-  constexpr zx_usize FUZZ_MEM_CAP = (zx_usize){1} << 29;
-
-  void *mem = zx_page_alloc_thp_2mb(MEM_CAP);
-  ZXAlloc alloc = ZXAlloc_init(mem, MEM_CAP);
+  constexpr zx_u64 MEM_CAP = (zx_u64){1} << 30;
+  constexpr zx_u64 FUZZ_MEM_CAP = (zx_u64){1} << 29;
 
   ZXErrStack err_stack = ZXErrStack_init();
 
+  void *mem = nullptr;
+  ZX_ERR_TRY_FATAL((zx_page_alloc_thp_2mb(MEM_CAP, &mem, &err_stack)),
+                   &err_stack);
+
+  ZXAlloc alloc = ZXAlloc_init(mem, MEM_CAP);
+
   void *fuzz_mem = nullptr;
-  ZX_ERR_TRACE_TRY_ABORT(
-      ZXAlloc_alloc(&alloc, FUZZ_MEM_CAP, &fuzz_mem, &err_stack), &err_stack);
+  ZX_ERR_TRY_FATAL(ZXAlloc_alloc(&alloc, FUZZ_MEM_CAP, &fuzz_mem, &err_stack),
+                   &err_stack);
 
   FuzzCtx const ctx = {
       .mem = fuzz_mem,
@@ -204,13 +207,13 @@ int main(void) {
       .usr_ctx = (void *)&ctx,
       .fuzz_one = fuzz_one,
       .tgt_file_filter = tgt_file_filter,
-      .tgt_file_filter_len = __builtin_strlen(tgt_file_filter),
+      .tgt_file_filter_len = (zx_u16)__builtin_strlen(tgt_file_filter),
   };
 
   // initiate main loop
-  ZX_ERR_TRACE_TRY_ABORT((zx_fuzz_main(&alloc, &params, &err_stack)),
-                         &err_stack);
+  ZX_ERR_TRY_FATAL((zx_fuzz_main(&alloc, &params, &err_stack)), &err_stack);
 
-  zx_page_alloc_free(mem, MEM_CAP);
-  return ZX_SYS_EXIT_SUCCESS;
+  ZX_ERR_TRY_FATAL((zx_page_alloc_free(mem, MEM_CAP, &err_stack)), &err_stack);
+
+  return 0;
 }
