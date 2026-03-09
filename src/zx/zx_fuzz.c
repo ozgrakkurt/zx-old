@@ -9,6 +9,7 @@
 #include <zx/zx_int.h>
 #include <zx/zx_memmem.h>
 #include <zx/zx_rapidhash_v3.h>
+#include <zx/zx_sys.h>
 #include <zx/zx_xoshiro256.h>
 
 static void zx_fuzz_clear_linker_set(ZXFuzzLinkerSet const *linker_set) {
@@ -19,13 +20,13 @@ static void zx_fuzz_clear_linker_set(ZXFuzzLinkerSet const *linker_set) {
 static zx_u64 zx_fuzz_calculate_score(ZXFuzzLinkerSet const *linker_set) {
   zx_u64 score = 0;
 
-  for (zx_usize i = 0; i < linker_set->n_markers; i++) {
+  for (zx_u64 i = 0; i < linker_set->n_markers; i++) {
     if (linker_set->marker_hit[i] > 0) {
       score++;
     }
   }
 
-  for (zx_usize i = 0; i < linker_set->n_errs; i++) {
+  for (zx_u64 i = 0; i < linker_set->n_errs; i++) {
     if (linker_set->err_hit[i] > 0) {
       score++;
     }
@@ -53,25 +54,6 @@ static zx_u32 zx_fuzz_count_tgt_coverage(bool const *is_tgt,
   return count;
 }
 
-static ZXStatus zx_fuzz_print_tgt_uncoverage(
-    ZXFmtBuf *fmt_buf, char const *const *file_names, int const *line_numbers,
-    bool const *is_tgt, bool const *coverage, zx_u32 n, ZXErrStack *err_stack) {
-  for (zx_u32 i = 0; i < n; i++) {
-    if (is_tgt[i] && !coverage[i]) {
-      ZX_ERR_TRY((ZXFmtBuf_format_cstr(fmt_buf, " ", err_stack)), err_stack);
-      ZX_ERR_TRY((ZXFmtBuf_format_cstr(fmt_buf, file_names[i], err_stack)),
-                 err_stack);
-      ZX_ERR_TRY((ZXFmtBuf_format_cstr(fmt_buf, "[line=", err_stack)),
-                 err_stack);
-      ZX_ERR_TRY((ZXFmtBuf_format_i64(fmt_buf, line_numbers[i], err_stack)),
-                 err_stack);
-      ZX_ERR_TRY((ZXFmtBuf_format_cstr(fmt_buf, "]", err_stack)), err_stack);
-    }
-  }
-
-  return ZXStatus_Ok;
-}
-
 static zx_u32 zx_fuzz_count_coverage(bool const *coverage, zx_u32 n) {
   zx_u32 count = 0;
   for (zx_u32 i = 0; i < n; i++) {
@@ -88,7 +70,7 @@ static zx_u32 zx_fuzz_update_coverage(ZXFuzzLinkerSet const *linker_set,
                                       bool *err_coverage) {
   zx_u32 new = 0;
 
-  for (zx_usize i = 0; i < linker_set->n_markers; i++) {
+  for (zx_u64 i = 0; i < linker_set->n_markers; i++) {
     bool const hit = linker_set->marker_hit[i] > 0;
 
     if (!marker_coverage[i] && hit) {
@@ -97,7 +79,7 @@ static zx_u32 zx_fuzz_update_coverage(ZXFuzzLinkerSet const *linker_set,
     marker_coverage[i] |= hit;
   }
 
-  for (zx_usize i = 0; i < linker_set->n_errs; i++) {
+  for (zx_u64 i = 0; i < linker_set->n_errs; i++) {
     bool const hit = linker_set->err_hit[i] > 0;
 
     if (!err_coverage[i] && hit) {
@@ -137,11 +119,11 @@ static bool zx_fuzz_process_signature_is_new(zx_u32 *signature_dedup,
 
 static zx_u32 zx_fuzz_count_tgt(char const *const *filenames,
                                 zx_u32 n_filenames, char const *tgt_file_filter,
-                                zx_usize tgt_file_filter_len, bool *is_tgt) {
+                                zx_u64 tgt_file_filter_len, bool *is_tgt) {
   zx_u32 tgt_count = 0;
   for (zx_u32 i = 0; i < n_filenames; i++) {
     char const *filename = filenames[i];
-    zx_usize const filename_len = __builtin_strlen(filename);
+    zx_u64 const filename_len = __builtin_strlen(filename);
     is_tgt[i] = nullptr != zx_memmem((zx_u8 const *)filename, filename_len,
                                      (zx_u8 const *)tgt_file_filter,
                                      tgt_file_filter_len);
@@ -247,8 +229,7 @@ static ZXStatus ZXFuzzer_init(ZXAlloc *alloc, ZXFuzzParams const *params,
 }
 
 static ZXStatus ZXFuzzer_print_status(ZXFuzzer *fuzzer, bool clear_lines,
-                                      ZXFmtBuf *fmt_buf,
-                                      ZXErrStack *err_stack) {
+                                      ZXFmt *fmt, ZXErrStack *err_stack) {
   zx_u32 const marker_cov = zx_fuzz_count_coverage(
       fuzzer->marker_coverage, fuzzer->linker_set.n_markers);
   zx_u32 const err_cov =
@@ -260,69 +241,47 @@ static ZXStatus ZXFuzzer_print_status(ZXFuzzer *fuzzer, bool clear_lines,
       fuzzer->err_is_tgt, fuzzer->err_coverage, fuzzer->linker_set.n_errs);
 
   if (clear_lines) {
-    ZX_ERR_TRY((ZXFmtBuf_format_cstr(fmt_buf,
-                                     "\033[2J"
-                                     "\033[H",
-                                     err_stack)),
-               err_stack);
+    ZX_FMT(fmt, "\033[2J\033[H");
   }
 
-  ZX_ERR_TRY(
-      (ZXFmtBuf_format_cstr(fmt_buf, "FUZZ STATUS:\n\tMARKERS: ", err_stack)),
-      err_stack);
-  ZX_ERR_TRY((ZXFmtBuf_format_u64(fmt_buf, marker_cov, err_stack)), err_stack);
-  ZX_ERR_TRY((ZXFmtBuf_format_cstr(fmt_buf, " / ", err_stack)), err_stack);
-  ZX_ERR_TRY(
-      (ZXFmtBuf_format_u64(fmt_buf, fuzzer->linker_set.n_markers, err_stack)),
-      err_stack);
-  ZX_ERR_TRY((ZXFmtBuf_format_cstr(fmt_buf, "\n\tERRS: ", err_stack)),
-             err_stack);
-  ZX_ERR_TRY((ZXFmtBuf_format_u64(fmt_buf, err_cov, err_stack)), err_stack);
-  ZX_ERR_TRY((ZXFmtBuf_format_cstr(fmt_buf, " / ", err_stack)), err_stack);
-  ZX_ERR_TRY(
-      (ZXFmtBuf_format_u64(fmt_buf, fuzzer->linker_set.n_errs, err_stack)),
-      err_stack);
-  ZX_ERR_TRY((ZXFmtBuf_format_cstr(fmt_buf, "\n\tABORTS: ", err_stack)),
-             err_stack);
-  ZX_ERR_TRY(
-      (ZXFmtBuf_format_u64(fmt_buf, fuzzer->linker_set.n_aborts, err_stack)),
-      err_stack);
-  ZX_ERR_TRY((ZXFmtBuf_format_cstr(fmt_buf, "\n\tTARGET_MARKERS: ", err_stack)),
-             err_stack);
-  ZX_ERR_TRY((ZXFmtBuf_format_u64(fmt_buf, tgt_marker_cov, err_stack)),
-             err_stack);
-  ZX_ERR_TRY((ZXFmtBuf_format_cstr(fmt_buf, " / ", err_stack)), err_stack);
-  ZX_ERR_TRY(
-      (ZXFmtBuf_format_u64(fmt_buf, fuzzer->tgt_marker_count, err_stack)),
-      err_stack);
-  ZX_ERR_TRY((ZXFmtBuf_format_cstr(fmt_buf, "\n\tTARGET_ERRS: ", err_stack)),
-             err_stack);
-  ZX_ERR_TRY((ZXFmtBuf_format_u64(fmt_buf, tgt_err_cov, err_stack)), err_stack);
-  ZX_ERR_TRY((ZXFmtBuf_format_cstr(fmt_buf, " / ", err_stack)), err_stack);
-  ZX_ERR_TRY((ZXFmtBuf_format_u64(fmt_buf, fuzzer->tgt_err_count, err_stack)),
-             err_stack);
-  ZX_ERR_TRY((ZXFmtBuf_format_cstr(fmt_buf, "\n\tUNCOVERED_MARKERS:\n\t\t",
-                                   err_stack)),
-             err_stack);
-  ZX_ERR_TRY(
-      (zx_fuzz_print_tgt_uncoverage(
-          fmt_buf, fuzzer->linker_set.marker_filename,
-          fuzzer->linker_set.marker_lineno, fuzzer->marker_is_tgt,
-          fuzzer->marker_coverage, fuzzer->linker_set.n_markers, err_stack)),
-      err_stack);
-  ZX_ERR_TRY(
-      (ZXFmtBuf_format_cstr(fmt_buf, "\n\tUNCOVERED_ERRS:\n\t\t", err_stack)),
-      err_stack);
-  ZX_ERR_TRY((zx_fuzz_print_tgt_uncoverage(
-                 fmt_buf, fuzzer->linker_set.err_filename,
-                 fuzzer->linker_set.err_lineno, fuzzer->err_is_tgt,
-                 fuzzer->err_coverage, fuzzer->linker_set.n_errs, err_stack)),
-             err_stack);
-  ZX_ERR_TRY((ZXFmtBuf_format_cstr(fmt_buf, "\n", err_stack)), err_stack);
+  ZX_FMT(fmt, "FUZZ STATUS: \n\tMARKERS: ", marker_cov, " / ",
+         fuzzer->linker_set.n_markers, (char)'\n');
+  ZX_FMT(fmt, "\tERRORS: ", err_cov, " / ", fuzzer->linker_set.n_errs,
+         (char)'\n');
+  ZX_FMT(fmt, "\tABORTS: ", fuzzer->linker_set.n_aborts, (char)'\n');
+  ZX_FMT(fmt, "\tTARGET_MARKERS: ", tgt_marker_cov, " / ",
+         fuzzer->tgt_marker_count, (char)'\n');
+  ZX_FMT(fmt, "\tTARGET_ERRORS: ", tgt_err_cov, " / ", fuzzer->tgt_err_count,
+         (char)'\n');
 
-  ZX_ERR_TRY((ZXFmtBuf_write(fmt_buf, ZX_STDERR, err_stack)), err_stack);
+  ZX_FMT(fmt, "\tUNCOVERED_MARKERS:\n\t\t");
 
-  ZXFmtBuf_reset(fmt_buf);
+  for (zx_u32 i = 0; i < fuzzer->linker_set.n_markers; i++) {
+    if (fuzzer->marker_is_tgt[i] && !fuzzer->marker_coverage[i]) {
+      ZX_FMT(fmt, (char)' ', fuzzer->linker_set.marker_filename[i],
+             "[line=", fuzzer->linker_set.marker_lineno[i], (char)']');
+    }
+  }
+
+  ZX_FMT(fmt, "\n\tUNCOVERED_ERRS:\n\t\t");
+
+  for (zx_u32 i = 0; i < fuzzer->linker_set.n_errs; i++) {
+    if (fuzzer->err_is_tgt[i] && !fuzzer->err_coverage[i]) {
+      ZX_FMT(fmt, (char)' ', fuzzer->linker_set.err_filename[i],
+             "[line=", fuzzer->linker_set.err_lineno[i], (char)']');
+    }
+  }
+
+  ZX_FMT(fmt, (char)'\n');
+
+  zx_u32 const to_write = ZXFmt_n_written(fmt);
+  zx_u64 n_written = 0;
+  ZX_ERR_TRY((zx_sys_write(ZX_STDERR, ZXFmt_buf(fmt), to_write, &n_written,
+                           err_stack)),
+             err_stack);
+  ZX_ERR_ASSERT((n_written == to_write), err_stack);
+
+  ZXFmt_reset(fmt);
 
   return ZXStatus_Ok;
 }
@@ -371,13 +330,12 @@ static ZXStatus ZXFuzzer_fuzz_one(ZXFuzzer *fuzzer, zx_u32 mut_idx,
   return ZXStatus_Ok;
 }
 
-static ZXStatus ZXFuzzer_fuzz(ZXFuzzer *fuzzer, ZXFmtBuf *fmt_buf,
+static ZXStatus ZXFuzzer_fuzz(ZXFuzzer *fuzzer, ZXFmt *fmt,
                               ZXErrStack *err_stack) {
-  ZX_ERR_TRY((ZXFuzzer_print_status(fuzzer, false, fmt_buf, err_stack)),
-             err_stack);
+  ZX_ERR_TRY((ZXFuzzer_print_status(fuzzer, false, fmt, err_stack)), err_stack);
 
   constexpr zx_u64 MAGIC[] = {0, ZX_U64_MAX};
-  constexpr zx_usize N_MAGIC = sizeof(MAGIC) / sizeof(MAGIC[0]);
+  constexpr zx_u64 N_MAGIC = sizeof(MAGIC) / sizeof(MAGIC[0]);
 
   ZXXoshiro256 rand = ZXXoshiro256_init(0);
 
@@ -398,7 +356,7 @@ static ZXStatus ZXFuzzer_fuzz(ZXFuzzer *fuzzer, ZXFmtBuf *fmt_buf,
     mut_idx = zx_rand_mod_u32((zx_u32)ZXXoshiro256_next(&rand),
                               baseline_result.consumed_count);
 
-    for (zx_usize i = 0; i < N_MAGIC; i++) {
+    for (zx_u64 i = 0; i < N_MAGIC; i++) {
       fuzzer->fuzz_input[mut_idx] = MAGIC[i];
       ZXFuzzRunResult result = {0};
       ZX_ERR_TRY((ZXFuzzer_fuzz_one(fuzzer, mut_idx, baseline_result.score,
@@ -408,7 +366,7 @@ static ZXStatus ZXFuzzer_fuzz(ZXFuzzer *fuzzer, ZXFmtBuf *fmt_buf,
 
     // try previous interesting values for this mut_idx
     ZXFuzzValues const *fuzz_vals = &fuzzer->fuzz_values[mut_idx];
-    for (zx_usize i = 0; i < fuzz_vals->n_filled; i++) {
+    for (zx_u64 i = 0; i < fuzz_vals->n_filled; i++) {
       fuzzer->fuzz_input[mut_idx] = fuzz_vals->values[i];
 
       ZXFuzzRunResult result = {0};
@@ -448,7 +406,7 @@ static ZXStatus ZXFuzzer_fuzz(ZXFuzzer *fuzzer, ZXFmtBuf *fmt_buf,
     }
 
     if ((fuzz_iter_no % 1024) == 0) {
-      ZX_ERR_TRY((ZXFuzzer_print_status(fuzzer, true, fmt_buf, err_stack)),
+      ZX_ERR_TRY((ZXFuzzer_print_status(fuzzer, true, fmt, err_stack)),
                  err_stack);
     }
 
@@ -464,18 +422,17 @@ ZXStatus zx_fuzz_main(ZXAlloc *alloc, ZXFuzzParams const *params,
   constexpr zx_u32 INPUT_LEN = 1 << 14;
   constexpr zx_u32 SIGNATURE_DEDUP_CAP = 1 << 21;
 
-  char *fmt_buf_alloc = nullptr;
-  ZX_ERR_TRY(
-      (ZXAlloc_alloc(alloc, FMT_BUF_CAP, (void **)&fmt_buf_alloc, err_stack)),
-      err_stack);
-  ZXFmtBuf fmt_buf = ZXFmtBuf_init(fmt_buf_alloc, FMT_BUF_CAP);
+  char *fmt_buf = nullptr;
+  ZX_ERR_TRY((ZXAlloc_alloc(alloc, FMT_BUF_CAP, (void **)&fmt_buf, err_stack)),
+             err_stack);
+  ZXFmt fmt = ZXFmt_init(fmt_buf, FMT_BUF_CAP);
 
   ZXFuzzer fuzzer = {0};
   ZX_ERR_TRY((ZXFuzzer_init(alloc, params, INPUT_LEN, SIGNATURE_DEDUP_CAP,
                             &fuzzer, err_stack)),
              err_stack);
 
-  ZX_ERR_TRY((ZXFuzzer_fuzz(&fuzzer, &fmt_buf, err_stack)), err_stack);
+  ZX_ERR_TRY((ZXFuzzer_fuzz(&fuzzer, &fmt, err_stack)), err_stack);
 
   return ZXStatus_Ok;
 }

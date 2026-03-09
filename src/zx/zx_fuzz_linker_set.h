@@ -5,18 +5,18 @@
 #include <zx/zx_int.h>
 
 extern zx_u8 __start_zx_fuzz_marker_hit;
-extern int const __start_zx_fuzz_marker_lineno;
+extern zx_u16 const __start_zx_fuzz_marker_lineno;
 
 extern char const *__start_zx_fuzz_marker_filename;
 extern char const *__stop_zx_fuzz_marker_filename;
 
 extern zx_u8 __start_zx_fuzz_err_hit;
-extern int const __start_zx_fuzz_err_lineno;
+extern zx_u16 const __start_zx_fuzz_err_lineno;
 
 extern char const *__start_zx_fuzz_err_filename;
 extern char const *__stop_zx_fuzz_err_filename;
 
-extern int const __start_zx_fuzz_abort_lineno;
+extern zx_u16 const __start_zx_fuzz_abort_lineno;
 extern char const *__start_zx_fuzz_abort_filename;
 extern char const *__stop_zx_fuzz_abort_filename;
 
@@ -24,14 +24,14 @@ typedef struct ZXFuzzLinkerSet {
   zx_u32 n_markers;
   zx_u8 *marker_hit;
   char const *const *marker_filename;
-  int const *marker_lineno;
+  zx_u16 const *marker_lineno;
   zx_u32 n_errs;
   zx_u8 *err_hit;
   char const *const *err_filename;
-  int const *err_lineno;
+  zx_u16 const *err_lineno;
   zx_u32 n_aborts;
   char const *const *abort_filename;
-  int const *abort_lineno;
+  zx_u16 const *abort_lineno;
 } ZXFuzzLinkerSet;
 
 static ZXFuzzLinkerSet ZXFuzzLinkerSet_load(void) {

@@ -12,7 +12,7 @@
     static char const *zx_fuzz_marker_filename_                                \
         __attribute__((section("zx_fuzz_marker_filename"), used)) =            \
             __FILE_NAME__;                                                     \
-    static int zx_fuzz_marker_lineno_                                          \
+    static zx_u16 zx_fuzz_marker_lineno_                                       \
         __attribute__((section("zx_fuzz_marker_lineno"), used)) = __LINE__;    \
     (void)zx_fuzz_marker_filename_;                                            \
     (void)zx_fuzz_marker_lineno_;                                              \
@@ -27,7 +27,7 @@
     static char const *zx_fuzz_err_filename_                                   \
         __attribute__((section("zx_fuzz_err_filename"), used)) =               \
             __FILE_NAME__;                                                     \
-    static int zx_fuzz_err_lineno_                                             \
+    static zx_u16 zx_fuzz_err_lineno_                                          \
         __attribute__((section("zx_fuzz_err_lineno"), used)) = __LINE__;       \
     (void)zx_fuzz_err_filename_;                                               \
     (void)zx_fuzz_err_lineno_;                                                 \
@@ -40,7 +40,7 @@
     static char const *zx_fuzz_abort_filename_                                 \
         __attribute__((section("zx_fuzz_abort_filename"), used)) =             \
             __FILE_NAME__;                                                     \
-    static int zx_fuzz_abort_lineno_                                           \
+    static zx_u16 zx_fuzz_abort_lineno_                                        \
         __attribute__((section("zx_fuzz_abort_lineno"), used)) = __LINE__;     \
     (void)zx_fuzz_abort_filename_;                                             \
     (void)zx_fuzz_abort_lineno_;                                               \

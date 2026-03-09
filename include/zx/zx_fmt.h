@@ -25,6 +25,8 @@ static inline ZXFmt ZXFmt_init(char *buf, zx_u32 capacity) {
 
 static inline zx_u32 ZXFmt_n_written(ZXFmt const *fmt) { return fmt->offset; }
 
+static inline char const *ZXFmt_buf(ZXFmt const *fmt) { return fmt->buf; }
+
 static inline void ZXFmt_reset(ZXFmt *fmt) { fmt->offset = 0; }
 
 static inline void ZXFmt_format_str(ZXFmt *fmt, ZXFmtStr str) {
