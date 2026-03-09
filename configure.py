@@ -176,6 +176,9 @@ def make_cflags(profile: Profile, config: Config) -> List[str]:
         "-nostdinc",
         # specify nolibc target
         "--target=x86_64-linux-none",
+        # enable linker garbage collection
+        "-ffunction-sections",
+        "-fdata-sections",
     ]
 
     if profile.enable_debug_info:
@@ -199,6 +202,8 @@ def make_ldflags(build_path: str, config: Config) -> List[str]:
         "-fuse-ld=lld",
         # don't allow undefined references
         "-Wl,-z,defs",
+        # remove unused sections
+        "-Wl,--gc-sections",
         # static link
         "-static",
         # disable libc
