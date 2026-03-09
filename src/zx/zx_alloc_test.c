@@ -1,7 +1,6 @@
 #include <zx/zx_alloc.h>
 #include <zx/zx_def.h>
 #include <zx/zx_err.h>
-#include <zx/zx_err_trace.h>
 #include <zx/zx_page_alloc.h>
 
 constexpr zx_u64 MEMORY_SIZE = 1 << 16;
@@ -58,38 +57,18 @@ ZXStatus test_allocator(ZXAlloc *alloc, ZXErrStack *err_stack) {
   return ZXStatus_Ok;
 }
 
-ZXStatus test_allocator_aligned(ZXAlloc *alloc, ZXErrStack *err_stack) {
-  ZXAlloc_reset(alloc);
-
-  zx_u64 const alignments[] = {1, 2, 4, 8, 16, 32, 64};
-
-  zx_u8 *ptr = nullptr;
-
-  for (zx_u64 i = 0; i < sizeof(alignments) / sizeof(alignments[0]); i++) {
-    zx_u64 const alignment = alignments[i];
-
-    ptr = nullptr;
-    ZX_ERR_TRY(
-        (ZXAlloc_aligned_alloc(alloc, alignment, 69, (void **)&ptr, err_stack)),
-        err_stack);
-    ZX_ERR_ASSERT((ptr != nullptr), err_stack);
-    ZX_ERR_ASSERT((((zx_u64)ptr) % alignment == 0), err_stack);
-    ZX_ERR_ASSERT((((zx_u64)ptr) % alignof(zx_u256) == 0), err_stack);
-  }
-
-  return ZXStatus_Ok;
-}
-
 int main(void) {
-  void *const page = zx_page_alloc_4kb(MEMORY_SIZE);
-
   ZXErrStack err_stack = ZXErrStack_init();
-  ZXAlloc alloc = ZXAlloc_init(page, MEMORY_SIZE);
 
-  ZX_ERR_TRACE_TRY_ABORT((test_allocator(&alloc, &err_stack)), &err_stack);
-  ZX_ERR_TRACE_TRY_ABORT((test_allocator_aligned(&alloc, &err_stack)),
-                         &err_stack);
+  void *mem = nullptr;
+  ZX_ERR_TRY_FATAL((zx_page_alloc_4kb(MEMORY_SIZE, &mem, &err_stack)),
+                   &err_stack);
 
-  zx_page_alloc_free(page, MEMORY_SIZE);
+  ZXAlloc alloc = ZXAlloc_init(mem, MEMORY_SIZE);
+
+  ZX_ERR_TRY_FATAL((test_allocator(&alloc, &err_stack)), &err_stack);
+
+  ZX_ERR_TRY_FATAL((zx_page_alloc_free(mem, MEMORY_SIZE, &err_stack)),
+                   &err_stack);
   return 0;
 }

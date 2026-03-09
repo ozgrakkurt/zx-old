@@ -17,9 +17,9 @@ static inline bool keys_eql(void const *ctx, void const *a, void const *b) {
 
 static inline ZXStatus smoke_test(ZXAlloc *alloc, ZXErrStack *err_stack) {
   ZXHashtable table;
-  ZX_ERR_TRY((ZXHashtable_init(alloc, CAP, (zx_u16)alignof(key_type),
-                               sizeof(key_type), &table, err_stack)),
-             err_stack);
+  ZX_ERR_TRY(
+      (ZXHashtable_init(alloc, CAP, sizeof(key_type), &table, err_stack)),
+      err_stack);
 
   for (zx_u64 i = 0; i < CAP / 2; i++) {
     key_type const key = i;
@@ -89,24 +89,27 @@ static inline ZXStatus smoke_test(ZXAlloc *alloc, ZXErrStack *err_stack) {
 
 static inline ZXStatus zero_size_test(ZXAlloc *alloc, ZXErrStack *err_stack) {
   ZXHashtable table;
-  ZX_ERR_TRY((ZXHashtable_init(alloc, 0, (zx_u16)alignof(key_type),
-                               sizeof(key_type), &table, err_stack)),
+  ZX_ERR_TRY((ZXHashtable_init(alloc, 0, sizeof(key_type), &table, err_stack)),
              err_stack);
 
   return ZXStatus_Ok;
 }
 
 int main(void) {
-  void *const page = zx_page_alloc_4kb(MEMORY_SIZE);
-
   ZXErrStack err_stack = ZXErrStack_init();
-  ZXAlloc alloc = ZXAlloc_init(page, MEMORY_SIZE);
 
-  ZX_ERR_TRACE_TRY_ABORT((smoke_test(&alloc, &err_stack)), &err_stack);
+  void *mem = nullptr;
+  ZX_ERR_TRY_FATAL((zx_page_alloc_4kb(MEMORY_SIZE, &mem, &err_stack)),
+                   &err_stack);
+
+  ZXAlloc alloc = ZXAlloc_init(mem, MEMORY_SIZE);
+
+  ZX_ERR_TRY_FATAL((smoke_test(&alloc, &err_stack)), &err_stack);
   ZXAlloc_reset(&alloc);
 
-  ZX_ERR_TRACE_TRY_ABORT((zero_size_test(&alloc, &err_stack)), &err_stack);
+  ZX_ERR_TRY_FATAL((zero_size_test(&alloc, &err_stack)), &err_stack);
 
-  zx_page_alloc_free(page, MEMORY_SIZE);
+  ZX_ERR_TRY_FATAL((zx_page_alloc_free(mem, MEMORY_SIZE, &err_stack)),
+                   &err_stack);
   return 0;
 }

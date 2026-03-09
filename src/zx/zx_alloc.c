@@ -37,9 +37,8 @@ ZXStatus ZXAlloc_alloc(ZXAlloc *self, zx_u64 size, void **ptr,
 
   static_assert(sizeof(void *) <= sizeof(zx_u64));
   zx_u64 const addr = (zx_u64)(&state.buf[state.offset]);
-  zx_u64 const aligned_addr = zx_next_multiple_of_u64(addr, alloc_align);
-  ZX_ASSERT((aligned_addr % alloc_align == 0));
-  ZX_ASSERT((aligned_addr % align == 0));
+  zx_u64 const aligned_addr = zx_next_multiple_of_u64(addr, ALIGN);
+  ZX_ASSERT((aligned_addr % ALIGN == 0));
   zx_u64 const padding = aligned_addr - addr;
 
   zx_u64 const alloc_size = zx_chk_add_u64(padding, size);
@@ -52,13 +51,5 @@ ZXStatus ZXAlloc_alloc(ZXAlloc *self, zx_u64 size, void **ptr,
   *ptr = (void *)aligned_addr;
   self->offset = new_offset;
 
-  return ZXStatus_Ok;
-}
-
-ZXStatus ZXAlloc_alloc(ZXAlloc *self, zx_u64 size, void **ptr,
-                       ZXErrStack *err_stack) {
-  ZX_ERR_TRY(
-      (ZXAlloc_aligned_alloc(self, ZX_ALLOC_MIN_ALIGN, size, ptr, err_stack)),
-      err_stack);
   return ZXStatus_Ok;
 }

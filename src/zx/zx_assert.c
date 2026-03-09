@@ -4,17 +4,15 @@
 #include <zx/zx_fmt.h>
 #include <zx/zx_sys.h>
 
-static inline zx_u32 zx_assert_min_(zx_u32 a, zx_u32 b) {
-  return (a > b) ? b : a;
-}
-
 [[noreturn]] void zx_assert_abort_(char const *file_name, zx_u8 file_name_len,
                                    zx_u16 line_no) {
   constexpr zx_u32 BUF_CAP = 1 << 12;
   char buf[BUF_CAP] = {0};
   ZXFmt fmt = ZXFmt_init(buf, BUF_CAP);
 
-  ZX_FMT(&fmt, "Assert failed at: ", file_name, "[line=", line_no, "]\n");
+  ZXFmtStr const file_name_s = {.str = file_name, .len = file_name_len};
+
+  ZX_FMT(&fmt, "Assert failed at: ", file_name_s, "[line=", line_no, "]\n");
 
   // write buf to stderr
   ZXErrStack err_stack = ZXErrStack_init();

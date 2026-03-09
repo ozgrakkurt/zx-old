@@ -148,7 +148,10 @@ ZXStatus zx_sys_read(zx_i32 fd, void *buf, zx_u64 size, zx_u64 *n_read,
   zx_sys_reg const ret = zx_syscall3(ZX_SYSCALL_READ, (zx_sys_reg)fd,
                                      (zx_sys_reg)buf, (zx_sys_reg)read_len);
 
-  ZX_ERR_TRY((zx_sys_status(ret)), err_stack);
+  ZXStatus const status = zx_sys_status(ret);
+  if (status != ZXStatus_Ok) {
+    ZX_ERR_RETURN(status, err_stack);
+  }
   *n_read = (zx_u64){ret};
 
   return ZXStatus_Ok;
@@ -162,7 +165,10 @@ ZXStatus zx_sys_write(zx_i32 fd, void const *buf, zx_u64 size,
   zx_sys_reg const ret = zx_syscall3(ZX_SYSCALL_WRITE, (zx_sys_reg)fd,
                                      (zx_sys_reg)buf, (zx_sys_reg)write_len);
 
-  ZX_ERR_TRY((zx_sys_status(ret)), err_stack);
+  ZXStatus const status = zx_sys_status(ret);
+  if (status != ZXStatus_Ok) {
+    ZX_ERR_RETURN(status, err_stack);
+  }
   *n_written = (zx_u64){ret};
 
   return ZXStatus_Ok;
@@ -191,7 +197,10 @@ ZXStatus zx_sys_mmap(void *address, zx_u64 length, zx_i32 prot, zx_i32 flags,
       ZX_SYSCALL_MMAP, (zx_sys_reg)address, (zx_sys_reg)length,
       (zx_sys_reg)prot, (zx_sys_reg)flags, (zx_sys_reg)fd, (zx_sys_reg)offset);
 
-  ZX_ERR_TRY((zx_sys_status(ret)), err_stack);
+  ZXStatus const status = zx_sys_status(ret);
+  if (status != ZXStatus_Ok) {
+    ZX_ERR_RETURN(status, err_stack);
+  }
   *mem = (void *)ret;
 
   return ZXStatus_Ok;
@@ -200,7 +209,10 @@ ZXStatus zx_sys_mmap(void *address, zx_u64 length, zx_i32 prot, zx_i32 flags,
 ZXStatus zx_sys_munmap(void *mem, zx_u64 length, ZXErrStack *err_stack) {
   zx_sys_reg const ret =
       zx_syscall2(ZX_SYSCALL_MUNMAP, (zx_sys_reg)mem, (zx_sys_reg)length);
-  ZX_ERR_TRY((zx_sys_status(ret)), err_stack);
+  ZXStatus const status = zx_sys_status(ret);
+  if (status != ZXStatus_Ok) {
+    ZX_ERR_RETURN(status, err_stack);
+  }
 
   return ZXStatus_Ok;
 }
@@ -210,7 +222,10 @@ ZXStatus zx_sys_madvise(void *mem, zx_u64 length, zx_i32 advice,
   zx_sys_reg const ret = zx_syscall3(ZX_SYSCALL_MADVISE, (zx_sys_reg)mem,
                                      (zx_sys_reg)length, (zx_sys_reg)advice);
 
-  ZX_ERR_TRY((zx_sys_status(ret)), err_stack);
+  ZXStatus const status = zx_sys_status(ret);
+  if (status != ZXStatus_Ok) {
+    ZX_ERR_RETURN(status, err_stack);
+  }
 
   return ZXStatus_Ok;
 }

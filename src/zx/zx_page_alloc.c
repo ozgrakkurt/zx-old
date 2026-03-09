@@ -4,65 +4,82 @@
 #include <zx/zx_page_alloc.h>
 #include <zx/zx_sys.h>
 
-static void *zx_page_mmap(zx_u64 size, int huge_page_flags) {
+static ZXStatus zx_page_mmap(zx_u64 size, int huge_page_flags, void **mem,
+                             ZXErrStack *err_stack) {
+  ZX_ERR_ASSERT((mem != nullptr), err_stack);
+  ZX_ERR_ASSERT((*mem == nullptr), err_stack);
+
   int const prot = ZX_SYS_PROT_READ | ZX_SYS_PROT_WRITE;
   int const flags = ZX_SYS_MAP_PRIVATE | ZX_SYS_MAP_ANONYMOUS |
                     ZX_SYS_MAP_LOCKED | ZX_SYS_MAP_POPULATE | huge_page_flags;
 
-  void *mem = nullptr;
-  zx_u64 const status = zx_sys_mmap(nullptr, size, prot, flags, -1, 0, &mem);
-  ZX_ASSERT((status == ZX_SYS_STATUS_SUCCESS));
-  ZX_ASSERT((mem != nullptr));
+  ZX_ERR_TRY((zx_sys_mmap(nullptr, size, prot, flags, -1, 0, mem, err_stack)),
+             err_stack);
+  ZX_ASSERT((*mem != nullptr));
 
-  return mem;
+  return ZXStatus_Ok;
 }
 
-void *zx_page_alloc_4kb(zx_u64 size) {
+ZXStatus zx_page_alloc_4kb(zx_u64 size, void **mem, ZXErrStack *err_stack) {
   constexpr zx_u64 ALIGNMENT = 1 << 12;
 
-  ZX_ASSERT((size > 0));
-  ZX_ASSERT((size >= ALIGNMENT));
-  ZX_ASSERT((size % ALIGNMENT == 0));
+  ZX_ERR_ASSERT((size > 0), err_stack);
+  ZX_ERR_ASSERT((size >= ALIGNMENT), err_stack);
+  ZX_ERR_ASSERT((size % ALIGNMENT == 0), err_stack);
 
-  return zx_page_mmap(size, 0);
+  ZX_ERR_TRY((zx_page_mmap(size, 0, mem, err_stack)), err_stack);
+
+  return ZXStatus_Ok;
 }
 
-void *zx_page_alloc_thp_2mb(zx_u64 size) {
+ZXStatus zx_page_alloc_thp_2mb(zx_u64 size, void **mem, ZXErrStack *err_stack) {
   constexpr zx_u64 ALIGNMENT = 1 << 21;
 
-  ZX_ASSERT((size > 0));
-  ZX_ASSERT((size >= ALIGNMENT));
-  ZX_ASSERT((size % ALIGNMENT == 0));
+  ZX_ERR_ASSERT((size > 0), err_stack);
+  ZX_ERR_ASSERT((size >= ALIGNMENT), err_stack);
+  ZX_ERR_ASSERT((size % ALIGNMENT == 0), err_stack);
 
-  void *const page = zx_page_mmap(size, 0);
+  ZX_ERR_TRY((zx_page_mmap(size, 0, mem, err_stack)), err_stack);
+  ZX_ERR_TRY((zx_sys_madvise(*mem, size, ZX_SYS_MADV_HUGEPAGE, err_stack)),
+             err_stack);
 
-  ZX_ASSERT((ZX_SYS_STATUS_SUCCESS ==
-             zx_sys_madvise(page, size, ZX_SYS_MADV_HUGEPAGE)));
-
-  return page;
+  return ZXStatus_Ok;
 }
 
-void *zx_page_alloc_huge_2mb(zx_u64 size) {
+ZXStatus zx_page_alloc_huge_2mb(zx_u64 size, void **mem,
+                                ZXErrStack *err_stack) {
   constexpr zx_u64 ALIGNMENT = 1 << 21;
 
-  ZX_ASSERT((size > 0));
-  ZX_ASSERT((size >= ALIGNMENT));
-  ZX_ASSERT((size % ALIGNMENT == 0));
+  ZX_ERR_ASSERT((size > 0), err_stack);
+  ZX_ERR_ASSERT((size >= ALIGNMENT), err_stack);
+  ZX_ERR_ASSERT((size % ALIGNMENT == 0), err_stack);
 
-  return zx_page_mmap(size, ZX_SYS_MAP_HUGETLB | ZX_SYS_MAP_HUGE_2MB);
+  ZX_ERR_TRY((zx_page_mmap(size, ZX_SYS_MAP_HUGETLB | ZX_SYS_MAP_HUGE_2MB, mem,
+                           err_stack)),
+             err_stack);
+
+  return ZXStatus_Ok;
 }
 
-void *zx_page_alloc_huge_1gb(zx_u64 size) {
+ZXStatus zx_page_alloc_huge_1gb(zx_u64 size, void **mem,
+                                ZXErrStack *err_stack) {
   constexpr zx_u64 ALIGNMENT = 1 << 30;
 
-  ZX_ASSERT((size > 0));
-  ZX_ASSERT((size >= ALIGNMENT));
-  ZX_ASSERT((size % ALIGNMENT == 0));
+  ZX_ERR_ASSERT((size > 0), err_stack);
+  ZX_ERR_ASSERT((size >= ALIGNMENT), err_stack);
+  ZX_ERR_ASSERT((size % ALIGNMENT == 0), err_stack);
 
-  return zx_page_mmap(size, ZX_SYS_MAP_HUGETLB | ZX_SYS_MAP_HUGE_1GB);
+  ZX_ERR_TRY((zx_page_mmap(size, ZX_SYS_MAP_HUGETLB | ZX_SYS_MAP_HUGE_1GB, mem,
+                           err_stack)),
+             err_stack);
+
+  return ZXStatus_Ok;
 }
 
-void zx_page_alloc_free(void *page, zx_u64 size) {
-  ZX_ASSERT((page != nullptr));
-  ZX_ASSERT((ZX_SYS_STATUS_SUCCESS == zx_sys_munmap(page, size)));
+ZXStatus zx_page_alloc_free(void *page, zx_u64 size, ZXErrStack *err_stack) {
+  ZX_ERR_ASSERT((page != nullptr), err_stack);
+
+  ZX_ERR_TRY((zx_sys_munmap(page, size, err_stack)), err_stack);
+
+  return ZXStatus_Ok;
 }

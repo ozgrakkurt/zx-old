@@ -133,11 +133,9 @@ static inline zx_u64 zx_rapidhash_v3_long(zx_u8 const *key, zx_u32 len,
     }
   }
 
-  static_assert(sizeof(i) == sizeof(zx_u64));
   a = zx_rapidhash_v3_read64(&p[i - 16]) ^ ((zx_u64)i);
   b = zx_rapidhash_v3_read64(&p[i - 8]);
 
-  static_assert((sizeof(zx_u64) == sizeof(zx_isize)));
   return zx_rapidhash_v3_finish(a, b, s, (zx_u64)i);
 }
 

@@ -29,13 +29,14 @@ static inline void ZXFmt_reset(ZXFmt *fmt) { fmt->offset = 0; }
 
 static inline void ZXFmt_format_str(ZXFmt *fmt, ZXFmtStr str) {
   zx_u32 const capacity_left = fmt->capacity - fmt->offset;
-  zx_u64 const n_write = zx_int_min_u64(capacity_left, str->len);
-  __builtin_memcpy(&fmt->buf[fmt->offset], str->str, n_write);
+  zx_u64 const n_write = zx_int_min_u64(capacity_left, str.len);
+  __builtin_memcpy(&fmt->buf[fmt->offset], str.str, n_write);
   fmt->offset += n_write;
 }
 
 static inline void ZXFmt_format_cstr(ZXFmt *fmt, char const *cstr) {
-  ZXFmt_format_str(fmt, (ZXFmtStr){.str = cstr, .len = __builtin_strlen(cstr)});
+  ZXFmt_format_str(
+      fmt, (ZXFmtStr){.str = cstr, .len = (zx_u32)__builtin_strlen(cstr)});
 }
 
 static inline void ZXFmt_format_u64(ZXFmt *fmt, zx_u64 val) {
@@ -50,7 +51,7 @@ static inline void ZXFmt_format_u64(ZXFmt *fmt, zx_u64 val) {
   } while (val > 0);
   zx_u32 const len = MAX_NUM_DIGITS - pos;
 
-  ZXFmt_format_str(fmt, (ZXFmtStr){.str = digits, .len = len});
+  ZXFmt_format_str(fmt, (ZXFmtStr){.str = &digits[pos], .len = len});
 }
 
 static inline void ZXFmt_format_i64(ZXFmt *fmt, zx_i64 val) {
