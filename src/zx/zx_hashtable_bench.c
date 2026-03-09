@@ -9,8 +9,8 @@
 #include <zx/zx_time.h>
 #include <zx/zx_xoshiro256.h>
 
-constexpr zx_u32 MEMORY_SIZE = 1 << 30;
-constexpr zx_u32 CAP = 40000;
+constexpr zx_u64 MEMORY_SIZE = (zx_u64){1} << 30;
+constexpr zx_u64 CAP = 300123;
 
 typedef zx_u256 key_type;
 
@@ -22,7 +22,6 @@ static inline bool keys_eql(void const *ctx, void const *a, void const *b) {
 }
 
 static inline ZXStatus do_inserts(ZXAlloc *alloc, ZXErrStack *err_stack) {
-
   constexpr zx_u32 fmt_buf_cap = 1 << 12;
   char *fmt_buf = nullptr;
   ZX_ERR_TRY((ZXAlloc_alloc(alloc, fmt_buf_cap, (void **)&fmt_buf, err_stack)),
@@ -39,16 +38,26 @@ static inline ZXStatus do_inserts(ZXAlloc *alloc, ZXErrStack *err_stack) {
   ZX_ERR_TRY(
       (ZXAlloc_alloc(alloc, sizeof(zx_u64) * CAP, (void **)&hashes, err_stack)),
       err_stack);
-  ZX_ASSERT((hashes != nullptr));
+
+  key_type *keys = nullptr;
+  ZX_ERR_TRY(
+      (ZXAlloc_alloc(alloc, sizeof(key_type) * CAP, (void **)&keys, err_stack)),
+      err_stack);
+
+  ZXXoshiro256 rand = ZXXoshiro256_init(0);
 
   for (zx_u32 x = 0; x < 5; x++) {
+    ZXHashtable_reset(&table);
+
     ZXTimer timer = ZXTimer_init();
 
-    ZXXoshiro256 rand = ZXXoshiro256_init(0);
-    for (zx_u32 i = 0; i < CAP; i++) {
-      key_type key = 0;
-      ZXXoshiro256_fill(&rand, (zx_u8 *)&key, sizeof(key_type));
+    ZXXoshiro256_fill(&rand, (zx_u8 *)keys, sizeof(key_type) * CAP);
 
+    zx_u64 const fill_ticks_per_elem = ZXTimer_lap(&timer) / CAP;
+    ZX_FMT(&fmt, "Fill: ", fill_ticks_per_elem, " ticks per element.\n");
+
+    for (zx_u32 i = 0; i < CAP; i++) {
+      key_type const key = keys[i];
       zx_u64 const hash =
           zx_rapidhash_v3((zx_u8 const *)&key, sizeof(key_type), 0);
       hashes[i] = hash;
@@ -58,7 +67,7 @@ static inline ZXStatus do_inserts(ZXAlloc *alloc, ZXErrStack *err_stack) {
     ZX_FMT(&fmt, "Hash: ", hash_ticks_per_elem, " ticks per element.\n");
 
     for (zx_u32 i = 0; i < CAP; i++) {
-      key_type const key = i;
+      key_type const key = keys[i];
       ZXHashtable_insert(&table, hashes[i], &key, sizeof(key_type), nullptr,
                          keys_eql);
     }
@@ -67,7 +76,7 @@ static inline ZXStatus do_inserts(ZXAlloc *alloc, ZXErrStack *err_stack) {
     ZX_FMT(&fmt, "Insert: ", insert_ticks_per_elem, " ticks per element.\n");
 
     for (zx_u32 i = 0; i < CAP; i++) {
-      key_type const key = i;
+      key_type const key = keys[i];
       ZX_ASSERT(
           (nullptr != ZXHashtable_get(&table, hashes[i], &key, sizeof(key_type),
                                       nullptr, keys_eql)));
