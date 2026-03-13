@@ -38,8 +38,23 @@ ZX: Library = Library(
     },
 )
 
+STREAMVBYTE: Library = Library(
+    source_files=set(["streamvbyte_0124_encode.c", "streamvbyte_0124_decode.c"]),
+    test_targets={
+        "streamvbyte_test": set([]),
+    },
+    fuzz_targets={
+        "streamvbyte_roundtrip_fuzz": set([]),
+        "streamvbyte_decode_fuzz": set([]),
+    },
+    bench_targets={
+        "streamvbyte_bench": set([]),
+    },
+)
+
 PROJECT: Project = Project(
     libraries={
         "zx": ZX,
+        "streamvbyte": STREAMVBYTE,
     },
 )

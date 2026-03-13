@@ -110,8 +110,11 @@ typedef bool zx_hashtable_key_eqfn(void const *ctx, void const *entry_a,
 
 static inline void ZXHashtable_load_(void const *group_ptr, zx_u8 tag,
                                      zx_u16 *tag_match, zx_u16 *empty_match) {
-  unsigned long tag_m;
-  unsigned long empty_m;
+  typedef unsigned long regt;
+  static_assert(sizeof(regt) == sizeof(void *));
+
+  regt tag_m;
+  regt empty_m;
 
   __asm__("vmovdqu %2, %%xmm0\n\t"              // load group
           "vmovd %3, %%xmm1\n\t"                // load tag
@@ -120,8 +123,7 @@ static inline void ZXHashtable_load_(void const *group_ptr, zx_u8 tag,
           "vpmovmskb %%xmm1, %0\n\t"
           "vpmovmskb %%xmm0, %1\n\t" // empty match
           : "=r"(tag_m), "=r"(empty_m)
-          : "m"(*(zx_u8(*)[ZX_HASHTABLE_GROUP_SIZE_])group_ptr),
-            "r"((unsigned long)tag)
+          : "m"(*(zx_u8(*)[ZX_HASHTABLE_GROUP_SIZE_])group_ptr), "r"((regt)tag)
           : "xmm0", "xmm1");
 
   *tag_match = (zx_u16)tag_m;
