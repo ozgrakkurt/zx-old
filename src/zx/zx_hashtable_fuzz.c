@@ -93,14 +93,14 @@ static ZXStatus fuzz_one(void *usr_ctx, ZXFuzzInput *fuzz_input,
   bool const do_hash = (ZXFuzzInput_next(fuzz_input) & 1) > 0;
 
   ZXHashtable hashtable;
-  ZX_ERR_TRY((ZXHashtable_init(&alloc, capacity, sizeof(KeyVal), &hashtable,
-                               err_stack)),
+  ZX_ERR_TRY((ZXHashtable_init(&alloc, capacity, alignof(KeyVal),
+                               sizeof(KeyVal), &hashtable, err_stack)),
              err_stack);
 
   // define a simple array to be used for differential fuzzing
   KeyVal *ref_data = nullptr;
-  ZX_ERR_TRY((ZXAlloc_alloc(&alloc, sizeof(KeyVal) * capacity,
-                            (void **)&ref_data, err_stack)),
+  ZX_ERR_TRY((ZXAlloc_alloc(&alloc, alignof(KeyVal), sizeof(KeyVal) * capacity,
+                            (zx_u8 **)&ref_data, err_stack)),
              err_stack);
   zx_u32 ref_data_len = 0;
 
@@ -186,14 +186,15 @@ int main(void) {
 
   ZXErrStack err_stack = ZXErrStack_init();
 
-  void *mem = nullptr;
+  zx_u8 *mem = nullptr;
   ZX_ERR_TRY_FATAL((zx_page_alloc_thp_2mb(MEM_CAP, &mem, &err_stack)),
                    &err_stack);
 
   ZXAlloc alloc = ZXAlloc_init(mem, MEM_CAP);
 
-  void *fuzz_mem = nullptr;
-  ZX_ERR_TRY_FATAL(ZXAlloc_alloc(&alloc, FUZZ_MEM_CAP, &fuzz_mem, &err_stack),
+  zx_u8 *fuzz_mem = nullptr;
+  ZX_ERR_TRY_FATAL(ZXAlloc_alloc(&alloc, alignof(zx_u8), FUZZ_MEM_CAP,
+                                 &fuzz_mem, &err_stack),
                    &err_stack);
 
   FuzzCtx const ctx = {

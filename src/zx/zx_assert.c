@@ -17,8 +17,9 @@
   // write buf to stderr
   ZXErrStack err_stack = ZXErrStack_init();
   zx_u64 n_written = 0;
-  ZXStatus const write_status = zx_sys_write(
-      ZX_STDERR, buf, ZXFmt_n_written(&fmt), &n_written, &err_stack);
+  ZXStatus const write_status =
+      zx_sys_write(ZX_STDERR, (zx_u8 const *)buf, ZXFmt_n_written(&fmt),
+                   &n_written, &err_stack);
   (void)write_status;
   (void)n_written;
 

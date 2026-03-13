@@ -156,17 +156,16 @@ def make_cflags(profile: Profile, config: Config) -> List[str]:
         f"-march={config.march}",
         # Use c23 standard.
         "--std=c23",
-        # enable feature_test_macro so linux/gnu functions don't get disabled because of std=c23 flag
-        "-D_DEFAULT_SOURCE=1",
-        # Required for correctness.
-        # Use 'restrict'/'register' in performance-critical code.
-        "-fno-strict-aliasing",
+        # we don't use libc but this might effect some compiler builtins?
         "-fno-math-errno",
         # Use pipes instead of temporary files in compilation.
+        # ninja docs or ninja repo configure.py say this is better.
         "-pipe",
+        # optimization level
         f"-O{profile.opt_level}",
+        # include dir
         "-I$include_path",
-        # frame pointer is useless anyway because fibers don't save it
+        # disable frame pointer usage by compiler
         "-fomit-frame-pointer",
         # this caused compilation errors so is disabled. could be an idea to re-enable it
         "-fno-stack-protector",
@@ -175,10 +174,15 @@ def make_cflags(profile: Profile, config: Config) -> List[str]:
         # disable default includes
         "-nostdinc",
         # specify nolibc target
+        # this doesn't have any effect as far as I can tell on a x86_64-linux-gnu PC, but do it anyway.
         "--target=x86_64-linux-none",
         # enable linker garbage collection
         "-ffunction-sections",
         "-fdata-sections",
+        # disable strict aliasing
+        "-fno-strict-aliasing",
+        # disable undefined behavior on signed integer overflow
+        "-fno-strict-overflow",
     ]
 
     if profile.enable_debug_info:

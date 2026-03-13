@@ -14,7 +14,7 @@ ZXAlloc ZXAlloc_init(zx_u8 *buf, zx_u64 capacity);
 
 void ZXAlloc_reset(ZXAlloc *self);
 
-ZXStatus ZXAlloc_alloc(ZXAlloc *self, zx_u64 size, void **ptr,
+ZXStatus ZXAlloc_alloc(ZXAlloc *self, zx_u16 align, zx_u64 size, zx_u8 **ptr,
                        ZXErrStack *err_stack);
 
 #endif

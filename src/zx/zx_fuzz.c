@@ -155,54 +155,56 @@ typedef struct ZXFuzzer {
 static ZXStatus ZXFuzzer_init(ZXAlloc *alloc, ZXFuzzParams const *params,
                               zx_u32 fuzz_input_len, zx_u32 signature_dedup_cap,
                               ZXFuzzer *fuzzer, ZXErrStack *err_stack) {
+  static_assert(sizeof(bool) == 1);
+
   ZXFuzzLinkerSet const linker_set = ZXFuzzLinkerSet_load();
 
   zx_u64 *fuzz_input = nullptr;
   zx_u32 const fuzz_input_byte_size =
       zx_chk_mul_u32(fuzz_input_len, sizeof(zx_u64));
-  ZX_ERR_TRY((ZXAlloc_alloc(alloc, fuzz_input_byte_size, (void **)&fuzz_input,
-                            err_stack)),
+  ZX_ERR_TRY((ZXAlloc_alloc(alloc, alignof(zx_u64), fuzz_input_byte_size,
+                            (zx_u8 **)&fuzz_input, err_stack)),
              err_stack);
   __builtin_memset(fuzz_input, 0, fuzz_input_byte_size);
 
   ZXFuzzValues *fuzz_values = nullptr;
   zx_u32 const fuzz_values_byte_size =
       zx_chk_mul_u32(fuzz_input_len, sizeof(ZXFuzzValues));
-  ZX_ERR_TRY((ZXAlloc_alloc(alloc, fuzz_values_byte_size, (void **)&fuzz_values,
-                            err_stack)),
+  ZX_ERR_TRY((ZXAlloc_alloc(alloc, alignof(ZXFuzzValues), fuzz_values_byte_size,
+                            (zx_u8 **)&fuzz_values, err_stack)),
              err_stack);
   __builtin_memset(fuzz_values, 0, fuzz_values_byte_size);
 
   bool *marker_coverage = nullptr;
-  ZX_ERR_TRY((ZXAlloc_alloc(alloc, linker_set.n_markers,
-                            (void **)&marker_coverage, err_stack)),
+  ZX_ERR_TRY((ZXAlloc_alloc(alloc, alignof(bool), linker_set.n_markers,
+                            (zx_u8 **)&marker_coverage, err_stack)),
              err_stack);
   __builtin_memset(marker_coverage, 0, linker_set.n_markers);
 
   bool *err_coverage = nullptr;
-  ZX_ERR_TRY((ZXAlloc_alloc(alloc, linker_set.n_errs, (void **)&err_coverage,
-                            err_stack)),
+  ZX_ERR_TRY((ZXAlloc_alloc(alloc, alignof(bool), linker_set.n_errs,
+                            (zx_u8 **)&err_coverage, err_stack)),
              err_stack);
   __builtin_memset(err_coverage, 0, linker_set.n_errs);
 
   zx_u32 *signature_dedup = nullptr;
   zx_u32 const signature_dedup_byte_size = signature_dedup_cap * sizeof(zx_u32);
-  ZX_ERR_TRY((ZXAlloc_alloc(alloc, signature_dedup_byte_size,
-                            (void **)&signature_dedup, err_stack)),
+  ZX_ERR_TRY((ZXAlloc_alloc(alloc, alignof(zx_u32), signature_dedup_byte_size,
+                            (zx_u8 **)&signature_dedup, err_stack)),
              err_stack);
   __builtin_memset(signature_dedup, 0, signature_dedup_byte_size);
 
   bool *marker_is_tgt = nullptr;
-  ZX_ERR_TRY((ZXAlloc_alloc(alloc, linker_set.n_markers,
-                            (void **)&marker_is_tgt, err_stack)),
+  ZX_ERR_TRY((ZXAlloc_alloc(alloc, alignof(bool), linker_set.n_markers,
+                            (zx_u8 **)&marker_is_tgt, err_stack)),
              err_stack);
   zx_u32 const tgt_marker_count = zx_fuzz_count_tgt(
       linker_set.marker_filename, linker_set.n_markers, params->tgt_file_filter,
       params->tgt_file_filter_len, marker_is_tgt);
 
   bool *err_is_tgt = nullptr;
-  ZX_ERR_TRY((ZXAlloc_alloc(alloc, linker_set.n_errs, (void **)&err_is_tgt,
-                            err_stack)),
+  ZX_ERR_TRY((ZXAlloc_alloc(alloc, alignof(bool), linker_set.n_errs,
+                            (zx_u8 **)&err_is_tgt, err_stack)),
              err_stack);
   zx_u32 const tgt_err_count = zx_fuzz_count_tgt(
       linker_set.err_filename, linker_set.n_errs, params->tgt_file_filter,
@@ -276,8 +278,8 @@ static ZXStatus ZXFuzzer_print_status(ZXFuzzer *fuzzer, bool clear_lines,
 
   zx_u32 const to_write = ZXFmt_n_written(fmt);
   zx_u64 n_written = 0;
-  ZX_ERR_TRY((zx_sys_write(ZX_STDERR, ZXFmt_buf(fmt), to_write, &n_written,
-                           err_stack)),
+  ZX_ERR_TRY((zx_sys_write(ZX_STDERR, (zx_u8 const *)ZXFmt_buf(fmt), to_write,
+                           &n_written, err_stack)),
              err_stack);
   ZX_ERR_ASSERT((n_written == to_write), err_stack);
 
@@ -423,7 +425,8 @@ ZXStatus zx_fuzz_main(ZXAlloc *alloc, ZXFuzzParams const *params,
   constexpr zx_u32 SIGNATURE_DEDUP_CAP = 1 << 21;
 
   char *fmt_buf = nullptr;
-  ZX_ERR_TRY((ZXAlloc_alloc(alloc, FMT_BUF_CAP, (void **)&fmt_buf, err_stack)),
+  ZX_ERR_TRY((ZXAlloc_alloc(alloc, alignof(char), FMT_BUF_CAP,
+                            (zx_u8 **)&fmt_buf, err_stack)),
              err_stack);
   ZXFmt fmt = ZXFmt_init(fmt_buf, FMT_BUF_CAP);
 

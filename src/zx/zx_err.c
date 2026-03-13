@@ -23,8 +23,8 @@ static void zx_err_format_(ZXFmt *fmt, ZXErrStack const *err_stack) {
   zx_err_format_(&fmt, err_stack);
 
   zx_u64 n_written = 0;
-  zx_u64 const status =
-      zx_sys_write(ZX_STDERR, buf, ZXFmt_n_written(&fmt), &n_written, &err_s);
+  zx_u64 const status = zx_sys_write(ZX_STDERR, (zx_u8 const *)buf,
+                                     ZXFmt_n_written(&fmt), &n_written, &err_s);
   (void)status;
   (void)n_written;
 

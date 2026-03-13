@@ -17,9 +17,9 @@ static inline bool keys_eql(void const *ctx, void const *a, void const *b) {
 
 static inline ZXStatus smoke_test(ZXAlloc *alloc, ZXErrStack *err_stack) {
   ZXHashtable table;
-  ZX_ERR_TRY(
-      (ZXHashtable_init(alloc, CAP, sizeof(key_type), &table, err_stack)),
-      err_stack);
+  ZX_ERR_TRY((ZXHashtable_init(alloc, CAP, alignof(key_type), sizeof(key_type),
+                               &table, err_stack)),
+             err_stack);
 
   for (zx_u64 i = 0; i < CAP / 2; i++) {
     key_type const key = i;
@@ -89,7 +89,8 @@ static inline ZXStatus smoke_test(ZXAlloc *alloc, ZXErrStack *err_stack) {
 
 static inline ZXStatus zero_size_test(ZXAlloc *alloc, ZXErrStack *err_stack) {
   ZXHashtable table;
-  ZX_ERR_TRY((ZXHashtable_init(alloc, 0, sizeof(key_type), &table, err_stack)),
+  ZX_ERR_TRY((ZXHashtable_init(alloc, 0, alignof(key_type), sizeof(key_type),
+                               &table, err_stack)),
              err_stack);
 
   return ZXStatus_Ok;
@@ -98,7 +99,7 @@ static inline ZXStatus zero_size_test(ZXAlloc *alloc, ZXErrStack *err_stack) {
 int main(void) {
   ZXErrStack err_stack = ZXErrStack_init();
 
-  void *mem = nullptr;
+  zx_u8 *mem = nullptr;
   ZX_ERR_TRY_FATAL((zx_page_alloc_4kb(MEMORY_SIZE, &mem, &err_stack)),
                    &err_stack);
 

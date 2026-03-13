@@ -4,7 +4,7 @@
 #include <zx/zx_page_alloc.h>
 #include <zx/zx_sys.h>
 
-static ZXStatus zx_page_mmap(zx_u64 size, int huge_page_flags, void **mem,
+static ZXStatus zx_page_mmap(zx_u64 size, int huge_page_flags, zx_u8 **mem,
                              ZXErrStack *err_stack) {
   ZX_ERR_ASSERT((mem != nullptr), err_stack);
   ZX_ERR_ASSERT((*mem == nullptr), err_stack);
@@ -20,7 +20,7 @@ static ZXStatus zx_page_mmap(zx_u64 size, int huge_page_flags, void **mem,
   return ZXStatus_Ok;
 }
 
-ZXStatus zx_page_alloc_4kb(zx_u64 size, void **mem, ZXErrStack *err_stack) {
+ZXStatus zx_page_alloc_4kb(zx_u64 size, zx_u8 **mem, ZXErrStack *err_stack) {
   constexpr zx_u64 ALIGNMENT = 1 << 12;
 
   ZX_ERR_ASSERT((size > 0), err_stack);
@@ -32,7 +32,8 @@ ZXStatus zx_page_alloc_4kb(zx_u64 size, void **mem, ZXErrStack *err_stack) {
   return ZXStatus_Ok;
 }
 
-ZXStatus zx_page_alloc_thp_2mb(zx_u64 size, void **mem, ZXErrStack *err_stack) {
+ZXStatus zx_page_alloc_thp_2mb(zx_u64 size, zx_u8 **mem,
+                               ZXErrStack *err_stack) {
   constexpr zx_u64 ALIGNMENT = 1 << 21;
 
   ZX_ERR_ASSERT((size > 0), err_stack);
@@ -46,7 +47,7 @@ ZXStatus zx_page_alloc_thp_2mb(zx_u64 size, void **mem, ZXErrStack *err_stack) {
   return ZXStatus_Ok;
 }
 
-ZXStatus zx_page_alloc_huge_2mb(zx_u64 size, void **mem,
+ZXStatus zx_page_alloc_huge_2mb(zx_u64 size, zx_u8 **mem,
                                 ZXErrStack *err_stack) {
   constexpr zx_u64 ALIGNMENT = 1 << 21;
 
@@ -61,7 +62,7 @@ ZXStatus zx_page_alloc_huge_2mb(zx_u64 size, void **mem,
   return ZXStatus_Ok;
 }
 
-ZXStatus zx_page_alloc_huge_1gb(zx_u64 size, void **mem,
+ZXStatus zx_page_alloc_huge_1gb(zx_u64 size, zx_u8 **mem,
                                 ZXErrStack *err_stack) {
   constexpr zx_u64 ALIGNMENT = 1 << 30;
 
@@ -76,7 +77,7 @@ ZXStatus zx_page_alloc_huge_1gb(zx_u64 size, void **mem,
   return ZXStatus_Ok;
 }
 
-ZXStatus zx_page_alloc_free(void *page, zx_u64 size, ZXErrStack *err_stack) {
+ZXStatus zx_page_alloc_free(zx_u8 *page, zx_u64 size, ZXErrStack *err_stack) {
   ZX_ERR_ASSERT((page != nullptr), err_stack);
 
   ZX_ERR_TRY((zx_sys_munmap(page, size, err_stack)), err_stack);

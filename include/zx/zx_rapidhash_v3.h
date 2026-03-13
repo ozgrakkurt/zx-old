@@ -64,18 +64,20 @@ static inline zx_u64 zx_rapidhash_v3_16(zx_u8 const *key, zx_u32 len,
   s ^= zx_rapidhash_v3_mix(s ^ ZX_RAPIDHASH_V3_SECRET[2],
                            ZX_RAPIDHASH_V3_SECRET[1]);
 
+  zx_u8 const *p = key;
+
   if (len >= 4) {
     s ^= (zx_u64){len};
     if (len >= 8) {
-      a = zx_rapidhash_v3_read64(key);
-      b = zx_rapidhash_v3_read64(&key[len - 8]);
+      a = zx_rapidhash_v3_read64(p);
+      b = zx_rapidhash_v3_read64(&p[len - 8]);
     } else {
-      a = zx_rapidhash_v3_read32(key);
-      b = zx_rapidhash_v3_read32(&key[len - 4]);
+      a = zx_rapidhash_v3_read32(p);
+      b = zx_rapidhash_v3_read32(&p[len - 4]);
     }
   } else if (len > 0) {
-    a = (((zx_u64){key[0]}) << 45) | key[len - 1];
-    b = key[len >> 1];
+    a = (((zx_u64)p[0]) << 45) | ((zx_u64)p[len - 1]);
+    b = (zx_u64)p[len >> 1];
   } else {
     a = 0;
     b = 0;

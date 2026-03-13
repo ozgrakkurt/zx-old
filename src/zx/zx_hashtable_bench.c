@@ -10,7 +10,7 @@
 #include <zx/zx_xoshiro256.h>
 
 constexpr zx_u64 MEMORY_SIZE = (zx_u64){1} << 30;
-constexpr zx_u64 CAP = 300123;
+constexpr zx_u64 CAP = 30123;
 
 typedef zx_u256 key_type;
 
@@ -24,25 +24,26 @@ static inline bool keys_eql(void const *ctx, void const *a, void const *b) {
 static inline ZXStatus do_inserts(ZXAlloc *alloc, ZXErrStack *err_stack) {
   constexpr zx_u32 fmt_buf_cap = 1 << 12;
   char *fmt_buf = nullptr;
-  ZX_ERR_TRY((ZXAlloc_alloc(alloc, fmt_buf_cap, (void **)&fmt_buf, err_stack)),
+  ZX_ERR_TRY((ZXAlloc_alloc(alloc, alignof(char), fmt_buf_cap,
+                            (zx_u8 **)&fmt_buf, err_stack)),
              err_stack);
 
   ZXFmt fmt = ZXFmt_init(fmt_buf, fmt_buf_cap);
 
   ZXHashtable table;
-  ZX_ERR_TRY(
-      (ZXHashtable_init(alloc, CAP, sizeof(key_type), &table, err_stack)),
-      err_stack);
+  ZX_ERR_TRY((ZXHashtable_init(alloc, CAP, alignof(key_type), sizeof(key_type),
+                               &table, err_stack)),
+             err_stack);
 
   zx_u64 *hashes = nullptr;
-  ZX_ERR_TRY(
-      (ZXAlloc_alloc(alloc, sizeof(zx_u64) * CAP, (void **)&hashes, err_stack)),
-      err_stack);
+  ZX_ERR_TRY((ZXAlloc_alloc(alloc, alignof(zx_u64), sizeof(zx_u64) * CAP,
+                            (zx_u8 **)&hashes, err_stack)),
+             err_stack);
 
   key_type *keys = nullptr;
-  ZX_ERR_TRY(
-      (ZXAlloc_alloc(alloc, sizeof(key_type) * CAP, (void **)&keys, err_stack)),
-      err_stack);
+  ZX_ERR_TRY((ZXAlloc_alloc(alloc, alignof(key_type), sizeof(key_type) * CAP,
+                            (zx_u8 **)&keys, err_stack)),
+             err_stack);
 
   ZXXoshiro256 rand = ZXXoshiro256_init(0);
 
@@ -87,8 +88,8 @@ static inline ZXStatus do_inserts(ZXAlloc *alloc, ZXErrStack *err_stack) {
   }
 
   zx_u64 n_written = 0;
-  ZX_ERR_TRY((zx_sys_write(ZX_STDERR, fmt_buf, ZXFmt_n_written(&fmt),
-                           &n_written, err_stack)),
+  ZX_ERR_TRY((zx_sys_write(ZX_STDERR, (zx_u8 const *)fmt_buf,
+                           ZXFmt_n_written(&fmt), &n_written, err_stack)),
              err_stack);
   (void)n_written;
 
@@ -98,7 +99,7 @@ static inline ZXStatus do_inserts(ZXAlloc *alloc, ZXErrStack *err_stack) {
 int main(void) {
   ZXErrStack err_stack = ZXErrStack_init();
 
-  void *mem = nullptr;
+  zx_u8 *mem = nullptr;
 
   ZX_ERR_TRY_FATAL((zx_page_alloc_thp_2mb(MEMORY_SIZE, &mem, &err_stack)),
                    &err_stack);

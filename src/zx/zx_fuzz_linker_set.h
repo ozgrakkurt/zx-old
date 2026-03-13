@@ -35,7 +35,7 @@ typedef struct ZXFuzzLinkerSet {
 } ZXFuzzLinkerSet;
 
 static ZXFuzzLinkerSet ZXFuzzLinkerSet_load(void) {
-  static_assert(sizeof(void *) <= sizeof(zx_u64));
+  static_assert(sizeof(void *) == sizeof(zx_u64));
 
   zx_u64 const n_markers = (((zx_u64)&__stop_zx_fuzz_marker_filename) -
                             ((zx_u64)&__start_zx_fuzz_marker_filename)) /

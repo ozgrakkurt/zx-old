@@ -34,7 +34,7 @@ constexpr zx_u64 MEMORY_SIZE = 1 << 16;
 int main(void) {
   ZXErrStack err_stack = ZXErrStack_init();
 
-  void *mem = nullptr;
+  zx_u8 *mem = nullptr;
   ZX_ERR_TRY_FATAL((zx_page_alloc_4kb(MEMORY_SIZE, &mem, &err_stack)),
                    &err_stack);
 

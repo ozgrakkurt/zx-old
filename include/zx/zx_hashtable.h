@@ -22,14 +22,13 @@
 #include <zx/zx_int.h>
 
 typedef struct ZXHashtable {
-  void *entries;
+  zx_u8 *entries;
   zx_u8 *metadata;
   zx_u32 cap_mask;
   zx_u32 capacity_left;
   zx_u32 capacity;
   zx_u8 padding[4];
 } ZXHashtable;
-
 static_assert(sizeof(ZXHashtable) == sizeof(void *) * 4);
 
 static inline zx_u32 ZXHashtable_capacity_left(ZXHashtable const *table) {
@@ -44,7 +43,8 @@ constexpr zx_u8 ZX_HASHTABLE_TAG_EMPTY = 0b11111111wbu;
 constexpr zx_u32 ZX_HASHTABLE_LOAD_FACTOR_ = 80;
 
 static inline ZXStatus ZXHashtable_init(ZXAlloc *alloc, zx_u32 capacity,
-                                        zx_u32 entry_size, ZXHashtable *table,
+                                        zx_u16 entry_align, zx_u32 entry_size,
+                                        ZXHashtable *table,
                                         ZXErrStack *err_stack) {
   ZX_ASSERT((alloc != nullptr));
   ZX_ASSERT((table != nullptr));
@@ -64,15 +64,16 @@ static inline ZXStatus ZXHashtable_init(ZXAlloc *alloc, zx_u32 capacity,
   // simple read path.
   zx_u32 const metadata_size = zx_chk_add_u32(cap, ZX_HASHTABLE_GROUP_SIZE_);
   zx_u8 *metadata = nullptr;
-  ZX_ERR_TRY(
-      (ZXAlloc_alloc(alloc, metadata_size, (void **)&metadata, err_stack)),
-      err_stack);
+  ZX_ERR_TRY((ZXAlloc_alloc(alloc, alignof(zx_u8), metadata_size, &metadata,
+                            err_stack)),
+             err_stack);
   __builtin_memset(metadata, ZX_HASHTABLE_TAG_EMPTY, metadata_size);
 
   zx_u64 const entries_size = zx_chk_mul_u64(entry_size, cap);
-  void *entries = nullptr;
-  ZX_ERR_TRY((ZXAlloc_alloc(alloc, entries_size, &entries, err_stack)),
-             err_stack);
+  zx_u8 *entries = nullptr;
+  ZX_ERR_TRY(
+      (ZXAlloc_alloc(alloc, entry_align, entries_size, &entries, err_stack)),
+      err_stack);
 
   *table = (ZXHashtable){
       .entries = entries,
@@ -107,29 +108,24 @@ static inline zx_u32 ZXHashtable_maybe_mirror_index_(zx_u32 cap_mask,
 typedef bool zx_hashtable_key_eqfn(void const *ctx, void const *entry_a,
                                    void const *entry_b);
 
-static inline void ZXHashtable_load_(void const *restrict group_ptr, zx_u8 tag,
-                                     zx_u16 *restrict tag_match,
-                                     zx_u16 *restrict empty_match) {
-  typedef unsigned long regt;
-  static_assert(8 == sizeof(regt));
+static inline void ZXHashtable_load_(void const *group_ptr, zx_u8 tag,
+                                     zx_u16 *tag_match, zx_u16 *empty_match) {
+  unsigned long tag_m;
+  unsigned long empty_m;
 
-  regt const gp = (regt)group_ptr;
-  regt const tg = (regt){tag};
-  regt tm;
-  regt em;
+  __asm__("vmovdqu %2, %%xmm0\n\t"              // load group
+          "vmovd %3, %%xmm1\n\t"                // load tag
+          "vpbroadcastb %%xmm1, %%xmm1\n\t"     // broadcast tag
+          "vpcmpeqb %%xmm0, %%xmm1, %%xmm1\n\t" // tag match
+          "vpmovmskb %%xmm1, %0\n\t"
+          "vpmovmskb %%xmm0, %1\n\t" // empty match
+          : "=r"(tag_m), "=r"(empty_m)
+          : "m"(*(zx_u8(*)[ZX_HASHTABLE_GROUP_SIZE_])group_ptr),
+            "r"((unsigned long)tag)
+          : "xmm0", "xmm1");
 
-  __asm__ volatile("vmovdqu (%2), %%xmm0\n\t"            // load group
-                   "vmovd %3, %%xmm1\n\t"                // load tag
-                   "vpbroadcastb %%xmm1, %%xmm1\n\t"     // broadcast tag
-                   "vpcmpeqb %%xmm0, %%xmm1, %%xmm1\n\t" // tag match
-                   "vpmovmskb %%xmm1, %0\n\t"
-                   "vpmovmskb %%xmm0, %1\n\t" // empty match
-                   : "=r"(tm), "=r"(em)
-                   : "r"(gp), "r"(tg)
-                   : "xmm0", "xmm1", "memory");
-
-  *tag_match = (zx_u16)tm;
-  *empty_match = (zx_u16)em;
+  *tag_match = (zx_u16)tag_m;
+  *empty_match = (zx_u16)empty_m;
 }
 
 typedef struct ZXHashtableFindIdx {
@@ -156,7 +152,7 @@ ZXHashtable_find_idx_(ZXHashtable const *const table, zx_u8 const tag,
     while (tag_match != 0) {
       zx_u8 const tag_pos = zx_ctz_u16(tag_match);
 
-      zx_u8 const *const entries = (zx_u8 const *)table->entries;
+      zx_u8 const *const entries = table->entries;
 
       zx_u32 const idx = (meta_idx + tag_pos) & cap_mask;
 
@@ -175,7 +171,7 @@ ZXHashtable_find_idx_(ZXHashtable const *const table, zx_u8 const tag,
       }
     }
 
-    if (empty_match != 0) {
+    if (zx_likely(empty_match != 0)) {
       ZX_FUZZ_MARKER;
 
       zx_u8 const tag_pos = zx_ctz_u16(empty_match);
@@ -186,7 +182,7 @@ ZXHashtable_find_idx_(ZXHashtable const *const table, zx_u8 const tag,
     }
 
     // Should have found an empty slot by now
-    ZX_ASSERT((stride <= cap_mask));
+    ZX_DBG_ASSERT((stride <= cap_mask));
 
     stride += ZX_HASHTABLE_GROUP_SIZE_;
     meta_idx = (meta_idx + stride) & cap_mask;
@@ -205,7 +201,7 @@ ZXHashtable_insert(ZXHashtable *const table, zx_u64 const hash,
   ZXHashtableFindIdx const find =
       ZXHashtable_find_idx_(table, tag, hash, entry, entry_size, ctx, key_eqfn);
 
-  zx_u8 *const entries = (zx_u8 *)table->entries;
+  zx_u8 *const entries = table->entries;
   void *const entry_ptr = &entries[entry_size * find.idx];
 
   __builtin_memcpy(entry_ptr, entry, entry_size);
@@ -243,7 +239,7 @@ ZXHashtable_get_or_insert(ZXHashtable *const table, zx_u64 const hash,
   ZXHashtableFindIdx const find =
       ZXHashtable_find_idx_(table, tag, hash, entry, entry_size, ctx, key_eqfn);
 
-  zx_u8 *const entries = (zx_u8 *)table->entries;
+  zx_u8 *const entries = table->entries;
   void *const entry_ptr = &entries[entry_size * find.idx];
 
   if (find.occupied) {
@@ -277,7 +273,7 @@ ZXHashtable_get(ZXHashtable const *const table, zx_u64 const hash,
       ZXHashtable_find_idx_(table, tag, hash, entry, entry_size, ctx, key_eqfn);
 
   if (find.occupied) {
-    zx_u8 const *const entries = (zx_u8 const *)table->entries;
+    zx_u8 const *const entries = table->entries;
     void const *const entry_ptr = &entries[entry_size * find.idx];
     ZX_FUZZ_MARKER;
     return entry_ptr;

@@ -58,7 +58,7 @@ constexpr zx_u32 FMT_BUF_SIZE = 1 << 12;
 int main(void) {
   ZXErrStack err_stack = ZXErrStack_init();
 
-  void *mem = nullptr;
+  zx_u8 *mem = nullptr;
   ZX_ERR_TRY_FATAL((zx_page_alloc_4kb(MEMORY_SIZE, &mem, &err_stack)),
                    &err_stack);
 
@@ -75,9 +75,9 @@ int main(void) {
 
   zx_u64 const to_write = ZXFmt_n_written(&fmt);
   zx_u64 n_written = 0;
-  ZX_ERR_TRY_FATAL(
-      (zx_sys_write(ZX_STDERR, fmt_buf, to_write, &n_written, &err_stack)),
-      &err_stack);
+  ZX_ERR_TRY_FATAL((zx_sys_write(ZX_STDERR, (zx_u8 const *)fmt_buf, to_write,
+                                 &n_written, &err_stack)),
+                   &err_stack);
   ZX_ASSERT((n_written == to_write));
 
   ZX_ERR_TRY_FATAL((zx_page_alloc_free(mem, MEMORY_SIZE, &err_stack)),
