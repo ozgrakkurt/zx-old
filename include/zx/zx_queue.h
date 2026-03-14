@@ -5,14 +5,15 @@
 #include <zx/zx_assert.h>
 #include <zx/zx_def.h>
 #include <zx/zx_err.h>
+#include <zx/zx_fuzz_instr.h>
 #include <zx/zx_int.h>
 
 typedef struct ZXQueue {
   zx_u8 *entries;
   zx_u32 start;
   zx_u32 len;
-  zx_u32 cap;
   zx_u32 cap_mask;
+  zx_u32 capacity;
 } ZXQueue;
 
 static inline ZXStatus ZXQueue_init(ZXAlloc *alloc, zx_u32 capacity,
@@ -34,8 +35,8 @@ static inline ZXStatus ZXQueue_init(ZXAlloc *alloc, zx_u32 capacity,
       .entries = entries,
       .start = 0,
       .len = 0,
-      .cap = cap,
       .cap_mask = cap - 1,
+      .capacity = capacity,
   };
 
   return ZXStatus_Ok;
@@ -45,9 +46,11 @@ static inline ZXStatus ZXQueue_init(ZXAlloc *alloc, zx_u32 capacity,
 // only failure reason is queue being full.
 static inline bool ZXQueue_push(ZXQueue *queue, void const *entry,
                                 zx_u32 entry_size) {
-  if (queue->cap == queue->len) {
+  if (queue->capacity == queue->len) {
+    ZX_FUZZ_MARKER;
     return false;
   }
+  ZX_FUZZ_MARKER;
 
   zx_u32 const end = (queue->start + queue->len) & queue->cap_mask;
 
@@ -61,8 +64,10 @@ static inline bool ZXQueue_push(ZXQueue *queue, void const *entry,
 // only failure reason is queue being empty.
 static inline bool ZXQueue_pop(ZXQueue *queue, zx_u32 entry_size, void *entry) {
   if (queue->len == 0) {
+    ZX_FUZZ_MARKER;
     return false;
   }
+  ZX_FUZZ_MARKER;
 
   zx_u32 const start = queue->start;
   zx_u64 const entry_offset = zx_chk_mul_u64(entry_size, start);
