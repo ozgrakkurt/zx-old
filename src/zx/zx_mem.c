@@ -60,10 +60,9 @@ __attribute__((no_builtin)) void *memmove(void *dest, const void *src,
 __attribute__((no_builtin)) sizet strlen(char const *src) {
   sizet count = ~((sizet)0);
 
-  __asm__ volatile("repne scasb\n\t"
-                   : "+c"(count), "+D"(src)
-                   : "a"(0)
-                   : "memory");
+  __asm__("repne scasb\n\t"
+          : "+c"(count), "+D"(src)
+          : "a"(0), "m"(*(zx_u8 const(*)[count])src));
 
   return ((sizet)0) - count - 2;
 }
