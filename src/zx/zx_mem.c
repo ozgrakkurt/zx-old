@@ -1,44 +1,55 @@
 #include <zx/zx_def.h>
 
+#ifndef __x86_64__
+#error "only x86_64 targets are supported"
+#endif
+
 typedef unsigned long sizet;
 static_assert(sizeof(void *) == sizeof(sizet));
 
-__attribute__((no_builtin)) void *
-memcpy(void *restrict dest, void const *restrict src, sizet count) {
-  zx_u8 *restrict dp = (zx_u8 *)dest;
-  zx_u8 const *restrict sp = (zx_u8 const *)src;
+void *memcpy(void *restrict dest, const void *restrict src, sizet count) {
+  void *orig_dest = dest;
+  __asm__("rep movsb\n\t"
+          : "+D"(dest), "+S"(src), "+c"(count), "=m"(*(zx_u8(*)[count])dest)
+          : "m"(*(zx_u8 const(*)[count])src)
+          : "cc");
+  return orig_dest;
+}
 
-  for (sizet i = 0; i < count; i++) {
-    dp[i] = sp[i];
-  }
+void *memset(void *dest, int ch, sizet count) {
+  void *ptr = dest;
+  unsigned char val = (unsigned char)ch;
+
+  __asm__("rep stosb\n\t"
+          : "+D"(ptr), "+c"(count), "=m"(*(zx_u8(*)[count])dest)
+          : "a"(val)
+          : "cc");
 
   return dest;
 }
 
-__attribute__((no_builtin)) void *memset(void *dest, int ch, sizet count) {
-  zx_u8 *dp = (zx_u8 *)dest;
-  zx_u8 c = (zx_u8)ch;
+void *memmove(void *dest, const void *src, sizet count) {
+  if (count == 0 || dest == src)
+    return dest;
 
-  for (sizet i = 0; i < count; i++) {
-    dp[i] = c;
-  }
+  if (dest < src || ((sizet)src + count <= (sizet)dest)) {
+    // forwards
+    __asm__("rep movsb\n\t"
+            : "+D"(dest), "+S"(src), "+c"(count), "=m"(*(zx_u8(*)[count])dest)
+            : "m"(*(zx_u8 const(*)[count])src)
+            : "cc");
+  } else {
+    // backwards
+    void *d_end = (char *)dest + count - 1;
+    const void *s_end = (const char *)src + count - 1;
 
-  return dest;
-}
-
-__attribute__((no_builtin)) void *memmove(void *dest, void const *src,
-                                          sizet count) {
-  zx_u8 *dp = (zx_u8 *)dest;
-  zx_u8 const *sp = (zx_u8 const *)src;
-
-  if (dp < sp) {
-    for (sizet i = 0; i < count; i++) {
-      dp[i] = sp[i];
-    }
-  } else if (dp > sp) {
-    for (sizet i = count; i > 0; i--) {
-      dp[i - 1] = sp[i - 1];
-    }
+    __asm__("std\n\t"
+            "rep movsb\n\t"
+            "cld\n\t"
+            : "+D"(d_end), "+S"(s_end), "+c"(count),
+              "=m"(*(zx_u8(*)[count])dest)
+            : "m"(*(zx_u8 const(*)[count])src)
+            : "cc");
   }
 
   return dest;
