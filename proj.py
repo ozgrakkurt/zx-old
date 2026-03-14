@@ -29,6 +29,7 @@ ZX: Library = Library(
         "zx_alloc_test": set([]),
         "zx_err_test": set([]),
         "zx_queue_test": set([]),
+        "zx_slab_test": set([]),
     },
     bench_targets={
         "zx_hashtable_bench": set([]),

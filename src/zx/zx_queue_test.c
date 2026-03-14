@@ -49,6 +49,15 @@ static inline ZXStatus zero_size_test(ZXAlloc *alloc, ZXErrStack *err_stack) {
                            &queue, err_stack)),
              err_stack);
 
+  // should be empty
+  key_type key = 69;
+  ZX_ERR_ASSERT((!ZXQueue_pop(&queue, sizeof(key_type), &key)), err_stack);
+  ZX_ERR_ASSERT((key == 69), err_stack);
+
+  // should be full
+  key = 69;
+  ZX_ERR_ASSERT(!ZXQueue_push(&queue, &key, sizeof(key_type)), err_stack);
+
   return ZXStatus_Ok;
 }
 

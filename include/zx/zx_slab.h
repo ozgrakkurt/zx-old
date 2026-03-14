@@ -23,7 +23,7 @@ static inline ZXStatus ZXSlab_init(ZXAlloc *alloc, zx_u32 capacity,
                                    ZXSlab *slab, ZXErrStack *err_stack) {
   ZX_ASSERT((alloc != nullptr));
   ZX_ASSERT((slab != nullptr));
-  ZX_ASSERT((entry_stack != nullptr));
+  ZX_ASSERT((err_stack != nullptr));
 
   bool *is_occupied = nullptr;
   zx_u64 const is_occupied_byte_size = zx_chk_mul_u64(capacity, sizeof(bool));
