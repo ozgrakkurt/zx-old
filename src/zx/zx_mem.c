@@ -73,14 +73,17 @@ __attribute__((no_builtin)) int memcmp(void const *lhs, void const *rhs,
     return 0;
 
   int result;
+  char a;
+  char b;
   __asm__("repe cmpsb\n\t"
-          "seta %%al\n\t"
-          "setb %%dl\n\t"
-          "subb %%dl, %%al\n\t"
-          "movsbl %%al, %[result]\n\t"
-          : "+S"(lhs), "+D"(rhs), "+c"(count), [result] "=r"(result)
+          "seta %[a]\n\t"
+          "setb %[b]\n\t"
+          "subb %[b], %[a]\n\t"
+          "movsbl %[a], %[result]\n\t"
+          : [a] "=r"(a), [b] "=r"(b), "+S"(lhs), "+D"(rhs),
+            "+c"(count), [result] "=r"(result)
           : "m"(*(zx_u8 const(*)[count])lhs), "m"(*(zx_u8 const(*)[count])rhs)
-          : "cc", "rdx", "rax");
+          : "cc");
 
   return result;
 }
