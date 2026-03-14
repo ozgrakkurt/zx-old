@@ -63,7 +63,7 @@ FIBER: Library = Library(
 )
 
 FIO: Library = Library(
-    source_files=set([""]),
+    source_files=set(["fio.c"]),
 )
 
 PROJECT: Project = Project(
@@ -71,5 +71,6 @@ PROJECT: Project = Project(
         "zx": ZX,
         "streamvbyte": STREAMVBYTE,
         "fiber": FIBER,
+        "fio": FIO,
     },
 )

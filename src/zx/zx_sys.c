@@ -9,6 +9,7 @@
 #include <zx/zx_def.h>
 #include <zx/zx_err.h>
 #include <zx/zx_sys.h>
+#include <zx/zx_sys_io_uring.h>
 
 typedef unsigned long zx_sys_reg;
 static_assert(sizeof(zx_sys_reg) == sizeof(zx_sys_reg));
@@ -140,6 +141,11 @@ constexpr zx_sys_reg ZX_SYSCALL_MUNMAP = 11;
 constexpr zx_sys_reg ZX_SYSCALL_MADVISE = 28;
 constexpr zx_sys_reg ZX_SYSCALL_EXIT_GROUP = 231;
 
+// echo '#include <sys/syscall.h>' | gcc -E -dM -xc - | grep -i "io_uring"
+constexpr zx_sys_reg ZX_SYSCALL_IO_URING_SETUP = 425;
+constexpr zx_sys_reg ZX_SYSCALL_IO_URING_ENTER = 426;
+constexpr zx_sys_reg ZX_SYSCALL_IO_URING_REGISTER = 427;
+
 ZXStatus zx_sys_read(zx_i32 fd, zx_u8 *buf, zx_u64 size, zx_u64 *n_read,
                      ZXErrStack *err_stack) {
   constexpr zx_u64 MAX = 0x7ffff000wbu;
@@ -221,6 +227,49 @@ ZXStatus zx_sys_madvise(zx_u8 *mem, zx_u64 length, zx_i32 advice,
                         ZXErrStack *err_stack) {
   zx_sys_reg const ret = zx_syscall3(ZX_SYSCALL_MADVISE, (zx_sys_reg)mem,
                                      (zx_sys_reg)length, (zx_sys_reg)advice);
+
+  ZXStatus const status = zx_sys_status(ret);
+  if (status != ZXStatus_Ok) {
+    ZX_ERR_RETURN(status, err_stack);
+  }
+
+  return ZXStatus_Ok;
+}
+
+ZXStatus zx_sys_io_uring_setup(zx_u32 entries, ZXSysIoUringParams *params,
+                               ZXErrStack *err_stack) {
+  zx_sys_reg const ret = zx_syscall2(ZX_SYSCALL_IO_URING_SETUP,
+                                     (zx_sys_reg)entries, (zx_sys_reg)params);
+
+  ZXStatus const status = zx_sys_status(ret);
+  if (status != ZXStatus_Ok) {
+    ZX_ERR_RETURN(status, err_stack);
+  }
+
+  return ZXStatus_Ok;
+}
+
+ZXStatus zx_sys_io_uring_enter(zx_i32 fd, zx_u32 to_submit, zx_u32 min_complete,
+                               zx_u32 flags, void *arg, zx_u64 sz,
+                               ZXErrStack *err_stack) {
+  zx_sys_reg const ret =
+      zx_syscall6(ZX_SYSCALL_IO_URING_ENTER, (zx_sys_reg)fd,
+                  (zx_sys_reg)to_submit, (zx_sys_reg)min_complete,
+                  (zx_sys_reg)flags, (zx_sys_reg)arg, (zx_sys_reg)sz);
+
+  ZXStatus const status = zx_sys_status(ret);
+  if (status != ZXStatus_Ok) {
+    ZX_ERR_RETURN(status, err_stack);
+  }
+
+  return ZXStatus_Ok;
+}
+
+ZXStatus zx_sys_io_uring_register(zx_i32 fd, zx_u32 opcode, void const *arg,
+                                  zx_u32 nr_args, ZXErrStack *err_stack) {
+  zx_sys_reg const ret =
+      zx_syscall4(ZX_SYSCALL_IO_URING_REGISTER, (zx_sys_reg)fd,
+                  (zx_sys_reg)opcode, (zx_sys_reg)arg, (zx_sys_reg)nr_args);
 
   ZXStatus const status = zx_sys_status(ret);
   if (status != ZXStatus_Ok) {

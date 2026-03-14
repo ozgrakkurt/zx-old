@@ -32,7 +32,7 @@ ZXStatus test_allocator(ZXAlloc *alloc, ZXErrStack *err_stack) {
   zx_u8 *zero_ptr = nullptr;
   ZX_ERR_TRY((ZXAlloc_alloc(alloc, alignof(zx_u8), 0, &zero_ptr, err_stack)),
              err_stack);
-  ZX_ERR_ASSERT((zero_ptr == nullptr), err_stack);
+  ZX_ERR_ASSERT((zero_ptr != nullptr), err_stack);
 
   zx_u8 *big_ptr = nullptr;
   ZXStatus const oom_status =
@@ -54,7 +54,7 @@ ZXStatus test_allocator(ZXAlloc *alloc, ZXErrStack *err_stack) {
 
   ZX_ERR_TRY((ZXAlloc_alloc(alloc, alignof(zx_u8), 0, &zero_ptr, err_stack)),
              err_stack);
-  ZX_ERR_ASSERT((zero_ptr == nullptr), err_stack);
+  ZX_ERR_ASSERT((zero_ptr != nullptr), err_stack);
 
   return ZXStatus_Ok;
 }

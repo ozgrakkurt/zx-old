@@ -5,7 +5,7 @@
 #include <zx/zx_int.h>
 
 ZXAlloc ZXAlloc_init(zx_u8 *buf, zx_u64 capacity) {
-  ZX_ASSERT((buf != nullptr || capacity == 0));
+  ZX_ASSERT((buf != nullptr));
 
   return (ZXAlloc){
       .capacity = capacity,
@@ -30,11 +30,6 @@ ZXStatus ZXAlloc_alloc(ZXAlloc *self, zx_u16 align, zx_u64 size, zx_u8 **ptr,
   ZX_ASSERT((align <= MAX_ALIGN));
   ZX_ASSERT((align > 0));
   ZX_ASSERT((zx_is_pow_two_u16(align)));
-
-  if (size == 0) {
-    *ptr = nullptr;
-    return ZXStatus_Ok;
-  }
 
   ZXAlloc const state = *self;
   static_assert(sizeof(void *) == sizeof(zx_u64));
