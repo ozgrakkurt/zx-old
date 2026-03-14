@@ -7,15 +7,17 @@
 typedef unsigned long sizet;
 static_assert(sizeof(void *) == sizeof(sizet));
 
-void *memcpy(void *restrict dest, const void *restrict src, sizet count) {
-  void *orig_dest = dest;
+__attribute__((no_builtin)) void *
+memcpy(void *restrict dest, const void *restrict src, sizet count) {
+  void *const orig_dest = dest;
   __asm__("rep movsb\n\t"
           : "+D"(dest), "+S"(src), "+c"(count), "=m"(*(zx_u8(*)[count])dest)
           : "m"(*(zx_u8 const(*)[count])src));
   return orig_dest;
 }
 
-void *memset(void *dest, int ch, sizet count) {
+__attribute__((no_builtin)) void *memset(void *const dest, int ch,
+                                         sizet count) {
   void *ptr = dest;
   unsigned char val = (unsigned char)ch;
 
@@ -26,9 +28,13 @@ void *memset(void *dest, int ch, sizet count) {
   return dest;
 }
 
-void *memmove(void *dest, const void *src, sizet count) {
-  if (count == 0 || dest == src)
+__attribute__((no_builtin)) void *memmove(void *dest, const void *src,
+                                          sizet count) {
+  if (count == 0 || dest == src) {
     return dest;
+  }
+
+  void *const orig_dest = dest;
 
   if (dest < src || ((sizet)src + count <= (sizet)dest)) {
     // forwards
@@ -48,27 +54,34 @@ void *memmove(void *dest, const void *src, sizet count) {
             : "m"(*(zx_u8 const(*)[count])src));
   }
 
-  return dest;
+  return orig_dest;
 }
 
 __attribute__((no_builtin)) sizet strlen(char const *src) {
-  zx_u8 const *sp = (zx_u8 const *)src;
-  sizet count = 0;
-  while (*sp++ != 0)
-    count++;
-  return count;
+  sizet count = ~((sizet)0);
+
+  __asm__ volatile("repne scasb\n\t"
+                   : "+c"(count), "+D"(src)
+                   : "a"(0)
+                   : "memory");
+
+  return ((sizet)0) - count - 2;
 }
 
 __attribute__((no_builtin)) int memcmp(void const *lhs, void const *rhs,
                                        sizet count) {
-  zx_u8 const *lhsp = (zx_u8 const *)lhs;
-  zx_u8 const *rhsp = (zx_u8 const *)rhs;
+  if (count == 0)
+    return 0;
 
-  for (sizet i = 0; i < count; i++) {
-    if (lhsp[i] != rhsp[i]) {
-      return (int)(lhsp[i] - rhsp[i]);
-    }
-  }
+  int result;
+  __asm__("repe cmpsb\n\t"
+          "seta %%al\n\t"
+          "setb %%dl\n\t"
+          "subb %%dl, %%al\n\t"
+          "movsbl %%al, %[result]\n\t"
+          : "+S"(lhs), "+D"(rhs), "+c"(count), [result] "=r"(result)
+          : "m"(*(zx_u8 const(*)[count])lhs), "m"(*(zx_u8 const(*)[count])rhs)
+          : "cc", "rdx", "rax");
 
-  return 0;
+  return result;
 }
