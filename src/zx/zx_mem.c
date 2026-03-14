@@ -11,8 +11,7 @@ void *memcpy(void *restrict dest, const void *restrict src, sizet count) {
   void *orig_dest = dest;
   __asm__("rep movsb\n\t"
           : "+D"(dest), "+S"(src), "+c"(count), "=m"(*(zx_u8(*)[count])dest)
-          : "m"(*(zx_u8 const(*)[count])src)
-          : "cc");
+          : "m"(*(zx_u8 const(*)[count])src));
   return orig_dest;
 }
 
@@ -22,8 +21,7 @@ void *memset(void *dest, int ch, sizet count) {
 
   __asm__("rep stosb\n\t"
           : "+D"(ptr), "+c"(count), "=m"(*(zx_u8(*)[count])dest)
-          : "a"(val)
-          : "cc");
+          : "a"(val));
 
   return dest;
 }
@@ -36,8 +34,7 @@ void *memmove(void *dest, const void *src, sizet count) {
     // forwards
     __asm__("rep movsb\n\t"
             : "+D"(dest), "+S"(src), "+c"(count), "=m"(*(zx_u8(*)[count])dest)
-            : "m"(*(zx_u8 const(*)[count])src)
-            : "cc");
+            : "m"(*(zx_u8 const(*)[count])src));
   } else {
     // backwards
     void *d_end = (char *)dest + count - 1;
@@ -48,8 +45,7 @@ void *memmove(void *dest, const void *src, sizet count) {
             "cld\n\t"
             : "+D"(d_end), "+S"(s_end), "+c"(count),
               "=m"(*(zx_u8(*)[count])dest)
-            : "m"(*(zx_u8 const(*)[count])src)
-            : "cc");
+            : "m"(*(zx_u8 const(*)[count])src));
   }
 
   return dest;
