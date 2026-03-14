@@ -3,8 +3,8 @@
 #include <zx/zx_def.h>
 #include <zx/zx_err.h>
 #include <zx/zx_fmt.h>
+#include <zx/zx_io.h>
 #include <zx/zx_page_alloc.h>
-#include <zx/zx_sys.h>
 #include <zx/zx_time.h>
 #include <zx/zx_xoshiro256.h>
 
@@ -124,11 +124,7 @@ static ZXStatus roundtrip(ZXAlloc *alloc, ZXErrStack *err_stack) {
                         (zx_u32 *)output, LEN * RATIO, err_stack)),
              err_stack);
 
-  zx_u64 n_written = 0;
-  ZX_ERR_TRY((zx_sys_write(ZX_STDERR, (zx_u8 const *)fmt_buf,
-                           ZXFmt_n_written(&fmt), &n_written, err_stack)),
-             err_stack);
-  (void)n_written;
+  ZX_ERR_TRY_FATAL((zx_io_print(ZX_STDERR, &fmt, err_stack)), err_stack);
 
   return ZXStatus_Ok;
 }

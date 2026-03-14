@@ -7,9 +7,9 @@
 #include <zx/zx_fmt.h>
 #include <zx/zx_fuzz.h>
 #include <zx/zx_int.h>
+#include <zx/zx_io.h>
 #include <zx/zx_memmem.h>
 #include <zx/zx_rapidhash_v3.h>
-#include <zx/zx_sys.h>
 #include <zx/zx_xoshiro256.h>
 
 static void zx_fuzz_clear_linker_set(ZXFuzzLinkerSet const *linker_set) {
@@ -276,12 +276,7 @@ static ZXStatus ZXFuzzer_print_status(ZXFuzzer *fuzzer, bool clear_lines,
 
   ZX_FMT(fmt, (char)'\n');
 
-  zx_u32 const to_write = ZXFmt_n_written(fmt);
-  zx_u64 n_written = 0;
-  ZX_ERR_TRY((zx_sys_write(ZX_STDERR, (zx_u8 const *)ZXFmt_buf(fmt), to_write,
-                           &n_written, err_stack)),
-             err_stack);
-  ZX_ERR_ASSERT((n_written == to_write), err_stack);
+  ZX_ERR_TRY((zx_io_print(ZX_STDERR, fmt, err_stack)), err_stack);
 
   ZXFmt_reset(fmt);
 

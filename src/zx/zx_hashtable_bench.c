@@ -3,9 +3,9 @@
 #include <zx/zx_err.h>
 #include <zx/zx_fmt.h>
 #include <zx/zx_hashtable.h>
+#include <zx/zx_io.h>
 #include <zx/zx_page_alloc.h>
 #include <zx/zx_rapidhash_v3.h>
-#include <zx/zx_sys.h>
 #include <zx/zx_time.h>
 #include <zx/zx_xoshiro256.h>
 
@@ -87,11 +87,7 @@ static inline ZXStatus do_inserts(ZXAlloc *alloc, ZXErrStack *err_stack) {
     ZX_FMT(&fmt, "Get: ", get_ticks_per_elem, " ticks per element.\n");
   }
 
-  zx_u64 n_written = 0;
-  ZX_ERR_TRY((zx_sys_write(ZX_STDERR, (zx_u8 const *)fmt_buf,
-                           ZXFmt_n_written(&fmt), &n_written, err_stack)),
-             err_stack);
-  (void)n_written;
+  ZX_ERR_TRY((zx_io_print(ZX_STDERR, &fmt, err_stack)), err_stack);
 
   return ZXStatus_Ok;
 }
