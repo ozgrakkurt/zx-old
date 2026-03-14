@@ -62,6 +62,10 @@ FIBER: Library = Library(
     },
 )
 
+FIO: Library = Library(
+    source_files=set([""]),
+)
+
 PROJECT: Project = Project(
     libraries={
         "zx": ZX,

@@ -145,6 +145,8 @@ def make_cflags(profile: Profile, config: Config) -> List[str]:
         "-Wextra",
         "-Wconversion",
         "-Wsign-conversion",
+        # warn on variable length array usage
+        "-Wvla",
         # these don't seem to catch much but enable anyways
         "-Wpointer-bool-conversion",
         "-Wbool-operation",

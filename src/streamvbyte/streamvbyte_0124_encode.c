@@ -62,48 +62,45 @@ ZXStatus streamvbyte_0124_encode(zx_u32 const *restrict input, zx_u32 input_len,
     regt in = (regt)input;
     small_regt n_iter = n_whole;
 
-    __asm__("vmovd %[ones], %%xmm0\n\t" // load ones
-            "vpbroadcastd %%xmm0, %%xmm0\n\t"
-            "vmovd %[gather_bits], %%xmm1\n\t" // load gather_bits
-            "vpbroadcastd %%xmm1, %%xmm1\n\t"
-            "vmovdqu %[code_table], %%xmm2\n\t"   // load code_table
-            "vmovdqu %[gather_bytes], %%xmm3\n\t" // load gather_bytes
-            "vmovdqu %[aggregators], %%xmm4\n\t"  // load aggregators
-            "0:\n\t"                              // main encode loop
-            "vmovdqu (%[input]), %%xmm5\n\t"      // load from input
-            "vpminub %%xmm0, %%xmm5, %%xmm6\n\t"
-            "vpmaddwd %%xmm1, %%xmm6, %%xmm6\n\t" // m0
-            "vpshufb %%xmm6, %%xmm2, %%xmm6\n\t"
-            "vpshufb %%xmm3, %%xmm6, %%xmm6\n\t"
-            "vpmaddwd %%xmm4, %%xmm6, %%xmm6\n\t" // m1
-            "vpextrb $1, %%xmm6, %%r9\n\t"        // code
-            "movb %%r9b, (%[out_head])\n\t"       // write code to output
-            "movq %%r9, %%r10\n\t"
-            "shlq $4, %%r10\n\t" // prep shuffle offset
-            "vmovdqu (%[shuffle_table], %%r10), %%xmm7\n\t" // load shuffle
-            "movzbq (%[length_table], %%r9), %%r11\n\t"     // load length
-            "vpshufb %%xmm7, %%xmm5, %%xmm5\n\t"            // do shuffle
-            "vmovdqu %%xmm5, (%[out_data])\n\t"             // store to output
-            "addq %%r11, %[out_data]\n\t" // increment out offset
-            "addq $16, %[input]\n\t"
-            "incq %[out_head]\n\t"
-            "decl %[n_iter]\n\t" // check loop counter
-            "jnz 0b\n\t"
-            : [out_data] "+r"(out_data), [out_head] "+r"(out_head),
-              [input] "+r"(in), [n_iter] "+r"(n_iter),
-              "=m"(*(zx_u8(*)[output_size])output)
-            : [ones] "r"(ones), [gather_bits] "r"(gather_bits),
-              [code_table] "m"(code_table), [gather_bytes] "m"(gather_bytes),
-              [aggregators] "m"(aggregators),
-              [length_table] "r"(
-                  STREAMVBYTE_SHUFFLE_TABLES_0124_ENCODE_LENGTH_TABLE),
-              [shuffle_table] "r"(
-                  STREAMVBYTE_SHUFFLE_TABLES_0124_ENCODE_SHUFFLE_TABLE),
-              "m"(STREAMVBYTE_SHUFFLE_TABLES_0124_ENCODE_LENGTH_TABLE),
-              "m"(STREAMVBYTE_SHUFFLE_TABLES_0124_ENCODE_SHUFFLE_TABLE),
-              "m"(*(zx_u32 const(*)[input_len])input)
-            : "xmm0", "xmm1", "xmm2", "xmm3", "xmm4", "xmm5", "xmm6", "xmm7",
-              "r9", "r10", "r11", "cc");
+    __asm__ volatile(
+        "vmovd %[ones], %%xmm0\n\t" // load ones
+        "vpbroadcastd %%xmm0, %%xmm0\n\t"
+        "vmovd %[gather_bits], %%xmm1\n\t" // load gather_bits
+        "vpbroadcastd %%xmm1, %%xmm1\n\t"
+        "vmovdqu %[code_table], %%xmm2\n\t"   // load code_table
+        "vmovdqu %[gather_bytes], %%xmm3\n\t" // load gather_bytes
+        "vmovdqu %[aggregators], %%xmm4\n\t"  // load aggregators
+        "0:\n\t"                              // main encode loop
+        "vmovdqu (%[input]), %%xmm5\n\t"      // load from input
+        "vpminub %%xmm0, %%xmm5, %%xmm6\n\t"
+        "vpmaddwd %%xmm1, %%xmm6, %%xmm6\n\t" // m0
+        "vpshufb %%xmm6, %%xmm2, %%xmm6\n\t"
+        "vpshufb %%xmm3, %%xmm6, %%xmm6\n\t"
+        "vpmaddwd %%xmm4, %%xmm6, %%xmm6\n\t" // m1
+        "vpextrb $1, %%xmm6, %%r9\n\t"        // code
+        "movb %%r9b, (%[out_head])\n\t"       // write code to output
+        "movq %%r9, %%r10\n\t"
+        "shlq $4, %%r10\n\t"                            // prep shuffle offset
+        "vmovdqu (%[shuffle_table], %%r10), %%xmm7\n\t" // load shuffle
+        "movzbq (%[length_table], %%r9), %%r11\n\t"     // load length
+        "vpshufb %%xmm7, %%xmm5, %%xmm5\n\t"            // do shuffle
+        "vmovdqu %%xmm5, (%[out_data])\n\t"             // store to output
+        "addq %%r11, %[out_data]\n\t"                   // increment out offset
+        "addq $16, %[input]\n\t"
+        "incq %[out_head]\n\t"
+        "decl %[n_iter]\n\t" // check loop counter
+        "jnz 0b\n\t"
+        : [out_data] "+r"(out_data), [out_head] "+r"(out_head),
+          [input] "+r"(in), [n_iter] "+r"(n_iter)
+        : [ones] "r"(ones), [gather_bits] "r"(gather_bits),
+          [code_table] "m"(code_table), [gather_bytes] "m"(gather_bytes),
+          [aggregators] "m"(aggregators),
+          [length_table] "r"(
+              STREAMVBYTE_SHUFFLE_TABLES_0124_ENCODE_LENGTH_TABLE),
+          [shuffle_table] "r"(
+              STREAMVBYTE_SHUFFLE_TABLES_0124_ENCODE_SHUFFLE_TABLE)
+        : "xmm0", "xmm1", "xmm2", "xmm3", "xmm4", "xmm5", "xmm6", "xmm7", "r9",
+          "r10", "r11", "cc", "memory");
 
     out_offset = (zx_u32)(out_data - (regt)output);
   }

@@ -53,7 +53,7 @@ ZXStatus streamvbyte_0124_decode(zx_u8 const *restrict input, zx_u32 input_size,
     regt const in_end = (regt)&input[input_size];
     small_regt n_iter = n_whole;
 
-    __asm__(
+    __asm__ volatile(
         "0:\n\t"                                    // main decode loop
         "movzbq (%[in_head]), %%r9\n\t"             // get code
         "movzbq (%[length_table], %%r9), %%r10\n\t" // get len
@@ -73,16 +73,13 @@ ZXStatus streamvbyte_0124_decode(zx_u8 const *restrict input, zx_u32 input_size,
         "jnz 0b\n\t"
         "1:\n\t" // marker for early exiting
         : [in_data] "+r"(in_data), [in_head] "+r"(in_head), [out] "+r"(out),
-          [n_iter] "+r"(n_iter), "=m"(*(zx_u32(*)[output_len])output)
+          [n_iter] "+r"(n_iter)
         : [in_end] "r"(in_end),
           [length_table] "r"(
               STREAMVBYTE_SHUFFLE_TABLES_0124_DECODE_LENGTH_TABLE),
           [shuffle_table] "r"(
-              STREAMVBYTE_SHUFFLE_TABLES_0124_DECODE_SHUFFLE_TABLE),
-          "m"(STREAMVBYTE_SHUFFLE_TABLES_0124_DECODE_LENGTH_TABLE),
-          "m"(STREAMVBYTE_SHUFFLE_TABLES_0124_DECODE_SHUFFLE_TABLE),
-          "m"(*(zx_u8 const(*)[input_size])input)
-        : "xmm0", "xmm1", "r9", "r10", "r11", "cc");
+              STREAMVBYTE_SHUFFLE_TABLES_0124_DECODE_SHUFFLE_TABLE)
+        : "xmm0", "xmm1", "r9", "r10", "r11", "cc", "memory");
 
     // we should have processed to the end unless we hit a problem
     ZX_ERR_ASSERT((out == ((regt)&output[n_whole * 4])), err_stack);
