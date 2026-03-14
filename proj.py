@@ -52,9 +52,20 @@ STREAMVBYTE: Library = Library(
     },
 )
 
+FIBER: Library = Library(
+    source_files=set(["fiber.c"]),
+    test_targets={
+        "fiber_test": set([]),
+    },
+    bench_targets={
+        "fiber_bench": set([]),
+    },
+)
+
 PROJECT: Project = Project(
     libraries={
         "zx": ZX,
         "streamvbyte": STREAMVBYTE,
+        "fiber": FIBER,
     },
 )
