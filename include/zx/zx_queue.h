@@ -42,6 +42,10 @@ static inline ZXStatus ZXQueue_init(ZXAlloc *alloc, zx_u32 capacity,
   return ZXStatus_Ok;
 }
 
+static inline zx_u32 ZXQueue_capacity_left(ZXQueue const *queue) {
+  return zx_chk_sub_u32(queue->capacity, queue->len);
+}
+
 // returns true if push succeeded, false if not.
 // only failure reason is queue being full.
 static inline bool ZXQueue_push(ZXQueue *queue, void const *entry,

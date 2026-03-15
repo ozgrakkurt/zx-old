@@ -7,7 +7,6 @@
 #include <zx/zx_page_alloc.h>
 #include <zx/zx_rapidhash_v3.h>
 #include <zx/zx_slab.h>
-#include <zx/zx_xoshiro256.h>
 
 typedef struct FuzzCtx {
   void *mem;
@@ -19,7 +18,7 @@ static ZXStatus fuzz_one(void *usr_ctx, ZXFuzzInput *fuzz_input,
   FuzzCtx const *ctx = (FuzzCtx const *)usr_ctx;
   ZXAlloc alloc = ZXAlloc_init(ctx->mem, ctx->cap);
 
-  zx_u32 const MAX_CAP = 1024;
+  zx_u32 const MAX_CAP = 256;
   zx_u32 const capacity =
       (((zx_u32)ZXFuzzInput_next(fuzz_input)) % MAX_CAP) | 1;
 

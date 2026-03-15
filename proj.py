@@ -38,6 +38,7 @@ ZX: Library = Library(
     fuzz_targets={
         "zx_hashtable_fuzz": set([]),
         "zx_slab_fuzz": set([]),
+        "zx_queue_fuzz": set([]),
     },
 )
 
