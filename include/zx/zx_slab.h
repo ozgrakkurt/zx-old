@@ -18,6 +18,10 @@ typedef struct ZXSlab {
 } ZXSlab;
 static_assert(sizeof(ZXSlab) == sizeof(void *) * 5);
 
+static inline zx_u32 ZXSlab_capacity_left(ZXSlab const *slab) {
+  return zx_chk_sub_u32(slab->capacity, slab->n_occupied);
+}
+
 static inline ZXStatus ZXSlab_init(ZXAlloc *alloc, zx_u32 capacity,
                                    zx_u16 entry_align, zx_u32 entry_size,
                                    ZXSlab *slab, ZXErrStack *err_stack) {
@@ -81,6 +85,7 @@ static inline zx_u64 ZXSlab_insert(ZXSlab *slab, void const *entry,
   return ((zx_u64){current_generation} << 32 | (zx_u64){key_idx});
 }
 
+// It is invalid to call this function with a key that doesn't exist in the slab
 static inline void ZXSlab_remove(ZXSlab *slab, zx_u64 key, zx_u32 entry_size,
                                  void *entry_out) {
   zx_u32 const key_idx = (zx_u32)key;
@@ -100,6 +105,7 @@ static inline void ZXSlab_remove(ZXSlab *slab, zx_u64 key, zx_u32 entry_size,
   __builtin_memcpy(entry_out, &slab->entries[entry_offset], entry_size);
 }
 
+// It is invalid to call this function with a key that doesn't exist in the slab
 static inline void *ZXSlab_get_mut(ZXSlab const *slab, zx_u64 key,
                                    zx_u32 entry_size) {
   zx_u32 const key_idx = (zx_u32)key;
@@ -112,6 +118,7 @@ static inline void *ZXSlab_get_mut(ZXSlab const *slab, zx_u64 key,
   return &slab->entries[entry_offset];
 }
 
+// It is invalid to call this function with a key that doesn't exist in the slab
 static inline void const *ZXSlab_get(ZXSlab const *slab, zx_u64 key,
                                      zx_u32 entry_size) {
   return ZXSlab_get_mut(slab, key, entry_size);

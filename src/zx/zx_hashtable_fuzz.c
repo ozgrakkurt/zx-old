@@ -202,7 +202,7 @@ int main(void) {
       .cap = FUZZ_MEM_CAP,
   };
 
-  char const *tgt_file_filter = "hashtable";
+  char const *tgt_file_filter = "zx_hashtable";
 
   ZXFuzzParams const params = {
       .usr_ctx = (void *)&ctx,
