@@ -273,7 +273,7 @@ ZXStatus zx_sys_io_uring_setup(zx_u32 n_entries, struct io_uring_params *params,
     ZX_ERR_RETURN(status, err_stack);
   }
 
-  fd = (zx_i32)ret;
+  *fd = (zx_i32)ret;
 
   return ZXStatus_Ok;
 }

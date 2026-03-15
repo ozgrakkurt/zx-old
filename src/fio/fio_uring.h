@@ -9,7 +9,29 @@
 #include <zx/zx_sys.h>
 #include <zx/zx_sys_io_uring.h>
 
-void fio_uring_setup_ring_pointers_(struct io_uring_params const *p,
+typedef struct io_uring_sqe fio_sqe;
+typedef struct io_uring_cqe fio_cqe;
+
+typedef struct fio_squeue {
+  zx_u32 *khead;
+  zx_u32 *ktail;
+  zx_u32 *kring_entries;
+  zx_u32 *kflags;
+  zx_u32 *kdropped;
+  zx_u32 *array;
+  fio_sqe *sqes;
+} fio_squeue;
+
+typedef struct fio_cqueue {
+  zx_u32 *khead;
+  zx_u32 *ktail;
+  zx_u32 *kring_entries;
+  zx_u32 *kflags;
+  zx_u32 *koverflow;
+  fio_cqe *cqes;
+} fio_cqueue;
+
+void fio_uring_setup_ring_pointers_(const struct io_uring_params *p,
                                     struct io_uring_sq *sq,
                                     struct io_uring_cq *cq) {
   sq->khead = sq->ring_ptr + p->sq_off.head;
@@ -101,11 +123,11 @@ static inline ZXStatus FioUring_init(ZXAlloc *alloc,
                      zx_chk_mul_u32(ring_params.sq_entries, sizeof(zx_u32)));
 
   // sanity check. it should always be 16
-  static_assert(sizeof(struct io_uring_cqe) == 16);
+  static_assert(sizeof(fio_cqe) == 16);
 
-  zx_u32 const cring_sz = zx_chk_add_u32(
-      ring_params.cq_off.cqes,
-      zx_chk_mul_u32(ring_params.cq_entries, sizeof(struct io_uring_cqe)));
+  zx_u32 const cring_sz =
+      zx_chk_add_u32(ring_params.cq_off.cqes,
+                     zx_chk_mul_u32(ring_params.cq_entries, sizeof(fio_cqe)));
 
   zx_u32 const ring_sz = zx_int_max_u32(sring_sz, cring_sz);
 
@@ -118,10 +140,10 @@ static inline ZXStatus FioUring_init(ZXAlloc *alloc,
   }
 
   // sanity check. it should always be 64
-  static_assert(sizeof(struct io_uring_sqe), 64);
+  static_assert(sizeof(fio_sqe), 64);
 
   zx_u32 const sqes_sz =
-      zx_chk_mul_u32(ring_params.sq_entries, sizeof(struct io_uring_sqe));
+      zx_chk_mul_u32(ring_params.sq_entries, sizeof(fio_sqe));
   error_status = zx_sys_mmap(0, sqes_sz, ZX_SYS_PROT_READ | ZX_SYS_PROT_WRITE,
                              ZX_SYS_MAP_SHARED | ZX_SYS_MAP_POPULATE, ring_fd,
                              IORING_OFF_SQ_RING, &sqes, err_stack);
