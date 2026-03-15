@@ -68,6 +68,9 @@ FIBER: Library = Library(
 
 FIO: Library = Library(
     source_files=set(["fio.c"]),
+    test_targets={
+        "fio_test": set([]),
+    },
 )
 
 PROJECT: Project = Project(

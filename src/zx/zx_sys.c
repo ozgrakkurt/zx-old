@@ -136,6 +136,8 @@ static ZXStatus zx_sys_status(zx_sys_reg ret) {
 
 constexpr zx_sys_reg ZX_SYSCALL_READ = 0;
 constexpr zx_sys_reg ZX_SYSCALL_WRITE = 1;
+constexpr zx_sys_reg ZX_SYSCALL_OPEN = 2;
+constexpr zx_sys_reg ZX_SYSCALL_CLOSE = 3;
 constexpr zx_sys_reg ZX_SYSCALL_MMAP = 9;
 constexpr zx_sys_reg ZX_SYSCALL_MUNMAP = 11;
 constexpr zx_sys_reg ZX_SYSCALL_MADVISE = 28;
@@ -176,6 +178,31 @@ ZXStatus zx_sys_write(zx_i32 fd, zx_u8 const *buf, zx_u64 size,
     ZX_ERR_RETURN(status, err_stack);
   }
   *n_written = (zx_u64){ret};
+
+  return ZXStatus_Ok;
+}
+
+ZXStatus zx_sys_open(char const *pathname, zx_i32 flags, zx_u32 mode,
+                     zx_i32 *fd, ZXErrStack *err_stack) {
+  zx_sys_reg const ret = zx_syscall3(ZX_SYSCALL_OPEN, (zx_sys_reg)pathname,
+                                     (zx_sys_reg)flags, (zx_sys_reg)mode);
+
+  ZXStatus const status = zx_sys_status(ret);
+  if (status != ZXStatus_Ok) {
+    ZX_ERR_RETURN(status, err_stack);
+  }
+  *fd = (zx_i32)ret;
+
+  return ZXStatus_Ok;
+}
+
+ZXStatus zx_sys_close(zx_i32 fd, ZXErrStack *err_stack) {
+  zx_sys_reg const ret = zx_syscall1(ZX_SYSCALL_CLOSE, (zx_sys_reg)fd);
+
+  ZXStatus const status = zx_sys_status(ret);
+  if (status != ZXStatus_Ok) {
+    ZX_ERR_RETURN(status, err_stack);
+  }
 
   return ZXStatus_Ok;
 }
@@ -236,15 +263,17 @@ ZXStatus zx_sys_madvise(zx_u8 *mem, zx_u64 length, zx_i32 advice,
   return ZXStatus_Ok;
 }
 
-ZXStatus zx_sys_io_uring_setup(zx_u32 entries, ZXSysIoUringParams *params,
-                               ZXErrStack *err_stack) {
+ZXStatus zx_sys_io_uring_setup(zx_u32 n_entries, struct io_uring_params *params,
+                               zx_i32 *fd, ZXErrStack *err_stack) {
   zx_sys_reg const ret = zx_syscall2(ZX_SYSCALL_IO_URING_SETUP,
-                                     (zx_sys_reg)entries, (zx_sys_reg)params);
+                                     (zx_sys_reg)n_entries, (zx_sys_reg)params);
 
   ZXStatus const status = zx_sys_status(ret);
   if (status != ZXStatus_Ok) {
     ZX_ERR_RETURN(status, err_stack);
   }
+
+  fd = (zx_i32)ret;
 
   return ZXStatus_Ok;
 }

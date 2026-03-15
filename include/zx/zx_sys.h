@@ -22,6 +22,11 @@ ZXStatus zx_sys_read(zx_i32 fd, zx_u8 *buf, zx_u64 size, zx_u64 *n_read,
 ZXStatus zx_sys_write(zx_i32 fd, zx_u8 const *buf, zx_u64 size,
                       zx_u64 *n_written, ZXErrStack *err_stack);
 
+ZXStatus zx_sys_open(char const *pathname, zx_i32 flags, zx_u32 mode,
+                     zx_i32 *fd, ZXErrStack *err_stack);
+
+ZXStatus zx_sys_close(zx_i32 fd, ZXErrStack *err_stack);
+
 [[noreturn]]
 void zx_sys_abort(void);
 

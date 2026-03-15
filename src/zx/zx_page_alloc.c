@@ -41,8 +41,13 @@ ZXStatus zx_page_alloc_thp_2mb(zx_u64 size, zx_u8 **mem,
   ZX_ERR_ASSERT((size % ALIGNMENT == 0), err_stack);
 
   ZX_ERR_TRY((zx_page_mmap(size, 0, mem, err_stack)), err_stack);
-  ZX_ERR_TRY((zx_sys_madvise(*mem, size, ZX_SYS_MADV_HUGEPAGE, err_stack)),
-             err_stack);
+
+  ZXStatus const madvise_status =
+      zx_sys_madvise(*mem, size, ZX_SYS_MADV_HUGEPAGE, err_stack);
+  if (madvise_status != ZXStatus_Ok) {
+    ZX_ERR_TRY((zx_page_alloc_free(*mem, size, err_stack)), err_stack);
+    ZX_ERR_TRY((madvise_status), err_stack);
+  }
 
   return ZXStatus_Ok;
 }
