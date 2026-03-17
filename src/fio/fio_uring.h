@@ -99,7 +99,7 @@ static inline ZXStatus FioUringSys_init(bool polled_io, zx_i32 wq_fd,
       zx_chk_mul_u32(ring_params.sq_entries, sizeof(fio_sqe));
   error_status = zx_sys_mmap(0, sqes_sz, ZX_SYS_PROT_READ | ZX_SYS_PROT_WRITE,
                              ZX_SYS_MAP_SHARED | ZX_SYS_MAP_POPULATE, ring_fd,
-                             IORING_OFF_SQ_RING, (zx_u8 **)&sqes, err_stack);
+                             IORING_OFF_SQES, (zx_u8 **)&sqes, err_stack);
   if (error_status != ZXStatus_Ok) {
     ZX_ERR_APPEND_LOC(err_stack);
     goto err;
