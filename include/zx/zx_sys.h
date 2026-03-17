@@ -41,6 +41,7 @@ ZXStatus zx_sys_madvise(zx_u8 *mem, zx_u64 length, zx_i32 advice,
                         ZXErrStack *err_stack);
 
 // echo '#include <sys/mman.h>' | gcc -E - -dM | grep "#define MAP_"
+constexpr int ZX_SYS_MAP_SHARED = 0x01;
 constexpr int ZX_SYS_MAP_PRIVATE = 0x02;
 constexpr int ZX_SYS_MAP_ANONYMOUS = 0x20;
 constexpr int ZX_SYS_MAP_LOCKED = 0x02000;

@@ -12,74 +12,29 @@
 typedef struct io_uring_sqe fio_sqe;
 typedef struct io_uring_cqe fio_cqe;
 
-typedef struct fio_squeue {
-  zx_u32 *khead;
-  zx_u32 *ktail;
-  zx_u32 *kring_entries;
-  zx_u32 *kflags;
-  zx_u32 *kdropped;
-  zx_u32 *array;
-  fio_sqe *sqes;
-} fio_squeue;
-
-typedef struct fio_cqueue {
-  zx_u32 *khead;
-  zx_u32 *ktail;
-  zx_u32 *kring_entries;
-  zx_u32 *kflags;
-  zx_u32 *koverflow;
+typedef struct FioUringSys {
+  zx_u32 *sq_head;
+  zx_u32 *sq_tail;
+  zx_u32 *cq_head;
+  zx_u32 *cq_tail;
+  void *ring_alloc;
+  void *sqes_alloc;
   fio_cqe *cqes;
-} fio_cqueue;
-
-void fio_uring_setup_ring_pointers_(const struct io_uring_params *p,
-                                    struct io_uring_sq *sq,
-                                    struct io_uring_cq *cq) {
-  sq->khead = sq->ring_ptr + p->sq_off.head;
-  sq->ktail = sq->ring_ptr + p->sq_off.tail;
-  sq->kring_mask = sq->ring_ptr + p->sq_off.ring_mask;
-  sq->kring_entries = sq->ring_ptr + p->sq_off.ring_entries;
-  sq->kflags = sq->ring_ptr + p->sq_off.flags;
-  sq->kdropped = sq->ring_ptr + p->sq_off.dropped;
-  if (!(p->flags & IORING_SETUP_NO_SQARRAY))
-    sq->array = sq->ring_ptr + p->sq_off.array;
-
-  cq->khead = cq->ring_ptr + p->cq_off.head;
-  cq->ktail = cq->ring_ptr + p->cq_off.tail;
-  cq->kring_mask = cq->ring_ptr + p->cq_off.ring_mask;
-  cq->kring_entries = cq->ring_ptr + p->cq_off.ring_entries;
-  cq->koverflow = cq->ring_ptr + p->cq_off.overflow;
-  cq->cqes = cq->ring_ptr + p->cq_off.cqes;
-  if (p->cq_off.flags)
-    cq->kflags = cq->ring_ptr + p->cq_off.flags;
-
-  sq->ring_mask = *sq->kring_mask;
-  sq->ring_entries = *sq->kring_entries;
-  cq->ring_mask = *cq->kring_mask;
-  cq->ring_entries = *cq->kring_entries;
-}
-
-typedef struct FioUring {
-  struct io_uring_sq sq;
-  struct io_uring_cq cq;
-  void *ring;
-  void *sqes;
-  zx_u32 ring_size;
-  zx_u32 sqes_size;
+  fio_sqe *sqes;
+  zx_u32 ring_alloc_size;
+  zx_u32 sqes_alloc_size;
   zx_i32 ring_fd;
-  ZXQueue io_queue;
-  ZXSlab slab;
-  bool is_polled;
-} FioUring;
+  zx_u32 sq_mask;
+  zx_u32 sq_n_entries;
+  zx_u32 cq_mask;
+} FioUringSys;
 
-typedef struct FioUringParams {
-  bool polled_io;
-  zx_i32 wq_fd;
-} FioUringParams;
+static inline ZXStatus FioUringSys_init(bool polled_io, zx_i32 wq_fd,
+                                        FioUringSys *fio_ring,
+                                        ZXErrStack *err_stack) {
+  ZX_ASSERT((fio_ring != nullptr));
+  ZX_ASSERT((err_stack != nullptr));
 
-static inline ZXStatus FioUring_init(ZXAlloc *alloc,
-                                     FioUringParams const *params,
-                                     FioUring *fio_ring,
-                                     ZXErrStack *err_stack) {
   void *ring = nullptr;
   void *sqes = nullptr;
   zx_i32 ring_fd = -1;
@@ -88,20 +43,18 @@ static inline ZXStatus FioUring_init(ZXAlloc *alloc,
   zx_u32 flags = IORING_SETUP_SQPOLL | IORING_SETUP_SINGLE_ISSUER |
                  IORING_SETUP_NO_SQARRAY;
 
-  if (params->polled_io) {
+  if (polled_io) {
     flags |= IORING_SETUP_IOPOLL;
   }
 
-  zx_u32 const wq_fd = params->wq_fd;
-
-  if (wq_fd != 0) {
+  if (wq_fd > -1) {
     flags |= IORING_SETUP_ATTACH_WQ;
   }
 
   struct io_uring_params ring_params;
   __builtin_memset(&ring_params, 0, sizeof(struct io_uring_params));
 
-  ring_params.wq_fd = wq_fd;
+  ring_params.wq_fd = (zx_u32)wq_fd;
   ring_params.sq_thread_idle = 1000;
   ring_params.flags = flags;
 
@@ -133,46 +86,59 @@ static inline ZXStatus FioUring_init(ZXAlloc *alloc,
 
   error_status = zx_sys_mmap(0, ring_sz, ZX_SYS_PROT_READ | ZX_SYS_PROT_WRITE,
                              ZX_SYS_MAP_SHARED | ZX_SYS_MAP_POPULATE, ring_fd,
-                             IORING_OFF_SQ_RING, &ring_ptr, err_stack);
+                             IORING_OFF_SQ_RING, (zx_u8 **)&ring, err_stack);
   if (error_status != ZXStatus_Ok) {
     ZX_ERR_APPEND_LOC(err_stack);
     goto err;
   }
 
   // sanity check. it should always be 64
-  static_assert(sizeof(fio_sqe), 64);
+  static_assert(sizeof(fio_sqe) == 64);
 
   zx_u32 const sqes_sz =
       zx_chk_mul_u32(ring_params.sq_entries, sizeof(fio_sqe));
   error_status = zx_sys_mmap(0, sqes_sz, ZX_SYS_PROT_READ | ZX_SYS_PROT_WRITE,
                              ZX_SYS_MAP_SHARED | ZX_SYS_MAP_POPULATE, ring_fd,
-                             IORING_OFF_SQ_RING, &sqes, err_stack);
+                             IORING_OFF_SQ_RING, (zx_u8 **)&sqes, err_stack);
   if (error_status != ZXStatus_Ok) {
     ZX_ERR_APPEND_LOC(err_stack);
     goto err;
   }
 
   // check features
-  // ring_param.features
+  if ((ring_params.features & IORING_FEAT_NODROP) == 0) {
+    error_status = ZXStatus_AssertFail;
+    ZX_ERR_APPEND_LOC(err_stack);
+    goto err;
+  }
+  if ((ring_params.features & IORING_FEAT_SQPOLL_NONFIXED) == 0) {
+    error_status = ZXStatus_AssertFail;
+    ZX_ERR_APPEND_LOC(err_stack);
+    goto err;
+  }
+  if ((ring_params.features & IORING_FEAT_RSRC_TAGS) == 0) {
+    error_status = ZXStatus_AssertFail;
+    ZX_ERR_APPEND_LOC(err_stack);
+    goto err;
+  }
 
   // setup output
-  __builtin_memset(&fio_ring, 0, sizeof(FioUring));
-  fio_uring_setup_ring_pointers_(&ring_params, &fio_ring->sq, &fio_ring->cq);
-  fio_ring->ring = ring;
-  fio_ring->ring_size = ring_sz;
-  fio_ring->sqes = sqes;
-  fio_ring->sqes_size = sqes_sz;
-  fio_ring->ring_fd = ring_fd;
-  fio_ring->is_polled = params->polled_io;
-
-  // struct io_uring_sq sq;
-  // struct io_uring_cq cq;
-  // void* ring;
-  // void* sqes;
-  // zx_i32 ring_fd;
-  // ZXQueue io_queue;
-  // ZXSlab slab;
-  // bool is_polled;
+  *fio_ring = (FioUringSys){
+      .sq_head = ring + ring_params.sq_off.head,
+      .sq_tail = ring + ring_params.sq_off.tail,
+      .cq_head = ring + ring_params.cq_off.head,
+      .cq_tail = ring + ring_params.cq_off.tail,
+      .ring_alloc = ring,
+      .sqes_alloc = sqes,
+      .cqes = ring + ring_params.cq_off.cqes,
+      .sqes = ring + ring_params.sq_off.ring_entries,
+      .ring_alloc_size = ring_sz,
+      .sqes_alloc_size = sqes_sz,
+      .ring_fd = ring_fd,
+      .sq_mask = *(zx_u32 const *)(ring + ring_params.sq_off.ring_mask),
+      .sq_n_entries = ring_params.sq_entries,
+      .cq_mask = *(zx_u32 const *)(ring + ring_params.cq_off.ring_mask),
+  };
 
   return ZXStatus_Ok;
 err:
@@ -193,14 +159,14 @@ err:
   return ZXStatus_Ok;
 }
 
-static inline ZXStatus FioUring_deinit(FioUring *fio_ring,
-                                       ZXErrStack *err_stack) {
+static inline ZXStatus FioUringSys_deinit(FioUringSys *fio_ring,
+                                          ZXErrStack *err_stack) {
   ZX_ASSERT((fio_ring != nullptr));
 
-  void *const ring = fio_ring->ring;
-  zx_u32 const ring_sz = fio_ring->ring_size;
-  void *const sqes = fio_ring->sqes;
-  zx_u32 const sqes_sz = fio_ring->sqes_size;
+  void *const ring = fio_ring->ring_alloc;
+  zx_u32 const ring_sz = fio_ring->ring_alloc_size;
+  void *const sqes = fio_ring->sqes_alloc;
+  zx_u32 const sqes_sz = fio_ring->sqes_alloc_size;
   zx_i32 const ring_fd = fio_ring->ring_fd;
 
   ZX_ASSERT((ring != nullptr));
@@ -208,10 +174,10 @@ static inline ZXStatus FioUring_deinit(FioUring *fio_ring,
   ZX_ASSERT((ring_fd >= 0));
 
   ZX_ERR_TRY((zx_sys_munmap(ring, ring_sz, err_stack)), err_stack);
-  fio_ring->ring = nullptr;
+  fio_ring->ring_alloc = nullptr;
 
   ZX_ERR_TRY((zx_sys_munmap(sqes, sqes_sz, err_stack)), err_stack);
-  fio_ring->sqes = nullptr;
+  fio_ring->sqes_alloc = nullptr;
 
   ZX_ERR_TRY((zx_sys_close(ring_fd, err_stack)), err_stack);
   fio_ring->ring_fd = -1;
