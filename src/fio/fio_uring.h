@@ -27,6 +27,7 @@ typedef struct FioUringSys {
   zx_u32 sq_mask;
   zx_u32 sq_n_entries;
   zx_u32 cq_mask;
+  bool polled_io;
 } FioUringSys;
 
 static inline ZXStatus FioUringSys_init(bool polled_io, zx_i32 wq_fd,
@@ -122,6 +123,17 @@ static inline ZXStatus FioUringSys_init(bool polled_io, zx_i32 wq_fd,
     goto err;
   }
 
+  if (!polled_io) {
+    // register napi
+    struct io_uring_napi napi_params;
+    __builtin_memset(&napi_params, 0, sizeof(napi_params));
+    napi_params.busy_poll_to = 100000;
+    napi_params.prefer_busy_poll = 1;
+    ZX_ERR_TRY((zx_sys_io_uring_register(ring_fd, IORING_REGISTER_NAPI,
+                                         &napi_params, 1, err_stack)),
+               err_stack);
+  }
+
   // setup output
   *fio_ring = (FioUringSys){
       .sq_head = ring + ring_params.sq_off.head,
@@ -138,6 +150,7 @@ static inline ZXStatus FioUringSys_init(bool polled_io, zx_i32 wq_fd,
       .sq_mask = *(zx_u32 const *)(ring + ring_params.sq_off.ring_mask),
       .sq_n_entries = ring_params.sq_entries,
       .cq_mask = *(zx_u32 const *)(ring + ring_params.cq_off.ring_mask),
+      .polled_io = polled_io,
   };
 
   return ZXStatus_Ok;
@@ -163,6 +176,16 @@ static inline ZXStatus FioUringSys_deinit(FioUringSys *fio_ring,
                                           ZXErrStack *err_stack) {
   ZX_ASSERT((fio_ring != nullptr));
 
+  if (!fio_ring->polled_io) {
+    // unregister napi
+    struct io_uring_napi napi_params;
+    __builtin_memset(&napi_params, 0, sizeof(napi_params));
+    ZX_ERR_TRY(
+        (zx_sys_io_uring_register(fio_ring->ring_fd, IORING_UNREGISTER_NAPI,
+                                  &napi_params, 1, err_stack)),
+        err_stack);
+  }
+
   void *const ring = fio_ring->ring_alloc;
   zx_u32 const ring_sz = fio_ring->ring_alloc_size;
   void *const sqes = fio_ring->sqes_alloc;
@@ -184,5 +207,7 @@ static inline ZXStatus FioUringSys_deinit(FioUringSys *fio_ring,
 
   return ZXStatus_Ok;
 }
+
+static inline void FioUringSys_push_io();
 
 #endif

@@ -11,7 +11,7 @@ int main(void) {
   FioUringSys poll_ring;
   FioUringSys ring;
 
-  for (zx_u8 i = 0; i < 5; i++) {
+  for (zx_u32 i = 0; i < 500; i++) {
     ZX_ERR_TRY_FATAL((FioUringSys_init(true, -1, &poll_ring, &err_stack)),
                      &err_stack);
     ZX_ERR_TRY_FATAL(
