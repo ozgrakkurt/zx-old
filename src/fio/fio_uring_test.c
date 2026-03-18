@@ -1,0 +1,59 @@
+#include "./fio_uring.h"
+#include <zx/zx_alloc.h>
+#include <zx/zx_assert.h>
+#include <zx/zx_err.h>
+#include <zx/zx_page_alloc.h>
+#include <zx/zx_sys.h>
+#include <zx/zx_sys_io_uring.h>
+
+int main(void) {
+  ZXErrStack err_stack = ZXErrStack_init();
+
+  FioUring poll_ring;
+  FioUring ring;
+
+  for (zx_u32 i = 0; i < 5; i++) {
+    ZX_ERR_TRY_FATAL((FioUring_init(true, -1, &poll_ring, &err_stack)),
+                     &err_stack);
+    ZX_ERR_TRY_FATAL(
+        (FioUring_init(false, poll_ring.ring_fd, &ring, &err_stack)),
+        &err_stack);
+    ZX_ERR_TRY_FATAL((FioUring_deinit(&ring, &err_stack)), &err_stack);
+    ZX_ERR_TRY_FATAL((FioUring_deinit(&poll_ring, &err_stack)), &err_stack);
+  }
+
+  ZX_ERR_TRY_FATAL((FioUring_init(true, -1, &poll_ring, &err_stack)),
+                   &err_stack);
+  ZX_ERR_TRY_FATAL((FioUring_init(false, poll_ring.ring_fd, &ring, &err_stack)),
+                   &err_stack);
+
+  constexpr zx_u32 total = 10;
+  constexpr zx_u32 concurrency = 3;
+  char const *msg = "Helllo!\n";
+  zx_u32 to_submit = total;
+  zx_u32 n_pending = 0;
+  zx_u32 n_finished = 0;
+  while (n_finished < total) {
+    while (n_pending < concurrency && to_submit > 0) {
+      ZX_ASSERT((FioUring_submit_write(&ring, ZX_STDOUT, (zx_u8 const *)msg,
+                                       100, (zx_u32)__builtin_strlen(msg))));
+      to_submit--;
+      n_pending++;
+    }
+
+    FioUringCompletion completion = {0};
+    while (FioUring_get_next_completion(&ring, &completion)) {
+      ZX_ASSERT((n_pending > 0));
+      // ZX_ASSERT((completion.res >= 0));
+      // ZX_ASSERT((completion.res == (zx_i32)__builtin_strlen(msg)));
+      n_finished += 1;
+      n_pending -= 1;
+    }
+
+    ZX_ERR_TRY_FATAL((FioUring_sync(&ring, &err_stack)), &err_stack);
+  }
+
+  ZX_ERR_TRY_FATAL((FioUring_deinit(&ring, &err_stack)), &err_stack);
+  ZX_ERR_TRY_FATAL((FioUring_deinit(&poll_ring, &err_stack)), &err_stack);
+  return 0;
+}

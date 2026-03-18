@@ -67,9 +67,9 @@ FIBER: Library = Library(
 )
 
 FIO: Library = Library(
-    source_files=set(["fio.c"]),
+    source_files=set(["fio_uring.c"]),
     test_targets={
-        "fio_test": set([]),
+        "fio_uring_test": set([]),
     },
 )
 
