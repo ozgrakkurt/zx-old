@@ -2,6 +2,7 @@
 #define FIO_URING_H
 
 #include <zx/zx_alloc.h>
+#include <zx/zx_branch.h>
 #include <zx/zx_def.h>
 #include <zx/zx_err.h>
 #include <zx/zx_queue.h>
@@ -9,18 +10,25 @@
 #include <zx/zx_sys.h>
 #include <zx/zx_sys_io_uring.h>
 
+static_assert(sizeof(zx_u64) == sizeof(void *));
+
 typedef struct io_uring_sqe fio_sqe;
 typedef struct io_uring_cqe fio_cqe;
 
 typedef struct FioUringSys {
-  zx_u32 *sq_head;
-  zx_u32 *sq_tail;
-  zx_u32 *cq_head;
-  zx_u32 *cq_tail;
+  zx_u32 const *sq_kflags;
+  zx_u32 const *sq_khead;
+  zx_u32 *sq_ktail;
+  zx_u32 *cq_khead;
+  zx_u32 const *cq_ktail;
   void *ring_alloc;
   void *sqes_alloc;
-  fio_cqe *cqes;
+  fio_cqe const *cqes;
   fio_sqe *sqes;
+  zx_u32 sq_head;
+  zx_u32 sq_tail;
+  zx_u32 cq_head;
+  zx_u32 cq_tail;
   zx_u32 ring_alloc_size;
   zx_u32 sqes_alloc_size;
   zx_i32 ring_fd;
@@ -39,6 +47,7 @@ static inline ZXStatus FioUringSys_init(bool polled_io, zx_i32 wq_fd,
   void *ring = nullptr;
   void *sqes = nullptr;
   zx_i32 ring_fd = -1;
+  bool registered_napi = false;
   ZXStatus error_status = ZXStatus_Ok;
 
   zx_u32 flags = IORING_SETUP_SQPOLL | IORING_SETUP_SINGLE_ISSUER |
@@ -59,7 +68,7 @@ static inline ZXStatus FioUringSys_init(bool polled_io, zx_i32 wq_fd,
   ring_params.sq_thread_idle = 1000;
   ring_params.flags = flags;
 
-  zx_u32 const n_entries = 32;
+  zx_u32 const n_entries = 64;
 
   ZX_ERR_TRY(
       (zx_sys_io_uring_setup(n_entries, &ring_params, &ring_fd, err_stack)),
@@ -124,22 +133,36 @@ static inline ZXStatus FioUringSys_init(bool polled_io, zx_i32 wq_fd,
   }
 
   if (!polled_io) {
-    // register napi
     struct io_uring_napi napi_params;
     __builtin_memset(&napi_params, 0, sizeof(napi_params));
     napi_params.busy_poll_to = 100000;
     napi_params.prefer_busy_poll = 1;
-    ZX_ERR_TRY((zx_sys_io_uring_register(ring_fd, IORING_REGISTER_NAPI,
-                                         &napi_params, 1, err_stack)),
-               err_stack);
+
+    error_status = zx_sys_io_uring_register(ring_fd, IORING_REGISTER_NAPI,
+                                            &napi_params, 1, err_stack);
+    if (error_status != ZXStatus_Ok) {
+      ZX_ERR_APPEND_LOC(err_stack);
+      goto err;
+    }
+    registered_napi = true;
   }
+
+  zx_u32 *sq_khead = ring + ring_params.sq_off.head;
+  zx_u32 *sq_ktail = ring + ring_params.sq_off.tail;
+  zx_u32 *cq_khead = ring + ring_params.cq_off.head;
+  zx_u32 *cq_ktail = ring + ring_params.cq_off.tail;
 
   // setup output
   *fio_ring = (FioUringSys){
-      .sq_head = ring + ring_params.sq_off.head,
-      .sq_tail = ring + ring_params.sq_off.tail,
-      .cq_head = ring + ring_params.cq_off.head,
-      .cq_tail = ring + ring_params.cq_off.tail,
+      .sq_kflags = ring + ring_params.sq_off.flags,
+      .sq_khead = sq_khead,
+      .sq_ktail = sq_ktail,
+      .cq_khead = cq_khead,
+      .cq_ktail = cq_ktail,
+      .sq_head = *sq_khead,
+      .sq_tail = *sq_ktail,
+      .cq_head = *cq_khead,
+      .cq_tail = *cq_ktail,
       .ring_alloc = ring,
       .sqes_alloc = sqes,
       .cqes = ring + ring_params.cq_off.cqes,
@@ -155,14 +178,23 @@ static inline ZXStatus FioUringSys_init(bool polled_io, zx_i32 wq_fd,
 
   return ZXStatus_Ok;
 err:
-  if (ring_fd != -1) {
-    ZX_ERR_TRY_FATAL((zx_sys_close(ring_fd, err_stack)), err_stack);
+  if (registered_napi) {
+    ZX_ASSERT((ring_fd != -1));
+    struct io_uring_napi napi_params;
+    __builtin_memset(&napi_params, 0, sizeof(napi_params));
+    ZX_ERR_TRY((zx_sys_io_uring_register(ring_fd, IORING_UNREGISTER_NAPI,
+                                         &napi_params, 1, err_stack)),
+               err_stack);
+  }
+
+  if (sqes != nullptr) {
+    ZX_ERR_TRY_FATAL((zx_sys_munmap(sqes, sqes_sz, err_stack)), err_stack);
   }
   if (ring != nullptr) {
     ZX_ERR_TRY_FATAL((zx_sys_munmap(ring, ring_sz, err_stack)), err_stack);
   }
-  if (sqes != nullptr) {
-    ZX_ERR_TRY_FATAL((zx_sys_munmap(sqes, sqes_sz, err_stack)), err_stack);
+  if (ring_fd != -1) {
+    ZX_ERR_TRY_FATAL((zx_sys_close(ring_fd, err_stack)), err_stack);
   }
 
   ZX_ASSERT((error_status != ZXStatus_Ok));
@@ -177,7 +209,6 @@ static inline ZXStatus FioUringSys_deinit(FioUringSys *fio_ring,
   ZX_ASSERT((fio_ring != nullptr));
 
   if (!fio_ring->polled_io) {
-    // unregister napi
     struct io_uring_napi napi_params;
     __builtin_memset(&napi_params, 0, sizeof(napi_params));
     ZX_ERR_TRY(
@@ -196,11 +227,11 @@ static inline ZXStatus FioUringSys_deinit(FioUringSys *fio_ring,
   ZX_ASSERT((sqes != nullptr));
   ZX_ASSERT((ring_fd >= 0));
 
-  ZX_ERR_TRY((zx_sys_munmap(ring, ring_sz, err_stack)), err_stack);
-  fio_ring->ring_alloc = nullptr;
-
   ZX_ERR_TRY((zx_sys_munmap(sqes, sqes_sz, err_stack)), err_stack);
   fio_ring->sqes_alloc = nullptr;
+
+  ZX_ERR_TRY((zx_sys_munmap(ring, ring_sz, err_stack)), err_stack);
+  fio_ring->ring_alloc = nullptr;
 
   ZX_ERR_TRY((zx_sys_close(ring_fd, err_stack)), err_stack);
   fio_ring->ring_fd = -1;
@@ -208,6 +239,101 @@ static inline ZXStatus FioUringSys_deinit(FioUringSys *fio_ring,
   return ZXStatus_Ok;
 }
 
-static inline void FioUringSys_push_io();
+// Synchronizes the ring with kernel side. Makes io_uring_enter syscall if
+// needed.
+//
+// References to cqe or sqe shoudn't be accessed across a call to this function.
+static inline ZXStatus FioUringSys_sync(FioUringSys *fio_ring,
+                                        ZXErrStack *err_stack) {
+  static_assert(sizeof(unsigned) == sizeof(zx_u32));
+  static_assert(alignof(unsigned) == alignof(zx_u32));
+
+  __atomic_store_n((unsigned *)fio_ring->sq_ktail, (unsigned)fio_ring->sq_tail,
+                   __ATOMIC_RELEASE);
+  __atomic_load((unsigned const *)fio_ring->sq_khead,
+                (unsigned *)&fio_ring->sq_head, __ATOMIC_ACQUIRE);
+  __atomic_store_n((unsigned *)fio_ring->cq_khead, (unsigned)fio_ring->cq_head,
+                   __ATOMIC_RELEASE);
+  __atomic_load((unsigned const *)fio_ring->cq_ktail,
+                (unsigned *)&fio_ring->cq_tail, __ATOMIC_ACQUIRE);
+
+  zx_u32 const sq_flags = (zx_u32)__atomic_load_n(
+      (unsigned const *)fio_ring->sq_kflags, __ATOMIC_RELAXED);
+  if (zx_unlikely((sq_flags & IORING_SQ_NEED_WAKEUP) > 0)) {
+    zx_u32 const enter_flags = IORING_ENTER_SQ_WAKEUP;
+
+    ZX_ERR_TRY((zx_sys_io_uring_enter(fio_ring->ring_fd, 0, 0, enter_flags,
+                                      nullptr, 0, err_stack)),
+               err_stack);
+  }
+
+  return ZXStatus_Ok;
+}
+
+typedef struct FioUringCompletion {
+  zx_u64 user_data;
+  zx_i32 res;
+  zx_u32 flags;
+} FioUringCompletion;
+static_assert(sizeof(FioUringCompletion) == 16);
+
+// Populates user_data and returns true if there was a completion to get.
+// Returns false and doesn't touch user_data otherwise.
+static inline bool
+FioUringSys_get_next_completion(FioUringSys *fio_ring,
+                                FioUringCompletion *completion) {
+  if (fio_ring->cq_tail != fio_ring->cq_head) {
+    fio_cqe const cqe = fio_ring->cqes[fio_ring->cq_head & fio_ring->cq_mask];
+    *completion = (FioUringCompletion){
+        .user_data = cqe.user_data,
+        .res = cqe.res,
+        .flags = cqe.flags,
+    };
+    fio_ring->cq_head += 1;
+    return true;
+  } else {
+    return false;
+  }
+}
+
+static inline fio_sqe *FioUringSys_get_next_sqe_(FioUringSys *fio_ring) {
+  if (fio_ring->sq_tail - fio_ring->sq_head < fio_ring->sq_n_entries) {
+    fio_sqe *ret = &fio_ring->sqes[fio_ring->sq_tail & fio_ring->sq_mask];
+    fio_ring->sq_tail += 1;
+    return ret;
+  } else {
+    return nullptr;
+  }
+}
+
+static inline bool FioUringSys_submit_rw_(FioUringSys *fio_ring, zx_i32 op,
+                                          zx_i32 fd, zx_u64 buf_addr,
+                                          zx_u64 offset, zx_u32 size) {
+  fio_sqe *sqe = FioUringSys_get_next_sqe_(fio_ring);
+  if (zx_unlikely(sqe == nullptr)) {
+    return false;
+  }
+  sqe->opcode = (zx_u8)op;
+  sqe->fd = fd;
+  sqe->addr = buf_addr;
+  sqe->off = offset;
+  sqe->len = size;
+
+  return true;
+}
+
+static inline bool FioUringSys_submit_read(FioUringSys *fio_ring, zx_i32 fd,
+                                           zx_u8 *buf, zx_u64 offset,
+                                           zx_u32 size) {
+  return FioUringSys_submit_rw_(fio_ring, IORING_OP_READ, fd, (zx_u64)buf,
+                                offset, size);
+}
+
+static inline bool FioUringSys_submit_write(FioUringSys *fio_ring, zx_i32 fd,
+                                            zx_u8 const *buf, zx_u64 offset,
+                                            zx_u32 size) {
+  return FioUringSys_submit_rw_(fio_ring, IORING_OP_WRITE, fd, (zx_u64)buf,
+                                offset, size);
+}
 
 #endif
