@@ -18,6 +18,11 @@ typedef struct ZXSlab {
 } ZXSlab;
 static_assert(sizeof(ZXSlab) == sizeof(void *) * 5);
 
+// converts the slab key to a unique integer in [0,slab_capacity)
+static inline zx_u32 ZXSlab_key_to_idx(zx_u64 slab_key) {
+  return (zx_u32)slab_key;
+}
+
 static inline zx_u32 ZXSlab_capacity_left(ZXSlab const *slab) {
   return zx_chk_sub_u32(slab->capacity, slab->n_occupied);
 }

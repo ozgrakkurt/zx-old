@@ -78,6 +78,11 @@ def validate_library(libs: Dict[str, Library], lib_name: str, lib: Library) -> N
             f"library {lib_name} explicitly depends on {BASE_LIB_NAME}, this in not allowed as it is implicit."
         )
 
+    for src_name in lib.source_files:
+        assert src_name.startswith(lib_name), (
+            f"expected source {src_name} of library {lib_name} to start with {lib_name}."
+        )
+
     for fuzz_tgt_name, deps in lib.fuzz_targets.items():
         validate_lib_sub_pattern(lib_name, fuzz_tgt_name, "_fuzz")
         validate_lib_sub_implicit_deps(lib_name, fuzz_tgt_name, deps)

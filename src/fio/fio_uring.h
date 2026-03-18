@@ -55,6 +55,7 @@ typedef struct FioUringCompletion {
   zx_u32 flags;
 } FioUringCompletion;
 static_assert(sizeof(FioUringCompletion) == 16);
+static_assert(sizeof(FioUringCompletion) == sizeof(fio_cqe));
 
 // Populates user_data and returns true if there was a completion to get.
 // Returns false and doesn't touch user_data otherwise.
@@ -62,12 +63,8 @@ static inline bool
 FioUring_get_next_completion(FioUring *fio_ring,
                              FioUringCompletion *completion) {
   if (fio_ring->cq_tail != fio_ring->cq_head) {
-    fio_cqe const cqe = fio_ring->cqes[fio_ring->cq_head & fio_ring->cq_mask];
-    *completion = (FioUringCompletion){
-        .user_data = cqe.user_data,
-        .res = cqe.res,
-        .flags = cqe.flags,
-    };
+    __builtin_memcpy(
+        completion, &fio_ring->cqes[fio_ring->cq_head & fio_ring->cq_mask], 16);
     fio_ring->cq_head += 1;
     return true;
   } else {

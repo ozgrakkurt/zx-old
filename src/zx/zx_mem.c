@@ -73,8 +73,9 @@ __attribute__((no_builtin)) sizet strlen(char const *src) {
 
 __attribute__((no_builtin)) int memcmp(void const *lhs, void const *rhs,
                                        sizet count) {
-  if (count == 0)
+  if (count == 0) {
     return 0;
+  }
 
   int result;
   char a;

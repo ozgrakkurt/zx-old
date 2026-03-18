@@ -123,7 +123,8 @@ static inline void ZXHashtable_load_(void const *group_ptr, zx_u8 tag,
           "vpmovmskb %%xmm1, %0\n\t"
           "vpmovmskb %%xmm0, %1\n\t" // empty match
           : "=r"(tag_m), "=r"(empty_m)
-          : "m"(*(zx_u8(*)[ZX_HASHTABLE_GROUP_SIZE_])group_ptr), "r"((regt)tag)
+          : "m"(*(zx_u8 const(*)[ZX_HASHTABLE_GROUP_SIZE_])group_ptr),
+            "r"((regt)tag)
           : "xmm0", "xmm1");
 
   *tag_match = (zx_u16)tag_m;
