@@ -31,9 +31,9 @@ static ZXStatus fuzz_one(void *usr_ctx, ZXFuzzInput *fuzz_input,
              err_stack);
 
   // use for randomly selecting slab keys for ops
-  zx_u64 *slab_keys = nullptr;
-  zx_u32 const slab_keys_byte_size = zx_chk_mul_u32(capacity, sizeof(zx_u64));
-  ZX_ERR_TRY((ZXAlloc_alloc(&alloc, alignof(zx_u64), slab_keys_byte_size,
+  zx_u32 *slab_keys = nullptr;
+  zx_u32 const slab_keys_byte_size = zx_chk_mul_u32(capacity, sizeof(zx_u32));
+  ZX_ERR_TRY((ZXAlloc_alloc(&alloc, alignof(zx_u32), slab_keys_byte_size,
                             (zx_u8 **)&slab_keys, err_stack)),
              err_stack);
   zx_u32 n_slab_keys = 0;
@@ -56,7 +56,7 @@ static ZXStatus fuzz_one(void *usr_ctx, ZXFuzzInput *fuzz_input,
     switch (op) {
     // get
     case 0: {
-      zx_u64 const slab_key = slab_keys[zx_rand_mod_u32(
+      zx_u32 const slab_key = slab_keys[zx_rand_mod_u32(
           (zx_u32)ZXFuzzInput_next(fuzz_input), n_slab_keys)];
       zx_u64 const slab_val =
           *(zx_u64 const *)ZXSlab_get(&slab, slab_key, sizeof(zx_u64));
@@ -69,7 +69,7 @@ static ZXStatus fuzz_one(void *usr_ctx, ZXFuzzInput *fuzz_input,
     case 1: {
       zx_u32 const slab_key_idx =
           zx_rand_mod_u32((zx_u32)ZXFuzzInput_next(fuzz_input), n_slab_keys);
-      zx_u64 const slab_key = slab_keys[slab_key_idx];
+      zx_u32 const slab_key = slab_keys[slab_key_idx];
       n_slab_keys--;
       slab_keys[slab_key_idx] = slab_keys[n_slab_keys];
 
@@ -82,7 +82,7 @@ static ZXStatus fuzz_one(void *usr_ctx, ZXFuzzInput *fuzz_input,
     }
     // insert
     case 2: {
-      zx_u64 const slab_key =
+      zx_u32 const slab_key =
           ZXSlab_insert(&slab, &(zx_u64){0}, sizeof(zx_u64));
       *(zx_u64 *)ZXSlab_get_mut(&slab, slab_key, sizeof(zx_u64)) = slab_key;
 

@@ -14,11 +14,11 @@ static inline ZXStatus smoke_test(ZXAlloc *alloc, ZXErrStack *err_stack) {
                           &slab, err_stack)),
              err_stack);
 
-  zx_u64 *slab_keys = nullptr;
-  ZX_ERR_TRY((ZXAlloc_alloc(alloc, alignof(zx_u64), CAP * sizeof(zx_u64),
+  zx_u32 *slab_keys = nullptr;
+  ZX_ERR_TRY((ZXAlloc_alloc(alloc, alignof(zx_u32), CAP * sizeof(zx_u32),
                             (zx_u8 **)&slab_keys, err_stack)),
              err_stack);
-  __builtin_memset(slab_keys, 0, sizeof(zx_u64) * CAP);
+  __builtin_memset(slab_keys, 0, sizeof(zx_u32) * CAP);
 
   for (zx_u64 i = 0; i < CAP; i++) {
     // insert and test

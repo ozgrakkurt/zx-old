@@ -9,19 +9,14 @@
 
 typedef struct ZXSlab {
   bool *is_occupied;
-  zx_u32 *generation_or_next_free;
+  zx_u32 *next_free;
   zx_u8 *entries;
   zx_u32 first_free_entry;
-  zx_u32 current_generation;
   zx_u32 n_occupied;
   zx_u32 capacity;
+  zx_u32 padding_;
 } ZXSlab;
 static_assert(sizeof(ZXSlab) == sizeof(void *) * 5);
-
-// converts the slab key to a unique integer in [0,slab_capacity)
-static inline zx_u32 ZXSlab_key_to_idx(zx_u64 slab_key) {
-  return (zx_u32)slab_key;
-}
 
 static inline zx_u32 ZXSlab_capacity_left(ZXSlab const *slab) {
   return zx_chk_sub_u32(slab->capacity, slab->n_occupied);
@@ -41,13 +36,13 @@ static inline ZXStatus ZXSlab_init(ZXAlloc *alloc, zx_u32 capacity,
              err_stack);
   __builtin_memset(is_occupied, 0, is_occupied_byte_size);
 
-  zx_u32 *generation_or_next_free = nullptr;
-  zx_u64 const gonf_byte_size = zx_chk_mul_u64(capacity, sizeof(zx_u32));
-  ZX_ERR_TRY((ZXAlloc_alloc(alloc, alignof(zx_u32), gonf_byte_size,
-                            (zx_u8 **)&generation_or_next_free, err_stack)),
+  zx_u32 *next_free = nullptr;
+  zx_u64 const next_free_byte_size = zx_chk_mul_u64(capacity, sizeof(zx_u32));
+  ZX_ERR_TRY((ZXAlloc_alloc(alloc, alignof(zx_u32), next_free_byte_size,
+                            (zx_u8 **)&next_free, err_stack)),
              err_stack);
   for (zx_u32 i = 0; i < capacity; i++) {
-    generation_or_next_free[i] = i + 1;
+    next_free[i] = i + 1;
   }
 
   zx_u8 *entries = nullptr;
@@ -58,10 +53,9 @@ static inline ZXStatus ZXSlab_init(ZXAlloc *alloc, zx_u32 capacity,
 
   *slab = (ZXSlab){
       .is_occupied = is_occupied,
-      .generation_or_next_free = generation_or_next_free,
+      .next_free = next_free,
       .entries = entries,
       .first_free_entry = 0,
-      .current_generation = 0,
       .n_occupied = 0,
       .capacity = capacity,
   };
@@ -69,7 +63,7 @@ static inline ZXStatus ZXSlab_init(ZXAlloc *alloc, zx_u32 capacity,
   return ZXStatus_Ok;
 }
 
-static inline zx_u64 ZXSlab_insert(ZXSlab *slab, void const *entry,
+static inline zx_u32 ZXSlab_insert(ZXSlab *slab, void const *entry,
                                    zx_u32 entry_size) {
   zx_u32 const key_idx = slab->first_free_entry;
   ZX_ASSERT((key_idx != slab->capacity));
@@ -77,54 +71,46 @@ static inline zx_u64 ZXSlab_insert(ZXSlab *slab, void const *entry,
   ZX_ASSERT((slab->is_occupied[key_idx] == false));
   slab->is_occupied[key_idx] = true;
 
-  zx_u32 const current_generation = slab->current_generation;
-
-  slab->first_free_entry = slab->generation_or_next_free[key_idx];
-  slab->generation_or_next_free[key_idx] = current_generation;
+  slab->first_free_entry = slab->next_free[key_idx];
 
   zx_u64 const entry_offset = zx_chk_mul_u64(entry_size, key_idx);
   __builtin_memcpy(&slab->entries[entry_offset], entry, entry_size);
 
   slab->n_occupied = zx_chk_add_u32(slab->n_occupied, 1);
 
-  return ((zx_u64){current_generation} << 32 | (zx_u64){key_idx});
+  return key_idx;
 }
 
 // It is invalid to call this function with a key that doesn't exist in the slab
-static inline void ZXSlab_remove(ZXSlab *slab, zx_u64 key, zx_u32 entry_size,
+static inline void ZXSlab_remove(ZXSlab *slab, zx_u32 key, zx_u32 entry_size,
                                  void *entry_out) {
-  zx_u32 const key_idx = (zx_u32)key;
-  zx_u32 const generation = (zx_u32)(key >> 32);
+  zx_u32 const key_idx = key;
 
   ZX_ASSERT((slab->is_occupied[key_idx] == true));
   slab->is_occupied[key_idx] = false;
 
-  ZX_ASSERT((slab->generation_or_next_free[key_idx] == generation));
-  slab->generation_or_next_free[key_idx] = slab->first_free_entry;
+  slab->next_free[key_idx] = slab->first_free_entry;
   slab->first_free_entry = key_idx;
 
   slab->n_occupied = zx_chk_sub_u32(slab->n_occupied, 1);
-  slab->current_generation++;
 
   zx_u64 const entry_offset = zx_chk_mul_u64(entry_size, key_idx);
   __builtin_memcpy(entry_out, &slab->entries[entry_offset], entry_size);
 }
 
 // It is invalid to call this function with a key that doesn't exist in the slab
-static inline void *ZXSlab_get_mut(ZXSlab const *slab, zx_u64 key,
+static inline void *ZXSlab_get_mut(ZXSlab const *slab, zx_u32 key,
                                    zx_u32 entry_size) {
-  zx_u32 const key_idx = (zx_u32)key;
-  zx_u32 const generation = (zx_u32)(key >> 32);
+  zx_u32 const key_idx = key;
 
   ZX_ASSERT((slab->is_occupied[key_idx] == true));
-  ZX_ASSERT((slab->generation_or_next_free[key_idx] == generation));
 
   zx_u64 const entry_offset = zx_chk_mul_u64(entry_size, key_idx);
   return &slab->entries[entry_offset];
 }
 
 // It is invalid to call this function with a key that doesn't exist in the slab
-static inline void const *ZXSlab_get(ZXSlab const *slab, zx_u64 key,
+static inline void const *ZXSlab_get(ZXSlab const *slab, zx_u32 key,
                                      zx_u32 entry_size) {
   return ZXSlab_get_mut(slab, key, entry_size);
 }
