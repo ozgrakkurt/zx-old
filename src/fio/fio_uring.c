@@ -6,8 +6,26 @@
 #include <zx/zx_int.h>
 #include <zx/zx_sys.h>
 #include <zx/zx_sys_io_uring.h>
+// typedef struct FioUringParams {
+//   // Create a ring for only doing polled direct io.
+//   bool polled_io;
+//   // Value of -1 is ignore, any other value is registered as wq_fd into uring
+//   instance
+//   // used for sharing sqpoll thread for multiple io_uring instances.
+//   zx_i32 wq_fd;
+//   // IO buffer for registering with io_uring. All later buffers passed to do
+//   io operations have to be
+//   // inside the range of this buffer.
+//   // passing nullptr for io_buf and zero for io_buf_size means "don't
+//   register anything".
+//   // In that case, it is not possible to do io operations that require
+//   passing a buffer including file read/write
+//   // and socket read/write.
+//   zx_u8* io_buf;
+//   zx_u64 io_buf_size;
+// } FioUringParams;
 
-ZXStatus FioUring_init(bool polled_io, zx_i32 wq_fd, FioUring *fio_ring,
+ZXStatus FioUring_init(FioUringParams const *params, FioUring *fio_ring,
                        ZXErrStack *err_stack) {
   ZX_ASSERT((fio_ring != nullptr));
   ZX_ASSERT((err_stack != nullptr));
@@ -16,23 +34,24 @@ ZXStatus FioUring_init(bool polled_io, zx_i32 wq_fd, FioUring *fio_ring,
   void *sqes = nullptr;
   zx_i32 ring_fd = -1;
   bool registered_napi = false;
+  bool registered_buffer = false;
   ZXStatus error_status = ZXStatus_Ok;
 
   zx_u32 flags = IORING_SETUP_SQPOLL | IORING_SETUP_SINGLE_ISSUER |
                  IORING_SETUP_NO_SQARRAY;
 
-  if (polled_io) {
+  if (params->polled_io) {
     flags |= IORING_SETUP_IOPOLL;
   }
 
-  if (wq_fd > -1) {
+  if (params->wq_fd > 0) {
     flags |= IORING_SETUP_ATTACH_WQ;
   }
 
   struct io_uring_params ring_params;
   __builtin_memset(&ring_params, 0, sizeof(struct io_uring_params));
 
-  ring_params.wq_fd = (zx_u32)wq_fd;
+  ring_params.wq_fd = (zx_u32)params->wq_fd;
   ring_params.sq_thread_idle = 1000;
   ring_params.flags = flags;
 
@@ -100,7 +119,7 @@ ZXStatus FioUring_init(bool polled_io, zx_i32 wq_fd, FioUring *fio_ring,
     goto err;
   }
 
-  if (!polled_io) {
+  if (!params->polled_io) {
     struct io_uring_napi napi_params;
     __builtin_memset(&napi_params, 0, sizeof(napi_params));
     napi_params.busy_poll_to = 100000;
@@ -113,6 +132,28 @@ ZXStatus FioUring_init(bool polled_io, zx_i32 wq_fd, FioUring *fio_ring,
       goto err;
     }
     registered_napi = true;
+  }
+
+  if (params->io_buf == nullptr) {
+    ZX_ERR_ASSERT((params->io_buf_size == 0), err_stack);
+  } else {
+    typedef struct iovec {
+      zx_u8 *iov_base;
+      zx_u64 iov_len;
+    } iovec;
+    static_assert(sizeof(iovec) == sizeof(void *) * 2);
+
+    error_status = zx_sys_io_uring_register(ring_fd, IORING_REGISTER_BUFFERS,
+                                            &(iovec){
+                                                .iov_base = params->io_buf,
+                                                .iov_len = params->io_buf_size,
+                                            },
+                                            1, err_stack);
+    if (error_status != ZXStatus_Ok) {
+      ZX_ERR_APPEND_LOC(err_stack);
+      goto err;
+    }
+    registered_buffer = true;
   }
 
   zx_u32 *sq_khead = ring + ring_params.sq_off.head;
@@ -141,18 +182,27 @@ ZXStatus FioUring_init(bool polled_io, zx_i32 wq_fd, FioUring *fio_ring,
       .sq_mask = *(zx_u32 const *)(ring + ring_params.sq_off.ring_mask),
       .sq_n_entries = ring_params.sq_entries,
       .cq_mask = *(zx_u32 const *)(ring + ring_params.cq_off.ring_mask),
-      .polled_io = polled_io,
+      .registered_buffer = registered_buffer,
+      .polled_io = params->polled_io,
   };
 
   return ZXStatus_Ok;
 err:
+  if (registered_buffer) {
+    ZX_ASSERT((ring_fd != -1));
+    ZX_ERR_TRY_FATAL(
+        (zx_sys_io_uring_register(ring_fd, IORING_UNREGISTER_BUFFERS, nullptr,
+                                  0, err_stack)),
+        err_stack);
+  }
+
   if (registered_napi) {
     ZX_ASSERT((ring_fd != -1));
     struct io_uring_napi napi_params;
     __builtin_memset(&napi_params, 0, sizeof(napi_params));
-    ZX_ERR_TRY((zx_sys_io_uring_register(ring_fd, IORING_UNREGISTER_NAPI,
-                                         &napi_params, 1, err_stack)),
-               err_stack);
+    ZX_ERR_TRY_FATAL((zx_sys_io_uring_register(ring_fd, IORING_UNREGISTER_NAPI,
+                                               &napi_params, 1, err_stack)),
+                     err_stack);
   }
 
   if (sqes != nullptr) {
@@ -174,6 +224,13 @@ err:
 
 ZXStatus FioUring_deinit(FioUring *fio_ring, ZXErrStack *err_stack) {
   ZX_ASSERT((fio_ring != nullptr));
+
+  if (fio_ring->registered_buffer) {
+    ZX_ERR_TRY(
+        (zx_sys_io_uring_register(fio_ring->ring_fd, IORING_UNREGISTER_BUFFERS,
+                                  nullptr, 0, err_stack)),
+        err_stack);
+  }
 
   if (!fio_ring->polled_io) {
     struct io_uring_napi napi_params;

@@ -18,3 +18,10 @@ typedef struct FioExe {
   // indivdual requests into io_uring
   ZXSlab ops;
 } FioExe;
+
+// static ZXStatus FioExe_init(ZXAlloc* alloc, ZXErrStack* err_stack) {
+//   (void)alloc;
+//   (void)err_stack;
+//
+//   return ZXStatus_Ok;
+// }

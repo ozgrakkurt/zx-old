@@ -13,18 +13,45 @@ int main(void) {
   FioUring ring;
 
   for (zx_u32 i = 0; i < 5; i++) {
-    ZX_ERR_TRY_FATAL((FioUring_init(true, -1, &poll_ring, &err_stack)),
+    ZX_ERR_TRY_FATAL((FioUring_init(
+                         &(FioUringParams){
+                             .wq_fd = 0,
+                             .polled_io = true,
+                             .io_buf = nullptr,
+                             .io_buf_size = 0,
+                         },
+                         &poll_ring, &err_stack)),
                      &err_stack);
-    ZX_ERR_TRY_FATAL(
-        (FioUring_init(false, poll_ring.ring_fd, &ring, &err_stack)),
-        &err_stack);
+    ZX_ERR_TRY_FATAL((FioUring_init(
+                         &(FioUringParams){
+                             .wq_fd = (zx_u32)poll_ring.ring_fd,
+                             .polled_io = false,
+                             .io_buf = nullptr,
+                             .io_buf_size = 0,
+                         },
+                         &ring, &err_stack)),
+                     &err_stack);
     ZX_ERR_TRY_FATAL((FioUring_deinit(&ring, &err_stack)), &err_stack);
     ZX_ERR_TRY_FATAL((FioUring_deinit(&poll_ring, &err_stack)), &err_stack);
   }
 
-  ZX_ERR_TRY_FATAL((FioUring_init(true, -1, &poll_ring, &err_stack)),
+  ZX_ERR_TRY_FATAL((FioUring_init(
+                       &(FioUringParams){
+                           .wq_fd = 0,
+                           .polled_io = true,
+                           .io_buf = nullptr,
+                           .io_buf_size = 0,
+                       },
+                       &poll_ring, &err_stack)),
                    &err_stack);
-  ZX_ERR_TRY_FATAL((FioUring_init(false, poll_ring.ring_fd, &ring, &err_stack)),
+  ZX_ERR_TRY_FATAL((FioUring_init(
+                       &(FioUringParams){
+                           .wq_fd = (zx_u32)poll_ring.ring_fd,
+                           .polled_io = false,
+                           .io_buf = nullptr,
+                           .io_buf_size = 0,
+                       },
+                       &ring, &err_stack)),
                    &err_stack);
 
   constexpr zx_u32 total = 10;

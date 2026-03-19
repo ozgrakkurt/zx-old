@@ -31,10 +31,26 @@ typedef struct FioUring {
   zx_u32 sq_mask;
   zx_u32 sq_n_entries;
   zx_u32 cq_mask;
+  bool registered_buffer;
   bool polled_io;
 } FioUring;
 
-ZXStatus FioUring_init(bool polled_io, zx_i32 wq_fd, FioUring *fio_ring,
+typedef struct FioUringParams {
+  // Create a ring for only doing polled direct io.
+  bool polled_io;
+  // Value of 0 is ignore, any other value is registered as wq_fd into uring
+  // instance used for sharing sqpoll thread for multiple io_uring instances.
+  zx_u32 wq_fd;
+  // IO buffer for registering with io_uring. All later buffers passed to do io
+  // operations have to be inside the range of this buffer. passing nullptr for
+  // io_buf and zero for io_buf_size means "don't register anything". In that
+  // case, it is not possible to do io operations that require passing a buffer
+  // including file read/write and socket read/write.
+  zx_u8 *io_buf;
+  zx_u64 io_buf_size;
+} FioUringParams;
+
+ZXStatus FioUring_init(FioUringParams const *params, FioUring *fio_ring,
                        ZXErrStack *err_stack);
 
 ZXStatus FioUring_deinit(FioUring *fio_ring, ZXErrStack *err_stack);
