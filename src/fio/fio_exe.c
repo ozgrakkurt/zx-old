@@ -1,105 +1,17 @@
+#include "./fio_exe.h"
 #include "./fio_uring.h"
+#include "./fio_wake.h"
 #include <fiber/fiber.h>
 #include <zx/zx_alloc.h>
+#include <zx/zx_bitmap.h>
 #include <zx/zx_err.h>
-#include <zx/zx_queue.h>
 #include <zx/zx_slab.h>
-
-typedef struct FioCtx {
-} FioCtx;
-
-typedef bool fio_fut_pollfn(FioCtx const *ctx, void *state);
-
-typedef struct FioFut {
-  void *state;
-  fio_fut_pollfn pollfn;
-} FioFut;
-
-typedef struct FioFiber {
-  FiberCtx fib_ctx;
-} FioFiber;
-
-typedef struct FioWakeQueue {
-  zx_u64 *dedup;
-  ZXQueue to_wake;
-} FioWakeQueue;
-
-static ZXStatus FioWakeQueue_init(ZXAlloc *alloc, zx_u32 capacity,
-                                  FioWakeQueue *queue, ZXErrStack *err_stack) {
-  zx_u32 const bitmap_len = zx_chk_add_u32(capacity, 63) / 64;
-  zx_u64 const bitmap_size = zx_chk_mul_u64(bitmap_len, sizeof(zx_u64));
-  zx_u64 *dedup = nullptr;
-  ZX_ERR_TRY((ZXAlloc_alloc(alloc, alignof(zx_u64), bitmap_size,
-                            (zx_u8 **)&dedup, err_stack)),
-             err_stack);
-  __builtin_memset(dedup, 0, bitmap_size);
-
-  ZXQueue to_wake;
-  ZX_ERR_TRY((ZXQueue_init(alloc, capacity, alignof(zx_u32), sizeof(zx_u32),
-                           &to_wake, err_stack)),
-             err_stack);
-
-  *queue = (FioWakeQueue){
-      .dedup = dedup,
-      .to_wake = to_wake,
-  };
-
-  return ZXStatus_Ok;
-}
-
-static void FioWakeQueue_push(FioWakeQueue *queue, zx_u32 id) {
-  zx_u32 const bitmap_pos = id / 64;
-  zx_u64 const bit_chunk = queue->dedup[bitmap_pos];
-  bit_chunk >> (id % 64);
-
-  if (FioBitVec_set(&queue->dedup, id)) {
-    ZX_ASSERT(ZXQueue_push(&queue->to_wake, &id, sizeof(zx_u32)));
-  }
-}
-
-static bool FioWakeQueue_pop(FioWakeQueue *queue, zx_u32 *id) {
-  bool popped = ZXQueue_pop(&queue->to_wake, sizeof(zx_u32), id);
-  if (popped) {
-    FioBitVec_unset(&queue->dedup, *id);
-  }
-  return popped;
-}
-
-typedef struct FioExe {
-  // io_uring interface for regular IO
-  FioUring io_ring;
-  // io_uring interface for Direct IO
-  FioUring polled_io_ring;
-  // book-keeping for fibers
-  FioWakeQueue fiber_wake;
-  ZXSlab fiber;
-  zx_u8 *fiber_stack;
-  // book-keeping for Future objects
-  FioWakeQueue fut_wake;
-  ZXSlab fut;
-} FioExe;
-
-typedef struct FioExeParams {
-  // Handle for sharing kernel SQ_POLL between different instances
-  // 0 means no handle.
-  zx_u32 wq_fd;
-  // Maximum number of fibers that can be running at a time.
-  // Attempting to spawn more fibers will error.
-  zx_u32 max_n_fibers;
-  // IO buffer for registering with io_uring. All later buffers passed to do io
-  // operations have to be inside the range of this buffer. passing nullptr for
-  // io_buf and zero for io_buf_size means "don't register anything". In that
-  // case, it is not possible to do io operations that require passing a buffer
-  // including file read/write and socket read/write.
-  zx_u8 *io_buf;
-  zx_u64 io_buf_size;
-} FioExeParams;
 
 constexpr zx_u32 FIO_FIBER_STACK_SIZE = 1 << 18;
 static_assert(FIO_FIBER_STACK_SIZE % FIBER_STACK_ALIGN == 0);
 
-static ZXStatus FioExe_init(ZXAlloc *alloc, FioExeParams const *params,
-                            FioExe *exe, ZXErrStack *err_stack) {
+ZXStatus FioExe_init(ZXAlloc *alloc, FioExeParams const *params, FioExe *exe,
+                     ZXErrStack *err_stack) {
   ZX_ASSERT((params->max_n_fibers > 0));
 
   bool did_init_io_ring = false;
@@ -110,7 +22,7 @@ static ZXStatus FioExe_init(ZXAlloc *alloc, FioExeParams const *params,
       .wq_fd = params->wq_fd,
       .polled_io = false,
       .io_buf = params->io_buf,
-      .io_buf_size = params->io_size,
+      .io_buf_size = params->io_buf_size,
   };
   FioUring io_ring;
   error_status = FioUring_init(&uring_params, &io_ring, err_stack);
@@ -130,27 +42,43 @@ static ZXStatus FioExe_init(ZXAlloc *alloc, FioExeParams const *params,
   }
   did_init_polled_io_ring = true;
 
-  zx_u8 *fiber_stack = nullptr;
-  zx_u64 fiber_stack_size =
+  zx_u8 *fiber_stacks = nullptr;
+  zx_u64 fiber_stacks_size =
       zx_chk_mul_u64(params->max_n_fibers, FIO_FIBER_STACK_SIZE);
-  error_status = ZXAlloc_alloc(alloc, FIBER_STACK_ALIGN, fiber_stack_size,
-                               &stacks, err_stack);
+  error_status = ZXAlloc_alloc(alloc, FIBER_STACK_ALIGN, fiber_stacks_size,
+                               &fiber_stacks, err_stack);
   if (error_status != ZXStatus_Ok) {
     ZX_ERR_APPEND_LOC(err_stack);
     goto err;
   }
 
-  ZXSlab fiber;
+  ZXSlab fibers;
   error_status = ZXSlab_init(alloc, params->max_n_fibers, alignof(FioFiber),
-                             sizeof(FioFiber), &fiber, err_stack);
+                             sizeof(FioFiber), &fibers, err_stack);
   if (error_status != ZXStatus_Ok) {
     ZX_ERR_APPEND_LOC(err_stack);
     goto err;
   }
 
-  ZXSlab fut;
-  error_status = ZXSlab_init(alloc, params->max_n_fibers, alignof(FioFut),
-                             sizeof(FioFut), &fut, err_stack);
+  ZXSlab futures;
+  error_status = ZXSlab_init(alloc, params->max_n_futures, alignof(FioFuture),
+                             sizeof(FioFuture), &futures, err_stack);
+  if (error_status != ZXStatus_Ok) {
+    ZX_ERR_APPEND_LOC(err_stack);
+    goto err;
+  }
+
+  FioWake fiber_wake;
+  error_status =
+      FioWake_init(alloc, params->max_n_fibers, &fiber_wake, err_stack);
+  if (error_status != ZXStatus_Ok) {
+    ZX_ERR_APPEND_LOC(err_stack);
+    goto err;
+  }
+
+  FioWake future_wake;
+  error_status =
+      FioWake_init(alloc, params->max_n_futures, &future_wake, err_stack);
   if (error_status != ZXStatus_Ok) {
     ZX_ERR_APPEND_LOC(err_stack);
     goto err;
@@ -160,10 +88,10 @@ static ZXStatus FioExe_init(ZXAlloc *alloc, FioExeParams const *params,
       .io_ring = io_ring,
       .polled_io_ring = polled_io_ring,
       .fiber_wake = fiber_wake,
-      .fiber = fiber,
-      .fiber_stack = fiber_stack,
-      .fut_wake = fut_wake,
-      .fut = fut,
+      .fibers = fibers,
+      .fiber_stacks = fiber_stacks,
+      .future_wake = future_wake,
+      .futures = futures,
   };
 
   return ZXStatus_Ok;
@@ -182,13 +110,11 @@ err:
   return ZXStatus_Ok;
 }
 
-static ZXStatus FioExe_deinit(FioExe *exe, ZXErrStack *err_stack) {
+ZXStatus FioExe_deinit(FioExe *exe, ZXErrStack *err_stack) {
   ZX_ERR_TRY((FioUring_deinit(&exe->polled_io_ring, err_stack)), err_stack);
   ZX_ERR_TRY((FioUring_deinit(&exe->io_ring, err_stack)), err_stack);
 
-  return ZXStatus_Ok;
-}
+  __builtin_memset(exe, 0, sizeof(FioExe));
 
-static zx_u32 FioExe_wq_fd(FioExe const *exe) {
-  return FioUring_wq_fd(&exe->io_ring);
+  return ZXStatus_Ok;
 }

@@ -64,6 +64,23 @@ static inline bool ZXQueue_push(ZXQueue *queue, void const *entry,
   return true;
 }
 
+// Similar to ZXQueue_push.
+// Updates the queue length but leaves the new entry uninitialized.
+// Returns a pointer to the new uninitialized entry.
+// Returns nullptr if queue has no space.
+static inline void *ZXQueue_push_in_place(ZXQueue *queue, zx_u32 entry_size) {
+  if (queue->capacity == queue->len) {
+    ZX_FUZZ_MARKER;
+    return nullptr;
+  }
+  ZX_FUZZ_MARKER;
+
+  zx_u32 const end = (queue->start + queue->len) & queue->cap_mask;
+  zx_u64 const entry_offset = zx_chk_mul_u64(entry_size, end);
+  queue->len++;
+  return &queue->entries[entry_offset];
+}
+
 // returns true if pop succeeded, false if not.
 // only failure reason is queue being empty.
 static inline bool ZXQueue_pop(ZXQueue *queue, zx_u32 entry_size, void *entry) {

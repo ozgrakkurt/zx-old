@@ -43,6 +43,44 @@ static inline ZXStatus smoke_test(ZXAlloc *alloc, ZXErrStack *err_stack) {
   return ZXStatus_Ok;
 }
 
+static inline ZXStatus smoke_test_in_place(ZXAlloc *alloc,
+                                           ZXErrStack *err_stack) {
+  ZXQueue queue;
+  ZX_ERR_TRY((ZXQueue_init(alloc, CAP, alignof(key_type), sizeof(key_type),
+                           &queue, err_stack)),
+             err_stack);
+
+  // should be empty
+  key_type key = 69;
+  ZX_ERR_ASSERT((!ZXQueue_pop(&queue, sizeof(key_type), &key)), err_stack);
+  ZX_ERR_ASSERT((key == 69), err_stack);
+
+  for (zx_u64 i = 0; i < CAP; i++) {
+    // push
+    key = i;
+    void *entry = ZXQueue_push_in_place(&queue, sizeof(key_type));
+    ZX_ERR_ASSERT((entry != nullptr), err_stack);
+    *(key_type *)entry = key;
+  }
+
+  // should be full
+  void *entry = ZXQueue_push_in_place(&queue, sizeof(key_type));
+  ZX_ERR_ASSERT((entry == nullptr), err_stack);
+
+  for (zx_u64 i = 0; i < CAP; i++) {
+    // pop
+    ZX_ERR_ASSERT((ZXQueue_pop(&queue, sizeof(key_type), &key)), err_stack);
+    ZX_ERR_ASSERT((i == key), err_stack);
+  }
+
+  // should be empty
+  key = 69;
+  ZX_ERR_ASSERT((!ZXQueue_pop(&queue, sizeof(key_type), &key)), err_stack);
+  ZX_ERR_ASSERT((key == 69), err_stack);
+
+  return ZXStatus_Ok;
+}
+
 static inline ZXStatus zero_size_test(ZXAlloc *alloc, ZXErrStack *err_stack) {
   ZXQueue queue;
   ZX_ERR_TRY((ZXQueue_init(alloc, 0, alignof(key_type), sizeof(key_type),
@@ -74,6 +112,9 @@ int main(void) {
   ZXAlloc_reset(&alloc);
 
   ZX_ERR_TRY_FATAL((zero_size_test(&alloc, &err_stack)), &err_stack);
+  ZXAlloc_reset(&alloc);
+
+  ZX_ERR_TRY_FATAL((smoke_test_in_place(&alloc, &err_stack)), &err_stack);
 
   ZX_ERR_TRY_FATAL((zx_page_alloc_free(mem, MEMORY_SIZE, &err_stack)),
                    &err_stack);

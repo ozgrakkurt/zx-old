@@ -68,13 +68,13 @@ int main(void) {
       n_pending++;
     }
 
-    FioUringCompletion completion = {0};
-    while (FioUring_get_next_completion(&ring, &completion)) {
+    FioCQE const *cqe = FioUring_pop_cqe(&ring);
+    while (cqe != nullptr) {
       ZX_ASSERT((n_pending > 0));
-      // ZX_ASSERT((completion.res >= 0));
-      // ZX_ASSERT((completion.res == (zx_i32)__builtin_strlen(msg)));
       n_finished += 1;
       n_pending -= 1;
+
+      cqe = FioUring_pop_cqe(&ring);
     }
 
     ZX_ERR_TRY_FATAL((FioUring_sync(&ring, &err_stack)), &err_stack);

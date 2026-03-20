@@ -368,8 +368,13 @@ def process_library(
             exe_path = process_sub_target(nw, libraries, lib_name, test_tgt_name, deps)
 
             # Add test execution step
+            nw.comment("test execution")
             artifacts.test_exes.append(exe_path)
+            nw.build(test_tgt_name, "runexe", exe_path)
 
+            nw.newline()
+
+            nw.comment("test stamp")
             stamp_path = os.path.join("$build_path", "stamps", f"{test_tgt_name}.stamp")
 
             nw.build(stamp_path, "runtest", exe_path)
@@ -388,7 +393,7 @@ def process_library(
             exe_path = process_sub_target(nw, libraries, lib_name, bench_tgt_name, deps)
 
             # Add bench execution step
-            nw.comment("bencmark execution")
+            nw.comment("benchmark execution")
             artifacts.bench_exes.append(exe_path)
             nw.build(bench_tgt_name, "runexe", exe_path)
 

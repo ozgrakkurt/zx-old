@@ -12,6 +12,19 @@ typedef struct ZXBitmap {
   zx_u32 n_bits;
 } ZXBitmap;
 
+// typedef struct ZXBitmapIter {
+//   zx_u64 *next_word;
+//   zx_u64 word;
+//   zx_u32 n_bits;
+//   zx_u32 pos;
+// } ZXBitmapIter;
+//
+// static inline bool ZXBitmapIter_next(ZXBitmapIter* iter, zx_u32* idx) {
+//   if (iter->n_bits == iter->pos) {
+//
+//   }
+// }
+
 static inline ZXStatus ZXBitmap_init(ZXAlloc *alloc, zx_u32 n_bits,
                                      ZXBitmap *bitmap, ZXErrStack *err_stack) {
   zx_u32 const bitmap_len = zx_chk_add_u32(n_bits, 63) / 64;
@@ -28,6 +41,12 @@ static inline ZXStatus ZXBitmap_init(ZXAlloc *alloc, zx_u32 n_bits,
   };
 
   return ZXStatus_Ok;
+}
+
+static inline void ZXBitmap_reset(ZXBitmap *bitmap) {
+  zx_u32 const bitmap_len = zx_chk_add_u32(bitmap->n_bits, 63) / 64;
+  zx_u32 const byte_size = zx_chk_mul_u32(bitmap_len, sizeof(zx_u64));
+  __builtin_memset(bitmap->storage, 0, byte_size);
 }
 
 static inline bool ZXBitmap_get(ZXBitmap const *bitmap, zx_u32 idx) {

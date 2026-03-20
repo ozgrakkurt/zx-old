@@ -35,4 +35,10 @@ static inline zx_u64 ZXTimer_lap(ZXTimer *timer) {
   return diff;
 }
 
+static inline zx_u64 ZXTimer_elapsed(ZXTimer const *timer) {
+  zx_u64 const now = zx_timer_now_();
+  zx_u64 const diff = now - timer->start;
+  return diff;
+}
+
 #endif
