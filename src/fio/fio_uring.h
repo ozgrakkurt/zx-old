@@ -31,6 +31,7 @@ typedef struct FioUring {
   zx_u32 sq_mask;
   zx_u32 sq_n_entries;
   zx_u32 cq_mask;
+  zx_u32 wq_fd;
   bool registered_buffer;
   bool polled_io;
 } FioUring;
@@ -62,7 +63,7 @@ ZXStatus FioUring_deinit(FioUring *fio_ring, ZXErrStack *err_stack);
 ZXStatus FioUring_sync(FioUring *fio_ring, ZXErrStack *err_stack);
 
 static inline zx_i32 FioUring_wq_fd(FioUring const *fio_uring) {
-  return fio_uring->ring_fd;
+  return fio_uring->wq_fd;
 }
 
 typedef struct FioUringCompletion {

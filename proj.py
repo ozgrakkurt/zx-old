@@ -67,6 +67,7 @@ FIBER: Library = Library(
 )
 
 FIO: Library = Library(
+    dependencies=set(["fiber"]),
     source_files=set(["fio_uring.c", "fio_exe.c"]),
     test_targets={
         "fio_uring_test": set([]),

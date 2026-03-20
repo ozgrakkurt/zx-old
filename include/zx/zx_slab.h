@@ -63,6 +63,7 @@ static inline ZXStatus ZXSlab_init(ZXAlloc *alloc, zx_u32 capacity,
   return ZXStatus_Ok;
 }
 
+// It is illegal to call this function when `ZXSlab_capacity_left() == 0`.
 static inline zx_u32 ZXSlab_insert(ZXSlab *slab, void const *entry,
                                    zx_u32 entry_size) {
   zx_u32 const key_idx = slab->first_free_entry;
