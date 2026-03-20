@@ -1,6 +1,7 @@
 #ifndef FIO_URING_H
 #define FIO_URING_H
 
+#include <zx/zx_assert.h>
 #include <zx/zx_def.h>
 #include <zx/zx_err.h>
 #include <zx/zx_sys.h>
@@ -62,8 +63,10 @@ ZXStatus FioUring_deinit(FioUring *fio_ring, ZXErrStack *err_stack);
 // References to cqe or sqe shoudn't be accessed across a call to this function.
 ZXStatus FioUring_sync(FioUring *fio_ring, ZXErrStack *err_stack);
 
-static inline zx_i32 FioUring_wq_fd(FioUring const *fio_uring) {
-  return fio_uring->wq_fd;
+static inline zx_u32 FioUring_wq_fd(FioUring const *fio_uring) {
+  zx_i32 const wq_fd = fio_uring->ring_fd;
+  ZX_ASSERT(wq_fd > 0);
+  return (zx_u32)wq_fd;
 }
 
 typedef struct FioUringCompletion {

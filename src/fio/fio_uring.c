@@ -143,6 +143,8 @@ ZXStatus FioUring_init(FioUringParams const *params, FioUring *fio_ring,
   zx_u32 *cq_khead = ring + ring_params.cq_off.head;
   zx_u32 *cq_ktail = ring + ring_params.cq_off.tail;
 
+  ZX_ASSERT(ring_fd > 0);
+
   // setup output
   *fio_ring = (FioUring){
       .sq_kflags = ring + ring_params.sq_off.flags,
@@ -164,7 +166,7 @@ ZXStatus FioUring_init(FioUringParams const *params, FioUring *fio_ring,
       .sq_mask = *(zx_u32 const *)(ring + ring_params.sq_off.ring_mask),
       .sq_n_entries = ring_params.sq_entries,
       .cq_mask = *(zx_u32 const *)(ring + ring_params.cq_off.ring_mask),
-      .wq_fd = (params->wq_fd == 0) ? ring_fd : params->wq_fd,
+      .wq_fd = (params->wq_fd > 0) ? (zx_u32)ring_fd : params->wq_fd,
       .registered_buffer = registered_buffer,
       .polled_io = params->polled_io,
   };

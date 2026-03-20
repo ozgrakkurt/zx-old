@@ -20,9 +20,50 @@ typedef struct FioFiber {
 } FioFiber;
 
 typedef struct FioWakeQueue {
-  FioBitVec dedup;
+  zx_u64 *dedup;
   ZXQueue to_wake;
 } FioWakeQueue;
+
+static ZXStatus FioWakeQueue_init(ZXAlloc *alloc, zx_u32 capacity,
+                                  FioWakeQueue *queue, ZXErrStack *err_stack) {
+  zx_u32 const bitmap_len = zx_chk_add_u32(capacity, 63) / 64;
+  zx_u64 const bitmap_size = zx_chk_mul_u64(bitmap_len, sizeof(zx_u64));
+  zx_u64 *dedup = nullptr;
+  ZX_ERR_TRY((ZXAlloc_alloc(alloc, alignof(zx_u64), bitmap_size,
+                            (zx_u8 **)&dedup, err_stack)),
+             err_stack);
+  __builtin_memset(dedup, 0, bitmap_size);
+
+  ZXQueue to_wake;
+  ZX_ERR_TRY((ZXQueue_init(alloc, capacity, alignof(zx_u32), sizeof(zx_u32),
+                           &to_wake, err_stack)),
+             err_stack);
+
+  *queue = (FioWakeQueue){
+      .dedup = dedup,
+      .to_wake = to_wake,
+  };
+
+  return ZXStatus_Ok;
+}
+
+static void FioWakeQueue_push(FioWakeQueue *queue, zx_u32 id) {
+  zx_u32 const bitmap_pos = id / 64;
+  zx_u64 const bit_chunk = queue->dedup[bitmap_pos];
+  bit_chunk >> (id % 64);
+
+  if (FioBitVec_set(&queue->dedup, id)) {
+    ZX_ASSERT(ZXQueue_push(&queue->to_wake, &id, sizeof(zx_u32)));
+  }
+}
+
+static bool FioWakeQueue_pop(FioWakeQueue *queue, zx_u32 *id) {
+  bool popped = ZXQueue_pop(&queue->to_wake, sizeof(zx_u32), id);
+  if (popped) {
+    FioBitVec_unset(&queue->dedup, *id);
+  }
+  return popped;
+}
 
 typedef struct FioExe {
   // io_uring interface for regular IO
@@ -36,8 +77,6 @@ typedef struct FioExe {
   // book-keeping for Future objects
   FioWakeQueue fut_wake;
   ZXSlab fut;
-  // Handle for sharing kernel SQ_POLL between different instances
-  zx_u32 wq_fd;
 } FioExe;
 
 typedef struct FioExeParams {
@@ -125,7 +164,6 @@ static ZXStatus FioExe_init(ZXAlloc *alloc, FioExeParams const *params,
       .fiber_stack = fiber_stack,
       .fut_wake = fut_wake,
       .fut = fut,
-      .wq_fd = FioUring_wq_fd(&io_ring),
   };
 
   return ZXStatus_Ok;
@@ -151,4 +189,6 @@ static ZXStatus FioExe_deinit(FioExe *exe, ZXErrStack *err_stack) {
   return ZXStatus_Ok;
 }
 
-static zx_u32 FioExe_wq_fd(FioExe const *exe) { return exe->wq_fd; }
+static zx_u32 FioExe_wq_fd(FioExe const *exe) {
+  return FioUring_wq_fd(&exe->io_ring);
+}
