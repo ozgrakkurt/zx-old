@@ -111,7 +111,7 @@ static inline FioCQE const *FioUring_pop_cqe(FioUring *fio_ring) {
 // The returned pointer should be processed and discarded immediately after
 // calling this function. It is illegal to call any other method in the uring
 // object until the returned pointer is discarded.
-static inline FioSQE *FioUring_push_sqe_(FioUring *fio_ring) {
+static inline FioSQE *FioUring_push_sqe(FioUring *fio_ring) {
   if (fio_ring->sq_tail - fio_ring->sq_head >= fio_ring->sq_n_entries) {
     // Check if kernel processed more entries so we can push more.
     FioUring_sync_sq(fio_ring);
@@ -126,34 +126,27 @@ static inline FioSQE *FioUring_push_sqe_(FioUring *fio_ring) {
   }
 }
 
-static inline bool FioUring_submit_rw_(FioUring *fio_ring, zx_i32 op, zx_i32 fd,
-                                       zx_u64 buf_addr, zx_u64 offset,
-                                       zx_u32 size) {
-  FioSQE *sqe = FioUring_push_sqe_(fio_ring);
-  if (zx_unlikely(sqe == nullptr)) {
-    return false;
-  }
+static inline void FioUring_prep_rw_(FioSQE *sqe, zx_i32 op, zx_i32 fd,
+                                     zx_u64 buf_addr, zx_u64 offset,
+                                     zx_u32 size) {
   sqe->opcode = (zx_u8)op;
   sqe->fd = fd;
   sqe->addr = buf_addr;
   sqe->off = offset;
   sqe->len = size;
-
-  return true;
 }
 
-static inline bool FioUring_submit_read(FioUring *fio_ring, zx_i32 fd,
-                                        zx_u8 *buf, zx_u64 offset,
-                                        zx_u32 size) {
-  return FioUring_submit_rw_(fio_ring, IORING_OP_READ, fd, (zx_u64)buf, offset,
-                             size);
+static inline void FioUring_prep_read_fixed(FioSQE *sqe, zx_i32 fd, zx_u8 *buf,
+                                            zx_u64 offset, zx_u32 size) {
+  FioUring_prep_rw_(sqe, IORING_OP_READ_FIXED, fd, (zx_u64)buf, offset, size);
+  sqe->buf_index = 0;
 }
 
-static inline bool FioUring_submit_write(FioUring *fio_ring, zx_i32 fd,
-                                         zx_u8 const *buf, zx_u64 offset,
-                                         zx_u32 size) {
-  return FioUring_submit_rw_(fio_ring, IORING_OP_WRITE, fd, (zx_u64)buf, offset,
-                             size);
+static inline void FioUring_prep_write_fixed(FioSQE *sqe, zx_i32 fd,
+                                             zx_u8 const *buf, zx_u64 offset,
+                                             zx_u32 size) {
+  FioUring_prep_rw_(sqe, IORING_OP_WRITE_FIXED, fd, (zx_u64)buf, offset, size);
+  sqe->buf_index = 0;
 }
 
 #endif

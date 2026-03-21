@@ -1,7 +1,7 @@
-#include "./fio_exe.h"
-#include "./fio_uring.h"
-#include "./fio_wake.h"
 #include <fiber/fiber.h>
+#include <fio/fio_exe.h>
+#include <fio/fio_uring.h>
+#include <fio/fio_wake.h>
 #include <zx/zx_alloc.h>
 #include <zx/zx_bitmap.h>
 #include <zx/zx_err.h>
@@ -84,6 +84,18 @@ ZXStatus FioExe_init(ZXAlloc *alloc, FioExeParams const *params, FioExe *exe,
     goto err;
   }
 
+  zx_i32 *io_results = nullptr;
+  zx_u32 const n_io_results =
+      zx_chk_mul_u32(params->max_n_futures, FIO_IO_PER_FUTURE);
+  zx_u64 const io_results_byte_size =
+      zx_chk_mul_u64(n_io_results, sizeof(zx_i32));
+  error_status = ZXAlloc_alloc(alloc, alignof(zx_i32), io_results_byte_size,
+                               (zx_u8 **)&io_results, err_stack);
+  if (error_status != ZXStatus_Ok) {
+    ZX_ERR_APPEND_LOC(err_stack);
+    goto err;
+  }
+
   *exe = (FioExe){
       .io_ring = io_ring,
       .polled_io_ring = polled_io_ring,
@@ -92,6 +104,8 @@ ZXStatus FioExe_init(ZXAlloc *alloc, FioExeParams const *params, FioExe *exe,
       .fiber_stacks = fiber_stacks,
       .future_wake = future_wake,
       .futures = futures,
+      .io_results = io_results,
+      .yield_after_n_ticks = params->yield_after_n_ticks,
   };
 
   return ZXStatus_Ok;

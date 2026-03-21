@@ -1,69 +1,15 @@
 #ifndef FIO_EXE_H
 #define FIO_EXE_H
 
-#include "./fio_uring.h"
-#include "./fio_wake.h"
 #include <fiber/fiber.h>
+#include <fio/fio_fut.h>
+#include <fio/fio_uring.h>
+#include <fio/fio_wake.h>
 #include <zx/zx_alloc.h>
 #include <zx/zx_bitmap.h>
 #include <zx/zx_err.h>
 #include <zx/zx_slab.h>
 #include <zx/zx_time.h>
-
-typedef bool (*fio_fut_pollfn)(FioCtx const *ctx, void *state);
-typedef struct FioFuture {
-  void *state;
-  fio_fut_pollfn pollfn;
-} FioFuture;
-
-constexpr zx_u16 FIO_MAX_IO_PER_FUTURE = 32;
-
-typedef struct FioFutureEntry {
-  FioFuture fut;
-  FioCQE finished_io[FIO_MAX_IO_PER_FUTURE];
-  zx_u16 n_finished_io;
-  zx_u16 n_pending_io;
-} FioFutureEntry;
-
-// for passing context into futures and fibers
-typedef struct FioCtx {
-  ZXTimer timer;
-  zx_u64 preempt_n_ticks;
-  zx_u32 fut_id;
-  FioFuture *fut;
-  FioExe *exe;
-} FioCtx;
-
-static inline ZXStatus FioCtx_spawn(FioCtx *ctx, FioFuture fut, zx_u32 *fut_id,
-                                    ZXErrStack *err_stack) {
-  FioFutureEntry const entry = {
-      .fut = fut,
-      .finished_io = {0},
-      .n_finished_io = 0,
-      .n_pending_io = 0,
-  };
-
-  ZXSlab *futs = &ctx->exe->futures;
-
-  ZX_ERR_ASSERT((ZXSlab_capacity_left(futs) > 0), err_stack);
-  *fut_id = ZXSlab_insert(futs, &entry, sizeof(FioFutureEntry));
-
-  return ZXStatus_Ok;
-}
-
-static inline bool FioCtx_yield_if_needed(FioCtx *ctx) {
-  zx_u64 const elapsed = ZXTimer_elapsed(&ctx->timer);
-  if (elapsed > ctx->preempt_n_ticks) {
-    FioWake_set(&ctx->exe->future_wake, ctx->fut_id);
-    return true;
-  } else {
-    return false;
-  }
-}
-
-static inline void FioCtx_wake_self(FioCtx *ctx) {
-  FioWake_set(&ctx->exe->future_wake, ctx->fut_id);
-}
 
 typedef struct FioFiber {
   FiberCtx fib_ctx;
@@ -76,11 +22,15 @@ typedef struct FioExe {
   FioUring polled_io_ring;
   // book-keeping for fibers
   FioWake fiber_wake;
+  // Slab(Fiber)
   ZXSlab fibers;
   zx_u8 *fiber_stacks;
   // book-keeping for Future objects
   FioWake future_wake;
+  // Slab(FutureEntry)
   ZXSlab futures;
+  zx_i32 *io_results;
+  zx_u64 yield_after_n_ticks;
 } FioExe;
 
 typedef struct FioExeParams {
@@ -100,6 +50,9 @@ typedef struct FioExeParams {
   // including file read/write and socket read/write.
   zx_u8 *io_buf;
   zx_u64 io_buf_size;
+  // yield_if_needed will return true after a future has been running this
+  // number of ticks.
+  zx_u64 yield_after_n_ticks;
 } FioExeParams;
 
 ZXStatus FioExe_init(ZXAlloc *alloc, FioExeParams const *params, FioExe *exe,
