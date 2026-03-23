@@ -8,9 +8,6 @@
 #include <zx/zx_int.h>
 #include <zx/zx_slab.h>
 
-constexpr zx_u32 FIO_FIBER_STACK_SIZE = 1 << 18;
-static_assert(FIO_FIBER_STACK_SIZE % FIBER_STACK_ALIGN == 0);
-
 ZXStatus FioExe_init(ZXAlloc *alloc, FioExeParams const *params, FioExe *exe,
                      ZXErrStack *err_stack) {
   ZX_ASSERT((params->max_n_fibers < ZX_U32_MAX));
@@ -46,8 +43,7 @@ ZXStatus FioExe_init(ZXAlloc *alloc, FioExeParams const *params, FioExe *exe,
 
   zx_u8 *fiber_stacks = nullptr;
   zx_u64 fiber_stacks_size =
-      zx_chk_mul_u64(params->max_n_fibers,
-                     zx_chk_add_u32(FIO_FIBER_STACK_SIZE, FIBER_RED_ZONE_SIZE));
+      zx_chk_mul_u64(params->max_n_fibers, FIO_FIBER_STACK_SIZE);
   error_status = ZXAlloc_alloc(alloc, FIBER_STACK_ALIGN, fiber_stacks_size,
                                &fiber_stacks, err_stack);
   if (error_status != ZXStatus_Ok) {

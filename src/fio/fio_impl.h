@@ -31,8 +31,10 @@ typedef struct Fio {
   FiberCtx const *finish_fib_ctx;
   zx_u64 yield_after_n_ticks;
   ZXSlab *fibers;
+  ZXTimer *switch_timer;
   // ---- Fiber specific ----
-  zx_u32 fiber_id;
+  FioFiberEntry *self_entry;
+  zx_u32 self_id;
 } Fio;
 
 static inline void Fio_switch_next(Fio const *fio, FiberCtx *current_fib_ctx,
@@ -40,6 +42,7 @@ static inline void Fio_switch_next(Fio const *fio, FiberCtx *current_fib_ctx,
   FioFiberEntry const *next_entry = (FioFiberEntry const *)ZXSlab_get(
       fio->fibers, next_id, sizeof(FioFiberEntry));
   ZX_ASSERT((next_entry != nullptr));
+  ZXTimer_lap(fio->switch_timer);
   fiber_switch(current_fib_ctx, next_entry->fib_ctx);
 }
 
@@ -78,6 +81,7 @@ static inline bool Fio_process_cq(Fio const *fio, FioUring *ring) {
 static inline void Fio_yield(Fio const *fio, FiberCtx *current_fib_ctx) {
   if (zx_unlikely((ZXSlab_n_occupied(fio->fibers) == 0))) {
     // go to exit
+    ZXTimer_lap(fio->switch_timer);
     fiber_switch(current_fib_ctx, fio->finish_fib_ctx);
     ZX_ASSERT((false));
     __builtin_unreachable();
@@ -109,7 +113,8 @@ static inline void Fio_yield(Fio const *fio, FiberCtx *current_fib_ctx) {
           return;
         }
 
-        // maybe put cpu to low power mode?
+        // Make cpu relax. Emits x86_64 `PAUSE` instruction.
+        __builtin_ia32_pause();
       }
     }
   }
@@ -118,9 +123,11 @@ static inline void Fio_yield(Fio const *fio, FiberCtx *current_fib_ctx) {
   __builtin_unreachable();
 }
 
-// typedef void (*fio_fiberfn)(Fio const *fio, void *usr_ctx);
-// ZXStatus fio_spawn(Fio const *fio, void *usr_ctx, fio_fiberfn fiber_func,
-// ZXErrStack *err_stack); void fio_yield_if_needed(Fio const *fio);
+static inline void Fio_yield_if_needed(Fio const *fio) {
+  if (ZXTimer_elapsed(fio->switch_timer) > fio->yield_after_n_ticks) {
+    Fio_yield(fio, &fio->self_entry->fib_ctx);
+  }
+}
 
 typedef struct FioTrampoline {
   Fio fio;
@@ -138,7 +145,7 @@ fio_trampoline_(FiberCtx const *exe_ctx, FiberCtx *self_ctx,
   t.fiber_func(&t.fio, t.usr_ctx);
 
   FioFiberEntry ent;
-  ZXSlab_remove(t.fio.fibers, t.fio.fiber_id, sizeof(FioFiberEntry), &ent);
+  ZXSlab_remove(t.fio.fibers, t.fio.self_id, sizeof(FioFiberEntry), &ent);
   // can't be finished while having pending io in the ring.
   ZX_ASSERT((ent.io_is_pending == 0));
 
@@ -146,6 +153,47 @@ fio_trampoline_(FiberCtx const *exe_ctx, FiberCtx *self_ctx,
 
   ZX_ASSERT((false));
   __builtin_unreachable();
+
+  (void)exe_ctx;
+  (void)self_ctx;
+}
+
+constexpr zx_u32 FIO_FIBER_STACK_SIZE = 1 << 18;
+static_assert(FIO_FIBER_STACK_SIZE % FIBER_STACK_ALIGN == 0);
+static_assert(FIO_FIBER_STACK_SIZE > FIBER_RED_ZONE_SIZE);
+// should have at least 128 kb left after redzone.
+static_assert((FIO_FIBER_STACK_SIZE - FIBER_RED_ZONE_SIZE) >= (1 << 17));
+
+static inline void Fio_spawn(Fio const *fio, void *usr_ctx,
+                             fio_fiberfn fiber_func) {
+  FioTrampoline t = {
+      .fio = *fio,
+      .usr_ctx = usr_ctx,
+      .fiber_func = fiber_func,
+  };
+
+  FioFiberEntry new_entry = {
+      .fiber_ctx = {0},
+      .io_is_pending = 0,
+      .io_is_finished = 0,
+  };
+  zx_u32 const new_fib_id =
+      ZXSlab_insert(fio->fibers, &new_entry, sizeof(FioFiberEntry));
+
+  FioFiberEntry *new_entry_p =
+      ZXSlab_get(fio->fibers, new_fib_id, sizeof(FioFiberEntry));
+  ZX_ASSERT((new_entry_p != nullptr));
+
+  t->fio->self_id = new_fib_id;
+  t->fio->self_entry = new_entry_p;
+
+  zx_u8 *fiber_stack =
+      &fio->fiber_stacks[zx_chk_mul_u64(FIO_FIBER_STACK_SIZE, new_fib_id)];
+
+  FioWake_set(fio->wake, fio->self_id);
+  ZXTimer_lap(fio->switch_timer);
+  fiber_start(&fio->self_entry->fib_ctx, &new_entry_p->fiber_ctx, &t,
+              fio_trampoline_, fiber_stack);
 }
 
 #endif
