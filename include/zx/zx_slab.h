@@ -18,6 +18,10 @@ typedef struct ZXSlab {
 } ZXSlab;
 static_assert(sizeof(ZXSlab) == sizeof(void *) * 5);
 
+static inline zx_u32 ZXSlab_n_occupied(ZXSlab const *slab) {
+  return slab->n_occupied;
+}
+
 static inline zx_u32 ZXSlab_capacity_left(ZXSlab const *slab) {
   return zx_chk_sub_u32(slab->capacity, slab->n_occupied);
 }
