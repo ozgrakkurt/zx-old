@@ -24,10 +24,13 @@ static inline ZXStatus FioWake_init(ZXAlloc *alloc, zx_u32 capacity,
   return ZXStatus_Ok;
 }
 
+// Sets a bit in the current write bitmap.
 static inline void FioWake_set(FioWake *wake, zx_u32 idx) {
   ZXBitmap_set(&wake->bitmaps[wake->write_bitmap], idx);
 }
 
+// switches write/read bitmaps and gives out a pointer to the current read
+// bitmap.
 static inline ZXBitmap const *FioWake_cycle(FioWake *wake) {
   zx_u8 const tmp = wake->write_bitmap;
   wake->write_bitmap = wake->read_bitmap;

@@ -12,19 +12,6 @@ typedef struct ZXBitmap {
   zx_u32 n_bits;
 } ZXBitmap;
 
-// typedef struct ZXBitmapIter {
-//   zx_u64 *next_word;
-//   zx_u64 word;
-//   zx_u32 n_bits;
-//   zx_u32 pos;
-// } ZXBitmapIter;
-//
-// static inline bool ZXBitmapIter_next(ZXBitmapIter* iter, zx_u32* idx) {
-//   if (iter->n_bits == iter->pos) {
-//
-//   }
-// }
-
 static inline ZXStatus ZXBitmap_init(ZXAlloc *alloc, zx_u32 n_bits,
                                      ZXBitmap *bitmap, ZXErrStack *err_stack) {
   zx_u32 const bitmap_len = zx_chk_add_u32(n_bits, 63) / 64;
@@ -41,6 +28,10 @@ static inline ZXStatus ZXBitmap_init(ZXAlloc *alloc, zx_u32 n_bits,
   };
 
   return ZXStatus_Ok;
+}
+
+static inline zx_u32 ZXBitmap_n_bits(ZXBitmap const *bitmap) {
+  return bitmap->n_bits;
 }
 
 static inline void ZXBitmap_reset(ZXBitmap *bitmap) {
@@ -83,6 +74,41 @@ static inline bool ZXBitmap_unset(ZXBitmap *bitmap, zx_u32 idx) {
   bool const ret = (byte & mask) != 0;
   *byte_p = byte & ~mask;
   return ret;
+}
+
+typedef struct ZXBitmapIter {
+  zx_u64 *storage;
+  zx_u64 word;
+  zx_u32 position;
+  zx_u32 n_bits;
+} ZXBitmapIter;
+
+static inline ZXBitmapIter ZXBitmap_iter(ZXBitmap const *bitmap) {
+  return (ZXBitmapIter){
+      .storage = bitmap->storage,
+      .word = (bitmap->n_bits > 0) ? bitmap->storage[0] : 0,
+      .position = 0,
+      .n_bits = bitmap->n_bits,
+  };
+}
+
+static inline bool ZXBitmapIter_next(ZXBitmapIter *iter, zx_u32 *idx) {
+  while (iter->position < iter->n_bits) {
+    zx_u64 const word = iter->word;
+    if (word != 0) {
+      zx_u8 const bit_pos = zx_ctz_u64(word);
+      zx_u64 const mask = (zx_u64){1} << bit_pos;
+      iter->word &= ~mask;
+      *idx = bit_pos + iter->position;
+      return true;
+    } else {
+      constexpr zx_u32 WORD_SIZE = 64;
+      iter->position += WORD_SIZE;
+      iter->word = iter->storage[iter->position / WORD_SIZE];
+    }
+  }
+
+  return false;
 }
 
 #endif

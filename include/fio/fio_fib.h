@@ -3,10 +3,27 @@
 
 #include <fiber/fiber.h>
 #include <fio/fio_fut.h>
+#include <zx/zx_assert.h>
 
-typedef struct FioFibCtx {
-  FiberCtx parent;
-} FioFibCtx;
+typedef struct FioFiberCtx {
+  FiberCtx const *exe_fib;
+  FiberCtx *self_fib;
+  FioCtx const *fio_ctx;
+  zx_u32 self_id;
+} FioFiberCtx;
+
+typedef struct FioFiberHandle {
+  FioFiberEntry *entry;
+} FioFibeHandle;
+
+static inline void FioFiberHandle_join(FioCtx const *fio_ctx,
+                                       FioFiberHandle *handle) {}
+
+static inline void FioFiberHandle_detach(FioCtx const *fio_ctx,
+                                         FioFiberHandle *handle) {
+  (void)fio_ctx;
+  handle->entry->parent_id = ZX_U32_MAX;
+}
 
 // typedef void fiber_startfn(FiberCtx const *parent_ctx, FiberCtx *fiber_ctx,
 //                            void *usr_ctx);
@@ -18,20 +35,11 @@ typedef struct FioFibCtx {
 // void fiber_switch(FiberCtx *prev, FiberCtx const *next);
 //
 
-typedef struct FioFibStartCtx {
-  FioFibCtx const *fio_ctx;
-  void *usr_ctx;
-  void (*fibfn)(FioFibCtx const *fio_ctx, void *usr_ctx);
-  bool is_done;
-} FioFibStartCtx;
+static inline ZXStatus fio_spawn(FioCtx const *fio_ctx, void *usr_ctx,
+                                 fio_fibfn fiber_func, FioFiberEntry *entry,
+                                 ZXErrStack *err_stack) {
 
-__attribute__((__noreturn__)) static inline void
-fio_fib_start(FiberCtx const *parent_ctx, FiberCtx *fiber_ctx,
-              void *start_ctx) {
-  FioFibStartCtx const *c = (FioFibStartCtx const *)start_ctx;
-  c->fibfn(c->fio_ctx, c->usr_ctx);
-  c->is_done = true;
-  fiber_switch(fiber_ctx, parent_ctx);
+  return ZXStatus_Ok;
 }
 
 typedef struct FioAwait {
