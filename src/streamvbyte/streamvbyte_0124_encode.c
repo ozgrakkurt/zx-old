@@ -43,6 +43,22 @@ ZXStatus streamvbyte_0124_encode(zx_u32 const *restrict input, zx_u32 input_len,
   zx_u32 out_offset = header_size;
 
   if (n_whole > 0) {
+    typedef int v4si __attribute__((vector_size(16)));
+
+    v4si const ones = {0x01010101, 0x01010101, 0x01010101, 0x01010101};
+    v4si const gather_bits = {0x08040102, 0x08040102, 0x08040102, 0x08040102};
+    v4si const code_table = {0x02020100, 0x03030303, 0x03030303,
+                                      0x03030303};
+    v4si const gather_bytes = {0x0D090501, 0x0D090501, 0, 0};
+    v4si const aggregators = {0x10400104, 0x01010101, 0, 0};
+
+    for (zx_u32 i=0; i<n_whole/4; i++) {
+    }
+
+    for (zx_u32 i=0; i<n_whole%4; i++) {
+
+    }
+
     ZX_FUZZ_MARKER;
     typedef unsigned long regt;
     static_assert(sizeof(regt) == sizeof(zx_u64));
@@ -52,8 +68,7 @@ ZXStatus streamvbyte_0124_encode(zx_u32 const *restrict input, zx_u32 input_len,
 
     small_regt const ones = 0x01010101;
     small_regt const gather_bits = 0x08040102;
-    small_regt const code_table[4] = {0x02020100, 0x03030303, 0x03030303,
-                                      0x03030303};
+    small_regt const code_table[4] = ;
     small_regt const gather_bytes[4] = {0x0D090501, 0x0D090501, 0, 0};
     small_regt const aggregators[4] = {0x10400104, 0x01010101, 0, 0};
 

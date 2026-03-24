@@ -2,10 +2,13 @@
 #define FIO_IMPL_H
 
 #include <fiber/fiber.h>
-#include <fio/fio.h>
 #include <zx/zx_def.h>
 #include <zx/zx_err.h>
 #include <zx/zx_slab.h>
+#include <zx/zx_time.h>
+
+#include "./fio_uring.h"
+#include "./fio_wake.h"
 
 // Entry is used by the executor to keep info about a Fiber.
 // Entry is also used by both the executor and the fiber itself for
@@ -36,6 +39,51 @@ typedef struct Fio {
   FioFiberEntry *self_entry;
   zx_u32 self_id;
 } Fio;
+
+// It is illegal to call this function when a future already has max number of
+// pending/finished io.
+// Returns a pointer to sqe entry and marks it as initialized if an empty entry
+// can be found at this time. Returned entry should be immediately initialized
+// after calling this function. Returns nullptr if an entry can't be found.
+// Caller should retry later.
+static inline FioSQE *Fio_push_sqe(Fio const *fio, bool polled_io) {
+  FioFutureEntry *fut_entry = ctx->fut_entry;
+
+  zx_u64 const is_filled = fut_entry->is_pending | fut_entry->is_finished;
+  ZX_ASSERT((is_filled != ZX_U64_MAX));
+
+  // bit index of the first zero
+  zx_u8 const io_id = zx_chk_sub_u8(zx_ctz_u64(~is_filled), 1);
+
+  FioUring *ring = polled_io ? ctx->polled_io_ring : ctx->io_ring;
+  FioSQE *sqe = FioUring_push_sqe(ring);
+  if (sqe == nullptr) {
+    return nullptr;
+  }
+
+  sqe->user_data = ((zx_u64){io_id} << 32) | (zx_u64){ctx->fut_id};
+
+  // mark it pending
+  fut_entry->is_pending |= ((zx_u64){1} << io_id);
+
+  return sqe;
+}
+
+static inline bool Fio_remove_io_result(Fio const *fio, zx_u32 io_id,
+                                        zx_i32 *result) {
+  FioFibEntry *entry = fio->self_entry;
+
+  zx_u64 const mask = (zx_u64){1} << io_id;
+
+  if ((entry->is_finished & mask) != 0) {
+    // remove finished marker
+    entry->is_finished &= ~mask;
+    *result = ctx->io_results[ctx->fut_id * FIO_IO_PER_FUTURE + io_id];
+    return true;
+  } else {
+    return false;
+  }
+}
 
 static inline void Fio_switch_next(Fio const *fio, FiberCtx *current_fib_ctx,
                                    zx_u32 next_id) {

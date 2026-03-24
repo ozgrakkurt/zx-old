@@ -141,6 +141,8 @@ ZXHashtable_find_idx_(ZXHashtable const *const table, zx_u8 const tag,
                       zx_u64 const hash, void const *const entry,
                       zx_u32 const entry_size, void const *const ctx,
                       zx_hashtable_key_eqfn key_eqfn) {
+  typedef unsigned char v16qi __attribute__((vector_size(16)));
+
   zx_u32 const cap_mask = table->cap_mask;
   zx_u32 stride = 0;
 
@@ -148,9 +150,15 @@ ZXHashtable_find_idx_(ZXHashtable const *const table, zx_u8 const tag,
 
   zx_u8 const *const meta = table->metadata;
   while (true) {
-    zx_u16 tag_match;
-    zx_u16 empty_match;
-    ZXHashtable_load_(&meta[meta_idx], tag, &tag_match, &empty_match);
+    v16qi const tag_vec = {
+        tag, tag, tag, tag, tag, tag, tag, tag,
+        tag, tag, tag, tag, tag, tag, tag, tag,
+    };
+
+    v16qi group;
+    __builtin_memcpy(&group, &meta[meta_idx], sizeof(group));
+
+    zx_u16 tag_match = (zx_u16)__builtin_ia32_pmovmskb128(tag_vec == group);
 
     while (tag_match != 0) {
       zx_u8 const tag_pos = zx_ctz_u16(tag_match);
@@ -174,6 +182,7 @@ ZXHashtable_find_idx_(ZXHashtable const *const table, zx_u8 const tag,
       }
     }
 
+    zx_u16 const empty_match = (zx_u16)__builtin_ia32_pmovmskb128(group);
     if (zx_likely(empty_match != 0)) {
       ZX_FUZZ_MARKER;
 
