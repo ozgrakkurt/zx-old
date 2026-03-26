@@ -81,8 +81,7 @@ struct ZXHashtable {
   //
   // This function will abort with an error if the table is already full and a
   // matching entry doesn't exist in the table already.
-  __attribute__((always_inline)) inline bool insert(zx_u64 hash, T const *entry,
-                                                    EqCtx eqctx) {
+  inline bool insert(zx_u64 hash, T const *entry, EqCtx eqctx) {
     zx_u8 const tag = (zx_u8)(hash >> 57);
     zx_u32 const cap_mask_ = this->cap_mask;
     zx_u32 stride = 0;
@@ -155,8 +154,7 @@ struct ZXHashtable {
   //
   // This function will abort with an error if the table is already full and a
   // matching entry doesn't exist in the table already.
-  __attribute__((always_inline)) inline T const *
-  get_or_insert(zx_u64 hash, T const *entry, EqCtx eqctx) {
+  inline T const *get_or_insert(zx_u64 hash, T const *entry, EqCtx eqctx) {
     zx_u8 const tag = (zx_u8)(hash >> 57);
     zx_u32 const cap_mask_ = this->cap_mask;
     zx_u32 stride = 0;

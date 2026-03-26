@@ -20,7 +20,7 @@ extern zx_u16 const __start_zx_fuzz_abort_lineno;
 extern char const *__start_zx_fuzz_abort_filename;
 extern char const *__stop_zx_fuzz_abort_filename;
 
-typedef struct ZXFuzzLinkerSet {
+struct ZXFuzzLinkerSet {
   zx_u32 n_markers;
   zx_u8 *marker_hit;
   char const *const *marker_filename;
@@ -32,7 +32,7 @@ typedef struct ZXFuzzLinkerSet {
   zx_u32 n_aborts;
   char const *const *abort_filename;
   zx_u16 const *abort_lineno;
-} ZXFuzzLinkerSet;
+};
 
 static ZXFuzzLinkerSet ZXFuzzLinkerSet_load(void) {
   static_assert(sizeof(void *) == sizeof(zx_u64));

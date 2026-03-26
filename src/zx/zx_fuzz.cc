@@ -92,11 +92,11 @@ static zx_u32 zx_fuzz_update_coverage(ZXFuzzLinkerSet const *linker_set,
 }
 
 constexpr zx_u32 ZX_FUZZ_VALUES_CAP = 512;
-typedef struct ZXFuzzValues {
+struct ZXFuzzValues {
   zx_u64 values[ZX_FUZZ_VALUES_CAP];
   zx_u32 push_pos;
   zx_u32 n_filled;
-} ZXFuzzValues;
+};
 
 static void ZXFuzzValues_push(ZXFuzzValues *queue, zx_u64 val) {
   constexpr zx_u32 PUSH_MASK = ZX_FUZZ_VALUES_CAP - 1;
@@ -135,7 +135,7 @@ static zx_u32 zx_fuzz_count_tgt(char const *const *filenames,
   return tgt_count;
 }
 
-typedef struct ZXFuzzer {
+struct ZXFuzzer {
   void *usr_ctx;
   zx_u64 *fuzz_input;
   ZXFuzzValues *fuzz_values;
@@ -150,7 +150,7 @@ typedef struct ZXFuzzer {
   zx_u32 *signature_dedup;
   zx_u32 signature_dedup_cap;
   zx_u32 fuzz_input_len;
-} ZXFuzzer;
+};
 
 static ZXStatus ZXFuzzer_init(ZXAlloc *alloc, ZXFuzzParams const *params,
                               zx_u32 fuzz_input_len, zx_u32 signature_dedup_cap,
@@ -283,11 +283,11 @@ static ZXStatus ZXFuzzer_print_status(ZXFuzzer *fuzzer, bool clear_lines,
   return ZXStatus_Ok;
 }
 
-typedef struct ZXFuzzRunResult {
+struct ZXFuzzRunResult {
   zx_u64 score;
   zx_u32 consumed_count;
   bool improvement;
-} ZXFuzzRunResult;
+};
 
 static ZXStatus ZXFuzzer_fuzz_one(ZXFuzzer *fuzzer, zx_u32 mut_idx,
                                   zx_u64 base_score, ZXFuzzRunResult *result,
