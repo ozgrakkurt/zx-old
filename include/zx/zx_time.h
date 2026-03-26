@@ -19,7 +19,7 @@ struct ZXTimer {
   }
 
   static inline ZXTimer init() {
-    zx_u64 const start = ZXTimer::now();
+    zx_u64 const start = now_();
 
     return ZXTimer{
         .start = start,
@@ -28,14 +28,14 @@ struct ZXTimer {
 
   // returns the number of ticks (roughly clock cycles) elapsed
   __attribute__((always_inline)) inline zx_u64 lap() {
-    zx_u64 const now = ZXTimer::now();
+    zx_u64 const now = now_();
     zx_u64 const diff = now - this->start;
     this->start = now;
     return diff;
   }
 
   inline zx_u64 elapsed() const {
-    zx_u64 const now = zx_timer_now_();
+    zx_u64 const now = now_();
     zx_u64 const diff = now - this->start;
     return diff;
   }

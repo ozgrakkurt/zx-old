@@ -31,10 +31,10 @@ ZX: Library = Library(
         # "zx_slab_test": set([]),
         # "zx_bitmap_test": set([]),
     },
-    # bench_targets={
-    #     "zx_hashtable_bench": set([]),
-    #     "zx_err_bench": set([]),
-    # },
+    bench_targets={
+        "zx_hashtable_bench": set([]),
+        #     "zx_err_bench": set([]),
+    },
     # fuzz_targets={
     #     "zx_hashtable_fuzz": set([]),
     #     "zx_slab_fuzz": set([]),

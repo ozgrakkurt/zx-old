@@ -10,7 +10,7 @@ struct ZXXoshiro256 {
   zx_u64 s[4];
 
   static inline ZXXoshiro256 init(zx_u64 seed) {
-    constexpr zx_u64 PHI = 0x9e3779b97f4a7c15wbu;
+    constexpr zx_u64 PHI = 0x9e3779b97f4a7c15;
 
     zx_u64 state = seed;
     ZXXoshiro256 rand;
@@ -18,8 +18,8 @@ struct ZXXoshiro256 {
     for (zx_u8 i = 0; i < 4; i++) {
       state += PHI;
       zx_u64 z = state;
-      z = (z ^ (z >> 30)) * 0xbf58476d1ce4e5bawbu,
-      z = (z ^ (z >> 27)) * 0x94d049bb133111ebwbu;
+      z = (z ^ (z >> 30)) * (zx_u64){0xbf58476d1ce4e5ba},
+      z = (z ^ (z >> 27)) * (zx_u64){0x94d049bb133111eb};
       z = z ^ (z >> 31);
       rand.s[i] = z;
     }
@@ -46,7 +46,7 @@ struct ZXXoshiro256 {
     return r;
   }
 
-  inline void fill(zx_u8 *restrict out, zx_u64 len) {
+  inline void fill(zx_u8 *__restrict out, zx_u64 len) {
     if (len == 0) {
       return;
     }
