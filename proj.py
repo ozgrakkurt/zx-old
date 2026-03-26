@@ -33,12 +33,12 @@ ZX: Library = Library(
     },
     bench_targets={
         "zx_hashtable_bench": set([]),
-        #     "zx_err_bench": set([]),
+        "zx_err_bench": set([]),
     },
     fuzz_targets={
         "zx_hashtable_fuzz": set([]),
-        #     "zx_slab_fuzz": set([]),
-        #     "zx_queue_fuzz": set([]),
+        "zx_slab_fuzz": set([]),
+        "zx_queue_fuzz": set([]),
     },
 )
 
