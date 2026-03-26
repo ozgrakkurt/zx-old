@@ -27,14 +27,14 @@ template <typename T> struct ZXSlab {
     __builtin_memset(is_occupied, 0, sizeof(bool) * capacity);
 
     zx_u32 *next_free = nullptr;
-    ZX_ERR_TRY((alloc->alloc<zx_u32>(capacity, next_free, err_stack)),
+    ZX_ERR_TRY((alloc->alloc<zx_u32>(capacity, &next_free, err_stack)),
                err_stack);
     for (zx_u32 i = 0; i < capacity; i++) {
       next_free[i] = i + 1;
     }
 
     T *entries = nullptr;
-    ZX_ERR_TRY((alloc->alloc<T>(capacity, entries, err_stack)), err_stack);
+    ZX_ERR_TRY((alloc->alloc<T>(capacity, &entries, err_stack)), err_stack);
 
     *slab = ZXSlab{
         .is_occupied = is_occupied,
@@ -66,7 +66,7 @@ template <typename T> struct ZXSlab {
 
     this->first_free_entry = this->next_free[key_idx];
     this->entries[key_idx] = *entry;
-    this->n_occupied = zx_chk_add_u32(this->n_occupied_, 1);
+    this->n_occupied_ = zx_chk_add_u32(this->n_occupied_, 1);
 
     return key_idx;
   }
@@ -82,7 +82,7 @@ template <typename T> struct ZXSlab {
     this->next_free[key_idx] = this->first_free_entry;
     this->first_free_entry = key_idx;
 
-    this->n_occupied = zx_chk_sub_u32(this->n_occupied, 1);
+    this->n_occupied_ = zx_chk_sub_u32(this->n_occupied_, 1);
 
     return this->entries[key_idx];
   }

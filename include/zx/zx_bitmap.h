@@ -7,6 +7,32 @@
 #include <zx/zx_err.h>
 #include <zx/zx_int.h>
 
+struct ZXBitmapIter {
+  zx_u64 *storage;
+  zx_u64 word;
+  zx_u32 position;
+  zx_u32 n_bits_;
+
+  inline bool next(zx_u32 *idx) {
+    while (this->position < this->n_bits_) {
+      zx_u64 const word_ = this->word;
+      if (word_ != 0) {
+        zx_u8 const bit_pos = zx_ctz_u64(word_);
+        zx_u64 const mask = (zx_u64){1} << bit_pos;
+        this->word &= ~mask;
+        *idx = bit_pos + this->position;
+        return true;
+      } else {
+        constexpr zx_u32 WORD_SIZE = 64;
+        this->position += WORD_SIZE;
+        this->word = this->storage[this->position / WORD_SIZE];
+      }
+    }
+
+    return false;
+  }
+};
+
 struct ZXBitmap {
   zx_u64 *storage;
   zx_u32 n_bits_;
@@ -61,7 +87,7 @@ struct ZXBitmap {
   }
 
   inline bool unset(zx_u32 idx) {
-    ZX_DBG_ASSERT(idx < this->n_bits);
+    ZX_DBG_ASSERT(idx < this->n_bits_);
 
     zx_u32 const byte_index = idx / 8;
     zx_u32 const bit_shift = idx % 8;
@@ -80,32 +106,6 @@ struct ZXBitmap {
         .position = 0,
         .n_bits_ = this->n_bits_,
     };
-  }
-};
-
-struct ZXBitmapIter {
-  zx_u64 *storage;
-  zx_u64 word;
-  zx_u32 position;
-  zx_u32 n_bits_;
-
-  inline bool next(zx_u32 *idx) {
-    while (this->position < this->n_bits_) {
-      zx_u64 const word_ = this->word;
-      if (word_ != 0) {
-        zx_u8 const bit_pos = zx_ctz_u64(word_);
-        zx_u64 const mask = (zx_u64){1} << bit_pos;
-        this->word &= ~mask;
-        *idx = bit_pos + this->position;
-        return true;
-      } else {
-        constexpr zx_u32 WORD_SIZE = 64;
-        this->position += WORD_SIZE;
-        this->word = this->storage[this->position / WORD_SIZE];
-      }
-    }
-
-    return false;
   }
 };
 

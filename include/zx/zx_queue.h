@@ -9,7 +9,7 @@
 #include <zx/zx_int.h>
 
 template <typename T> struct ZXQueue {
-  zx_u8 *entries;
+  T *entries;
   zx_u32 start;
   zx_u32 len_;
   zx_u32 cap_mask;
@@ -86,10 +86,10 @@ template <typename T> struct ZXQueue {
     }
     ZX_FUZZ_MARKER;
 
-    zx_u32 const start = this->start;
-    *entry = this->entries[start];
+    zx_u32 const start_ = this->start;
+    *entry = this->entries[start_];
 
-    this->start = (start + 1) & this->cap_mask;
+    this->start = (start_ + 1) & this->cap_mask;
     this->len_--;
     return true;
   }
