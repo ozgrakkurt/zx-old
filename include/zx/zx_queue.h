@@ -56,7 +56,7 @@ template <typename T> struct ZXQueue {
 
     zx_u32 const end = (this->start + this->len_) & this->cap_mask;
 
-    __builtin_memcpy(&this->entries[end], entry, sizeof(T));
+    this->entries[end] = *entry;
     this->len_++;
     return true;
   }
@@ -87,7 +87,7 @@ template <typename T> struct ZXQueue {
     ZX_FUZZ_MARKER;
 
     zx_u32 const start = this->start;
-    __builtin_memcpy(entry, &this->entries[start], sizeof(T));
+    *entry = this->entries[start];
 
     this->start = (start + 1) & this->cap_mask;
     this->len_--;

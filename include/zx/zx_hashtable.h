@@ -112,7 +112,7 @@ struct ZXHashtable {
         if (EqFn(eqctx, entry_p, entry)) [[likely]] {
           ZX_FUZZ_MARKER;
 
-          __builtin_memcpy(entry_p, entry, sizeof(T));
+          *entry_p = *entry;
           return true;
         } else {
           ZX_FUZZ_MARKER;
@@ -135,7 +135,7 @@ struct ZXHashtable {
         zx_u8 *metas = this->metadata;
 
         this->capacity_left_ = cap_left - (zx_u32){1};
-        __builtin_memcpy(&this->entries[index], entry, sizeof(T));
+        this->entries[index] = *entry;
         metas[index] = tag;
         metas[maybe_mirror_idx] = tag;
 
@@ -206,7 +206,7 @@ struct ZXHashtable {
         T *entry_p = &this->entries[index];
 
         this->capacity_left_ = cap_left - (zx_u32){1};
-        __builtin_memcpy(entry_p, entry, sizeof(T));
+        *entry_p = *entry;
         metas[index] = tag;
         metas[maybe_mirror_idx] = tag;
 
