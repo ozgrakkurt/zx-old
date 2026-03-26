@@ -9,15 +9,8 @@
 #include <zx/zx_int.h>
 #include <zx/zx_vec.h>
 
-template <typename T>
-bool zx_hashtable_default_eqfn(void const *ctx, T const *a, T const *b) {
-  (void)ctx;
-  return *a == *b;
-}
-
-template <typename T, typename EqCtx = void const *,
-          bool EqFn(EqCtx ctx, T const *a, T const *b) =
-              zx_hashtable_default_eqfn>
+template <typename T, typename EqCtx,
+          bool EqFn(EqCtx ctx, T const *a, T const *b)>
 struct ZXHashtable {
   T *entries;
   zx_u8 *metadata;

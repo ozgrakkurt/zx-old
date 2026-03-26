@@ -11,25 +11,27 @@
 struct ZXFuzzInput {
   zx_u64 *input;
   zx_u32 input_len;
-  zx_u32 consumed_count;
+  zx_u32 consumed_count_;
 
   static inline ZXFuzzInput init(zx_u64 *input, zx_u32 input_len) {
     return ZXFuzzInput{
         .input = input,
         .input_len = input_len,
-        .consumed_count = 0,
+        .consumed_count_ = 0,
     };
   }
 
-  inline zx_u64 next() {
-    zx_u32 const offset = this->consumed_count;
+  __attribute__((always_inline)) inline zx_u64 next() {
+    zx_u32 const offset = this->consumed_count_;
     ZX_ASSERT((this->input_len > offset));
-    this->consumed_count = offset + 1;
+    this->consumed_count_ = offset + 1;
 
     return this->input[offset];
   }
 
-  inline zx_u32 consumed_count() const { return this->consumed_count; }
+  __attribute__((always_inline)) inline zx_u32 consumed_count() const {
+    return this->consumed_count_;
+  }
 };
 
 typedef ZXStatus (*zx_fuzz_one_fn)(void *usr_ctx, ZXFuzzInput *fuzz_input,

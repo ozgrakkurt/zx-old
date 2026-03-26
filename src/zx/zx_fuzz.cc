@@ -68,13 +68,13 @@ static zx_u32 zx_fuzz_count_coverage(bool const *coverage, zx_u32 n) {
 static zx_u32 zx_fuzz_update_coverage(ZXFuzzLinkerSet const *linker_set,
                                       bool *marker_coverage,
                                       bool *err_coverage) {
-  zx_u32 new = 0;
+  zx_u32 new_hits = 0;
 
   for (zx_u64 i = 0; i < linker_set->n_markers; i++) {
     bool const hit = linker_set->marker_hit[i] > 0;
 
     if (!marker_coverage[i] && hit) {
-      new ++;
+      new_hits++;
     }
     marker_coverage[i] |= hit;
   }
@@ -83,12 +83,12 @@ static zx_u32 zx_fuzz_update_coverage(ZXFuzzLinkerSet const *linker_set,
     bool const hit = linker_set->err_hit[i] > 0;
 
     if (!err_coverage[i] && hit) {
-      new ++;
+      new_hits++;
     }
     err_coverage[i] |= hit;
   }
 
-  return new;
+  return new_hits;
 }
 
 constexpr zx_u32 ZX_FUZZ_VALUES_CAP = 512;
@@ -160,74 +160,68 @@ static ZXStatus ZXFuzzer_init(ZXAlloc *alloc, ZXFuzzParams const *params,
   ZXFuzzLinkerSet const linker_set = ZXFuzzLinkerSet_load();
 
   zx_u64 *fuzz_input = nullptr;
-  zx_u32 const fuzz_input_byte_size =
-      zx_chk_mul_u32(fuzz_input_len, sizeof(zx_u64));
-  ZX_ERR_TRY((ZXAlloc_alloc(alloc, alignof(zx_u64), fuzz_input_byte_size,
-                            (zx_u8 **)&fuzz_input, err_stack)),
+  ZX_ERR_TRY((alloc->alloc<zx_u64>(fuzz_input_len, &fuzz_input, err_stack)),
              err_stack);
-  __builtin_memset(fuzz_input, 0, fuzz_input_byte_size);
+  __builtin_memset(fuzz_input, 0,
+                   zx_chk_mul_u32(fuzz_input_len, sizeof(zx_u64)));
 
   ZXFuzzValues *fuzz_values = nullptr;
-  zx_u32 const fuzz_values_byte_size =
-      zx_chk_mul_u32(fuzz_input_len, sizeof(ZXFuzzValues));
-  ZX_ERR_TRY((ZXAlloc_alloc(alloc, alignof(ZXFuzzValues), fuzz_values_byte_size,
-                            (zx_u8 **)&fuzz_values, err_stack)),
-             err_stack);
-  __builtin_memset(fuzz_values, 0, fuzz_values_byte_size);
+  ZX_ERR_TRY(
+      (alloc->alloc<ZXFuzzValues>(fuzz_input_len, &fuzz_values, err_stack)),
+      err_stack);
+  __builtin_memset(fuzz_values, 0,
+                   zx_chk_mul_u32(fuzz_input_len, sizeof(ZXFuzzValues)));
 
   bool *marker_coverage = nullptr;
-  ZX_ERR_TRY((ZXAlloc_alloc(alloc, alignof(bool), linker_set.n_markers,
-                            (zx_u8 **)&marker_coverage, err_stack)),
-             err_stack);
+  ZX_ERR_TRY(
+      (alloc->alloc<bool>(linker_set.n_markers, &marker_coverage, err_stack)),
+      err_stack);
   __builtin_memset(marker_coverage, 0, linker_set.n_markers);
 
   bool *err_coverage = nullptr;
-  ZX_ERR_TRY((ZXAlloc_alloc(alloc, alignof(bool), linker_set.n_errs,
-                            (zx_u8 **)&err_coverage, err_stack)),
+  ZX_ERR_TRY((alloc->alloc<bool>(linker_set.n_errs, &err_coverage, err_stack)),
              err_stack);
   __builtin_memset(err_coverage, 0, linker_set.n_errs);
 
   zx_u32 *signature_dedup = nullptr;
-  zx_u32 const signature_dedup_byte_size = signature_dedup_cap * sizeof(zx_u32);
-  ZX_ERR_TRY((ZXAlloc_alloc(alloc, alignof(zx_u32), signature_dedup_byte_size,
-                            (zx_u8 **)&signature_dedup, err_stack)),
-             err_stack);
-  __builtin_memset(signature_dedup, 0, signature_dedup_byte_size);
+  ZX_ERR_TRY(
+      (alloc->alloc<zx_u32>(signature_dedup_cap, &signature_dedup, err_stack)),
+      err_stack);
+  __builtin_memset(signature_dedup, 0, signature_dedup_cap * sizeof(zx_u32));
 
   bool *marker_is_tgt = nullptr;
-  ZX_ERR_TRY((ZXAlloc_alloc(alloc, alignof(bool), linker_set.n_markers,
-                            (zx_u8 **)&marker_is_tgt, err_stack)),
-             err_stack);
+  ZX_ERR_TRY(
+      (alloc->alloc<bool>(linker_set.n_markers, &marker_is_tgt, err_stack)),
+      err_stack);
   zx_u32 const tgt_marker_count = zx_fuzz_count_tgt(
       linker_set.marker_filename, linker_set.n_markers, params->tgt_file_filter,
       params->tgt_file_filter_len, marker_is_tgt);
 
   bool *err_is_tgt = nullptr;
-  ZX_ERR_TRY((ZXAlloc_alloc(alloc, alignof(bool), linker_set.n_errs,
-                            (zx_u8 **)&err_is_tgt, err_stack)),
+  ZX_ERR_TRY((alloc->alloc<bool>(linker_set.n_errs, &err_is_tgt, err_stack)),
              err_stack);
   zx_u32 const tgt_err_count = zx_fuzz_count_tgt(
       linker_set.err_filename, linker_set.n_errs, params->tgt_file_filter,
       params->tgt_file_filter_len, err_is_tgt);
 
-  *fuzzer = (ZXFuzzer){
+  *fuzzer = ZXFuzzer{
       .usr_ctx = params->usr_ctx,
       .fuzz_input = fuzz_input,
       .fuzz_values = fuzz_values,
       .marker_coverage = marker_coverage,
       .err_coverage = err_coverage,
       .marker_is_tgt = marker_is_tgt,
+      .tgt_marker_count = tgt_marker_count,
       .err_is_tgt = err_is_tgt,
+      .tgt_err_count = tgt_err_count,
       .fuzz_one = params->fuzz_one,
       .linker_set = linker_set,
       .signature_dedup = signature_dedup,
       .signature_dedup_cap = signature_dedup_cap,
       .fuzz_input_len = fuzz_input_len,
-      .tgt_err_count = tgt_err_count,
-      .tgt_marker_count = tgt_marker_count,
   };
 
-  return ZXStatus_Ok;
+  return ZXStatus::Ok;
 }
 
 static ZXStatus ZXFuzzer_print_status(ZXFuzzer *fuzzer, bool clear_lines,
@@ -278,9 +272,9 @@ static ZXStatus ZXFuzzer_print_status(ZXFuzzer *fuzzer, bool clear_lines,
 
   ZX_ERR_TRY((zx_io_print(ZX_STDERR, fmt, err_stack)), err_stack);
 
-  ZXFmt_reset(fmt);
+  fmt->reset();
 
-  return ZXStatus_Ok;
+  return ZXStatus::Ok;
 }
 
 struct ZXFuzzRunResult {
@@ -295,7 +289,7 @@ static ZXStatus ZXFuzzer_fuzz_one(ZXFuzzer *fuzzer, zx_u32 mut_idx,
   ZX_ASSERT((mut_idx < fuzzer->fuzz_input_len));
 
   ZXFuzzInput input =
-      ZXFuzzInput_init(fuzzer->fuzz_input, fuzzer->fuzz_input_len);
+      ZXFuzzInput::init(fuzzer->fuzz_input, fuzzer->fuzz_input_len);
 
   zx_fuzz_clear_linker_set(&fuzzer->linker_set);
 
@@ -320,11 +314,11 @@ static ZXStatus ZXFuzzer_fuzz_one(ZXFuzzer *fuzzer, zx_u32 mut_idx,
 
   *result = (ZXFuzzRunResult){
       .score = score,
-      .consumed_count = ZXFuzzInput_consumed_count(&input),
+      .consumed_count = input.consumed_count(),
       .improvement = improvement,
   };
 
-  return ZXStatus_Ok;
+  return ZXStatus::Ok;
 }
 
 static ZXStatus ZXFuzzer_fuzz(ZXFuzzer *fuzzer, ZXFmt *fmt,
@@ -334,10 +328,10 @@ static ZXStatus ZXFuzzer_fuzz(ZXFuzzer *fuzzer, ZXFmt *fmt,
   constexpr zx_u64 MAGIC[] = {0, ZX_U64_MAX};
   constexpr zx_u64 N_MAGIC = sizeof(MAGIC) / sizeof(MAGIC[0]);
 
-  ZXXoshiro256 rand = ZXXoshiro256_init(0);
+  ZXXoshiro256 rand = ZXXoshiro256::init(0);
 
-  ZXXoshiro256_fill(&rand, (zx_u8 *)fuzzer->fuzz_input,
-                    fuzzer->fuzz_input_len * sizeof(zx_u64));
+  rand.fill((zx_u8 *)fuzzer->fuzz_input,
+            fuzzer->fuzz_input_len * sizeof(zx_u64));
 
   zx_u32 mut_idx = 0;
   zx_u32 fuzz_iter_no = 0;
@@ -345,17 +339,19 @@ static ZXStatus ZXFuzzer_fuzz(ZXFuzzer *fuzzer, ZXFmt *fmt,
     ZX_ASSERT((mut_idx < fuzzer->fuzz_input_len));
 
     // do a baseline run
-    ZXFuzzRunResult baseline_result = {0};
+    ZXFuzzRunResult baseline_result;
+    __builtin_memset(&baseline_result, 0, sizeof(baseline_result));
     ZX_ERR_TRY((ZXFuzzer_fuzz_one(fuzzer, mut_idx, ZX_U64_MAX, &baseline_result,
                                   err_stack)),
                err_stack);
     // select a random position to mutate
-    mut_idx = zx_rand_mod_u32((zx_u32)ZXXoshiro256_next(&rand),
-                              baseline_result.consumed_count);
+    mut_idx =
+        zx_rand_mod_u32((zx_u32)rand.next(), baseline_result.consumed_count);
 
     for (zx_u64 i = 0; i < N_MAGIC; i++) {
       fuzzer->fuzz_input[mut_idx] = MAGIC[i];
-      ZXFuzzRunResult result = {0};
+      ZXFuzzRunResult result;
+      __builtin_memset(&result, 0, sizeof(result));
       ZX_ERR_TRY((ZXFuzzer_fuzz_one(fuzzer, mut_idx, baseline_result.score,
                                     &result, err_stack)),
                  err_stack);
@@ -366,7 +362,8 @@ static ZXStatus ZXFuzzer_fuzz(ZXFuzzer *fuzzer, ZXFmt *fmt,
     for (zx_u64 i = 0; i < fuzz_vals->n_filled; i++) {
       fuzzer->fuzz_input[mut_idx] = fuzz_vals->values[i];
 
-      ZXFuzzRunResult result = {0};
+      ZXFuzzRunResult result;
+      __builtin_memset(&result, 0, sizeof(result));
       ZX_ERR_TRY((ZXFuzzer_fuzz_one(fuzzer, mut_idx, baseline_result.score,
                                     &result, err_stack)),
                  err_stack);
@@ -379,10 +376,11 @@ static ZXStatus ZXFuzzer_fuzz(ZXFuzzer *fuzzer, ZXFmt *fmt,
     zx_u32 const max_stall = zx_chk_add_u32(8, fuzz_vals->n_filled);
     zx_u32 stall = 0;
     while (stall < max_stall) {
-      zx_u64 const new_val = ZXXoshiro256_next(&rand);
+      zx_u64 const new_val = rand.next();
       fuzzer->fuzz_input[mut_idx] = new_val;
 
-      ZXFuzzRunResult result = {0};
+      ZXFuzzRunResult result;
+      __builtin_memset(&result, 0, sizeof(result));
       ZX_ERR_TRY((ZXFuzzer_fuzz_one(fuzzer, mut_idx, baseline_result.score,
                                     &result, err_stack)),
                  err_stack);
@@ -395,11 +393,11 @@ static ZXStatus ZXFuzzer_fuzz(ZXFuzzer *fuzzer, ZXFmt *fmt,
     }
 
     if (fuzz_vals->n_filled > 0) {
-      zx_u32 const val_idx = zx_rand_mod_u32((zx_u32)ZXXoshiro256_next(&rand),
-                                             fuzz_vals->n_filled);
+      zx_u32 const val_idx =
+          zx_rand_mod_u32((zx_u32)rand.next(), fuzz_vals->n_filled);
       fuzzer->fuzz_input[mut_idx] = fuzz_vals->values[val_idx];
     } else {
-      fuzzer->fuzz_input[mut_idx] = ZXXoshiro256_next(&rand);
+      fuzzer->fuzz_input[mut_idx] = rand.next();
     }
 
     if ((fuzz_iter_no % 1024) == 0) {
@@ -410,7 +408,7 @@ static ZXStatus ZXFuzzer_fuzz(ZXFuzzer *fuzzer, ZXFmt *fmt,
     fuzz_iter_no += 1;
   }
 
-  return ZXStatus_Ok;
+  return ZXStatus::Ok;
 }
 
 ZXStatus zx_fuzz_main(ZXAlloc *alloc, ZXFuzzParams const *params,
@@ -420,19 +418,17 @@ ZXStatus zx_fuzz_main(ZXAlloc *alloc, ZXFuzzParams const *params,
   constexpr zx_u32 SIGNATURE_DEDUP_CAP = 1 << 21;
 
   char *fmt_buf = nullptr;
-  ZX_ERR_TRY((ZXAlloc_alloc(alloc, alignof(char), FMT_BUF_CAP,
-                            (zx_u8 **)&fmt_buf, err_stack)),
-             err_stack);
-  ZXFmt fmt = ZXFmt_init(fmt_buf, FMT_BUF_CAP);
+  ZX_ERR_TRY((alloc->alloc<char>(FMT_BUF_CAP, &fmt_buf, err_stack)), err_stack);
+  ZXFmt fmt = ZXFmt::init(fmt_buf, FMT_BUF_CAP);
 
-  ZXFuzzer fuzzer = {0};
+  ZXFuzzer fuzzer;
   ZX_ERR_TRY((ZXFuzzer_init(alloc, params, INPUT_LEN, SIGNATURE_DEDUP_CAP,
                             &fuzzer, err_stack)),
              err_stack);
 
   ZX_ERR_TRY((ZXFuzzer_fuzz(&fuzzer, &fmt, err_stack)), err_stack);
 
-  return ZXStatus_Ok;
+  return ZXStatus::Ok;
 }
 
 #endif

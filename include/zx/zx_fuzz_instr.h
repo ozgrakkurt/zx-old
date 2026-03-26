@@ -17,7 +17,7 @@
             __LINE__;                                                          \
     (void)zx_fuzz_marker_filename_;                                            \
     (void)zx_fuzz_marker_lineno_;                                              \
-    zx_fuzz_marker_hit_ = (zx_fuzz_marker_hit_ + 1wbu) | (zx_u8){1wbu};        \
+    zx_fuzz_marker_hit_ = (zx_fuzz_marker_hit_ + (zx_u8){1}) | (zx_u8){1};     \
     (void)zx_fuzz_marker_hit_;                                                 \
   } while (false)
 
@@ -33,7 +33,7 @@
             __LINE__;                                                          \
     (void)zx_fuzz_err_filename_;                                               \
     (void)zx_fuzz_err_lineno_;                                                 \
-    zx_fuzz_err_hit_ = (zx_fuzz_err_hit_ + 1wbu) | (zx_u8){1wbu};              \
+    zx_fuzz_err_hit_ = (zx_fuzz_err_hit_ + (zx_u8){1}) | (zx_u8){1};           \
     (void)zx_fuzz_err_hit_;                                                    \
   } while (false)
 

@@ -14,7 +14,13 @@ constexpr zx_u64 CAP = 30123;
 
 typedef zx_u256 key_type;
 
-using HTable = ZXHashtable<key_type>;
+static inline bool keys_eql(void const *ctx, key_type const *a,
+                            key_type const *b) {
+  (void)ctx;
+  return *a == *b;
+}
+
+using HTable = ZXHashtable<key_type, void const *, keys_eql>;
 
 static inline ZXStatus do_inserts(ZXAlloc *alloc, ZXErrStack *err_stack) {
   constexpr zx_u32 fmt_buf_cap = 1 << 12;

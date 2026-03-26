@@ -13,7 +13,7 @@
     zx_err_stack_->append_(                                                    \
         ZXErrStackEntry_{.file_name = __FILE_NAME__,                           \
                          .line_no = __LINE__,                                  \
-                         .file_name_len = __builtin_strlen(__FILE_NAME__)}),   \
+                         .file_name_len = __builtin_strlen(__FILE_NAME__)});   \
   } while (false)
 
 // checks if expr evaluates to an error status.
@@ -27,8 +27,8 @@
       zx_err_stack_->append_(                                                  \
           ZXErrStackEntry_{.file_name = __FILE_NAME__,                         \
                            .line_no = __LINE__,                                \
-                           .file_name_len = __builtin_strlen(__FILE_NAME__)}), \
-          ZX_FUZZ_ERR_MARKER;                                                  \
+                           .file_name_len = __builtin_strlen(__FILE_NAME__)}); \
+      ZX_FUZZ_ERR_MARKER;                                                      \
       return zx_status_;                                                       \
     }                                                                          \
     ZX_FUZZ_MARKER;                                                            \
@@ -46,8 +46,8 @@
       zx_err_stack_->append_(                                                  \
           ZXErrStackEntry_{.file_name = __FILE_NAME__,                         \
                            .line_no = __LINE__,                                \
-                           .file_name_len = __builtin_strlen(__FILE_NAME__)}), \
-          ZX_FUZZ_ABORT_MARKER;                                                \
+                           .file_name_len = __builtin_strlen(__FILE_NAME__)}); \
+      ZX_FUZZ_ABORT_MARKER;                                                    \
       zx_err_stack_->abort_();                                                 \
     }                                                                          \
     ZX_FUZZ_MARKER;                                                            \
@@ -63,8 +63,8 @@
     zx_err_stack_->append_(                                                    \
         ZXErrStackEntry_{.file_name = __FILE_NAME__,                           \
                          .line_no = __LINE__,                                  \
-                         .file_name_len = __builtin_strlen(__FILE_NAME__)}),   \
-        ZX_FUZZ_ERR_MARKER;                                                    \
+                         .file_name_len = __builtin_strlen(__FILE_NAME__)});   \
+    ZX_FUZZ_ERR_MARKER;                                                        \
     return zx_status_;                                                         \
   } while (false)
 
