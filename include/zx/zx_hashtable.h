@@ -9,8 +9,15 @@
 #include <zx/zx_int.h>
 #include <zx/zx_vec.h>
 
-template <typename T, typename EqCtx,
-          bool EqFn(EqCtx ctx, T const *a, T const *b)>
+template <typename T>
+bool zx_hashtable_default_eqfn(void const *ctx, T const *a, T const *b) {
+  (void)ctx;
+  return *a == *b;
+}
+
+template <typename T, typename EqCtx = void const *,
+          bool EqFn(EqCtx ctx, T const *a, T const *b) =
+              zx_hashtable_default_eqfn>
 struct ZXHashtable {
   T *entries;
   zx_u8 *metadata;
@@ -105,7 +112,7 @@ struct ZXHashtable {
         if (EqFn(eqctx, entry_p, entry)) [[likely]] {
           ZX_FUZZ_MARKER;
 
-          *entry_p = *entry;
+          __builtin_memcpy(entry_p, entry, sizeof(T));
           return true;
         } else {
           ZX_FUZZ_MARKER;
@@ -128,7 +135,7 @@ struct ZXHashtable {
         zx_u8 *metas = this->metadata;
 
         this->capacity_left_ = cap_left - (zx_u32){1};
-        this->entries[index] = *entry;
+        __builtin_memcpy(&this->entries[index], entry, sizeof(T));
         metas[index] = tag;
         metas[maybe_mirror_idx] = tag;
 
@@ -199,7 +206,7 @@ struct ZXHashtable {
         T *entry_p = &this->entries[index];
 
         this->capacity_left_ = cap_left - (zx_u32){1};
-        *entry_p = *entry;
+        __builtin_memcpy(entry_p, entry, sizeof(T));
         metas[index] = tag;
         metas[maybe_mirror_idx] = tag;
 

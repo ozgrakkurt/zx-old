@@ -65,7 +65,7 @@ template <typename T> struct ZXSlab {
     this->is_occupied[key_idx] = true;
 
     this->first_free_entry = this->next_free[key_idx];
-    this->entries[key_idx] = *entry;
+    __builtin_memcpy(&this->entries[key_idx], *entry, sizeof(T));
     this->n_occupied = zx_chk_add_u32(this->n_occupied_, 1);
 
     return key_idx;
@@ -73,7 +73,7 @@ template <typename T> struct ZXSlab {
 
   // It is invalid to call this function with a key that doesn't exist in the
   // slab
-  inline T remove(zx_u32 key) {
+  inline void remove(zx_u32 key, T *entry) {
     zx_u32 const key_idx = key;
 
     ZX_ASSERT((this->is_occupied[key_idx] == true));
@@ -84,7 +84,7 @@ template <typename T> struct ZXSlab {
 
     this->n_occupied = zx_chk_sub_u32(this->n_occupied, 1);
 
-    return this->entries[key_idx];
+    __builtin_memcpy(entry, &this->entries[key_idx], sizeof(T));
   }
 
   // It is invalid to call this function with a key that doesn't exist in the
