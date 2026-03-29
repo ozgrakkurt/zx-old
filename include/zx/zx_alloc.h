@@ -24,7 +24,7 @@ struct ZXAlloc {
   inline void reset() { this->offset = 0; }
 
   template <typename T>
-  inline ZXStatus aligned_alloc(zx_u16 align, zx_u32 len, T **ptr,
+  inline ZXStatus aligned_alloc(zx_u16 align, zx_u64 len, T **ptr,
                                 ZXErrStack *err_stack) {
     ZX_ASSERT((err_stack != nullptr));
     ZX_ASSERT((ptr != nullptr));
@@ -56,7 +56,7 @@ struct ZXAlloc {
   }
 
   template <typename T>
-  inline ZXStatus alloc(zx_u32 len, T **ptr, ZXErrStack *err_stack) {
+  inline ZXStatus alloc(zx_u64 len, T **ptr, ZXErrStack *err_stack) {
     ZX_ERR_TRY((this->aligned_alloc(alignof(T), len, ptr, err_stack)),
                err_stack);
     return ZXStatus::Ok;

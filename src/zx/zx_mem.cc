@@ -13,13 +13,47 @@ static_assert(sizeof(void *) == sizeof(sizet));
 
 __attribute__((no_builtin)) void *
 memcpy(void *__restrict dest, const void *__restrict src, sizet count) {
-  void *const orig_dest = dest;
-  __asm__ volatile("rep movsb\n\t"
-                   : "+D"(dest), "+S"(src), "+c"(count)
-                   :
-                   : "memory");
-  return orig_dest;
+  char const *input = (char const *)src;
+  char *output = (char *)dest;
+
+  sizet offset = 0;
+
+  for (; offset + 64 < count; offset += 64) {
+    __asm__("vmovdqu8 %[input], %%zmm0\n\t"
+            "vmovdqu8 %%zmm0, %[output]\n\t"
+            : [output] "=m"(*(char (*)[64])output)
+            : [input] "m"(*(char const(*)[64])input)
+            : "zmm0");
+
+    output += 64;
+    input += 64;
+  }
+
+  sizet const remainder = count - offset;
+  if (remainder > 0) {
+    typedef unsigned long regt;
+    static_assert(sizeof(regt) == sizeof(void *));
+    register regt const storemask __asm__("k2") =
+        __builtin_ia32_bzhi_di(~(regt){0}, remainder);
+    __asm__("vmovdqu8 %[input], %%zmm0 %{%[storemask]%}\n\t"
+            "vmovdqu8 %%zmm0, %[output] %{%[storemask]%}\n\t"
+            : [output] "=m"(*(char (*)[64])output)
+            : [input] "m"(*(char const(*)[64])input), [storemask] "k"(storemask)
+            : "zmm0");
+  }
+
+  return dest;
 }
+
+// __attribute__((no_builtin)) void *
+// memcpy(void *__restrict dest, const void *__restrict src, sizet count) {
+//   void *const orig_dest = dest;
+//   __asm__ volatile("rep movsb\n\t"
+//                    : "+D"(dest), "+S"(src), "+c"(count)
+//                    :
+//                    : "memory");
+//   return orig_dest;
+// }
 
 __attribute__((no_builtin)) void *memset(void *const dest, int ch,
                                          sizet count) {

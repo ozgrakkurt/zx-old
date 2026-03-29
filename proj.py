@@ -47,6 +47,9 @@ NOZ: Library = Library(
     test_targets={
         "noz_test": set([]),
     },
+    bench_targets={
+        "noz_bench": set([]),
+    },
 )
 
 # STREAMVBYTE: Library = Library(

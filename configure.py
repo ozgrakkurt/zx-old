@@ -234,6 +234,8 @@ def make_ldflags(build_path: str, config: Config) -> List[str]:
         "-fno-rtti",
         "-nostdlib++",
         "-fno-threadsafe-statics",
+        # optimization level
+        f"-O{profile.opt_level}",
     ]
 
     if not profile.enable_debug_info:

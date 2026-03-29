@@ -85,16 +85,14 @@ struct ZXHashtable {
     regt tag_m;
     regt empty_m;
 
-    vect_ mvec;
-    vect_ group;
-    __asm__("vmovdqu %[group_ptr], %[group]\n\t"         // load group
-            "vpcmpeqb %[tag_vec], %[group], %[mvec]\n\t" // tag match
-            "vpmovmskb %[mvec], %[tag_m]\n\t"
-            "vpmovmskb %[group], %[empty_m]\n\t" // empty match
-            : [tag_m] "=r"(tag_m), [empty_m] "=r"(empty_m), [group] "=x"(group),
-              [mvec] "=x"(mvec)
+    __asm__("vmovdqu %[group_ptr], %%xmm1\n\t"        // load group
+            "vpcmpeqb %[tag_vec], %%xmm1, %%xmm0\n\t" // tag match
+            "vpmovmskb %%xmm0, %[tag_m]\n\t"
+            "vpmovmskb %%xmm1, %[empty_m]\n\t" // empty match
+            : [tag_m] "=r"(tag_m), [empty_m] "=r"(empty_m)
             : [group_ptr] "m"(*(zx_u8 const(*)[GROUP_SIZE_])group_ptr),
-              [tag_vec] "x"(tag_vec));
+              [tag_vec] "v"(tag_vec)
+            : "xmm0", "xmm1");
 
     *tag_match = (zx_u16)tag_m;
     *empty_match = (zx_u16)empty_m;
@@ -103,12 +101,12 @@ struct ZXHashtable {
   __attribute__((always_inline)) static inline zx_u16
   tag_match_(vect_ group, vect_ tag_vec) {
     regt tag_m;
-    vect_ mvec;
 
-    __asm__("vpcmpeqb %[tag_vec], %[group], %[mvec]\n\t"
-            "vpmovmskb %[mvec], %[tag_m]\n\t"
-            : [tag_m] "=r"(tag_m), [mvec] "=x"(mvec)
-            : [group] "x"(group), [tag_vec] "x"(tag_vec));
+    __asm__("vpcmpeqb %[tag_vec], %[group], %%xmm8\n\t"
+            "vpmovmskb %%xmm8, %[tag_m]\n\t"
+            : [tag_m] "=r"(tag_m)
+            : [group] "v"(group), [tag_vec] "v"(tag_vec)
+            : "xmm8");
 
     return (zx_u16)tag_m;
   }
@@ -119,7 +117,7 @@ struct ZXHashtable {
 
     __asm__("vpmovmskb %[group], %[empty_m]\n\t"
             : [empty_m] "=r"(empty_m)
-            : [group] "x"(group));
+            : [group] "v"(group));
 
     return (zx_u16)empty_m;
   }
@@ -128,7 +126,7 @@ struct ZXHashtable {
   load_group_(void const *group_ptr) {
     vect_ group;
     __asm__("vmovdqu %[group_ptr], %[group]\n\t"
-            : [group] "=x"(group)
+            : [group] "=v"(group)
             : [group_ptr] "m"(*(zx_u8 const(*)[GROUP_SIZE_])group_ptr));
 
     return group;
@@ -138,7 +136,7 @@ struct ZXHashtable {
     vect_ tag_vec;
     __asm__("vmovd %1, %0\n\t"
             "vpbroadcastb %0, %0\n\t"
-            : "=x"(tag_vec)
+            : "=v"(tag_vec)
             : "r"((regt)tag));
     return tag_vec;
   }
