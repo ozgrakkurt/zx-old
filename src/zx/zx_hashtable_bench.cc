@@ -10,7 +10,7 @@
 #include <zx/zx_xoshiro256.h>
 
 constexpr zx_u64 MEMORY_SIZE = (zx_u64){1} << 30;
-constexpr zx_u64 CAP = 30123;
+constexpr zx_u256 CAP = 30123;
 
 typedef zx_u256 key_type;
 

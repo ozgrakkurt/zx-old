@@ -7,7 +7,6 @@
 #include <zx/zx_err.h>
 #include <zx/zx_fuzz_instr.h>
 #include <zx/zx_int.h>
-#include <zx/zx_vec.h>
 
 template <typename T, typename EqCtx,
           bool EqFn(EqCtx ctx, T const *a, T const *b)>
@@ -18,7 +17,11 @@ struct ZXHashtable {
   zx_u32 capacity_left_;
   zx_u32 capacity;
 
-  static constexpr zx_u8 GROUP_SIZE_ = sizeof(zx_v128_u8);
+  typedef zx_u8 vect_ __attribute__((vector_size(16)));
+  typedef unsigned long regt;
+  static_assert(sizeof(regt) == sizeof(void *));
+
+  static constexpr zx_u8 GROUP_SIZE_ = sizeof(vect_);
   static constexpr zx_u8 EMPTY_TAG_ = 0b11111111;
   static constexpr zx_u32 LOAD_FACTOR_ = 80;
 
@@ -75,6 +78,71 @@ struct ZXHashtable {
     return ((index - GROUP_SIZE_) & cap_mask_) + GROUP_SIZE_;
   }
 
+  __attribute__((always_inline)) static inline void load_(void const *group_ptr,
+                                                          vect_ tag_vec,
+                                                          zx_u16 *tag_match,
+                                                          zx_u16 *empty_match) {
+    regt tag_m;
+    regt empty_m;
+
+    vect_ mvec;
+    vect_ group;
+    __asm__("vmovdqu %[group_ptr], %[group]\n\t"         // load group
+            "vpcmpeqb %[tag_vec], %[group], %[mvec]\n\t" // tag match
+            "vpmovmskb %[mvec], %[tag_m]\n\t"
+            "vpmovmskb %[group], %[empty_m]\n\t" // empty match
+            : [tag_m] "=r"(tag_m), [empty_m] "=r"(empty_m), [group] "=x"(group),
+              [mvec] "=x"(mvec)
+            : [group_ptr] "m"(*(zx_u8 const(*)[GROUP_SIZE_])group_ptr),
+              [tag_vec] "x"(tag_vec));
+
+    *tag_match = (zx_u16)tag_m;
+    *empty_match = (zx_u16)empty_m;
+  }
+
+  __attribute__((always_inline)) static inline zx_u16
+  tag_match_(vect_ group, vect_ tag_vec) {
+    regt tag_m;
+    vect_ mvec;
+
+    __asm__("vpcmpeqb %[tag_vec], %[group], %[mvec]\n\t"
+            "vpmovmskb %[mvec], %[tag_m]\n\t"
+            : [tag_m] "=r"(tag_m), [mvec] "=x"(mvec)
+            : [group] "x"(group), [tag_vec] "x"(tag_vec));
+
+    return (zx_u16)tag_m;
+  }
+
+  __attribute__((always_inline)) static inline zx_u16
+  empty_match_(vect_ group) {
+    regt empty_m;
+
+    __asm__("vpmovmskb %[group], %[empty_m]\n\t"
+            : [empty_m] "=r"(empty_m)
+            : [group] "x"(group));
+
+    return (zx_u16)empty_m;
+  }
+
+  __attribute__((always_inline)) static inline vect_
+  load_group_(void const *group_ptr) {
+    vect_ group;
+    __asm__("vmovdqu %[group_ptr], %[group]\n\t"
+            : [group] "=x"(group)
+            : [group_ptr] "m"(*(zx_u8 const(*)[GROUP_SIZE_])group_ptr));
+
+    return group;
+  }
+
+  __attribute__((always_inline)) static inline vect_ broadcast_(zx_u8 tag) {
+    vect_ tag_vec;
+    __asm__("vmovd %1, %0\n\t"
+            "vpbroadcastb %0, %0\n\t"
+            : "=x"(tag_vec)
+            : "r"((regt)tag));
+    return tag_vec;
+  }
+
   // Returns true if a matching entry existed before and was overwritten.
   //
   // Returns false otherwise.
@@ -84,18 +152,19 @@ struct ZXHashtable {
   inline bool insert(zx_u64 hash, T const *entry, EqCtx eqctx) {
     zx_u8 const tag = (zx_u8)(hash >> 57);
     zx_u32 const cap_mask_ = this->cap_mask;
-    zx_v128_u8 const tag_vec = zx_v128_broadcast_u8(tag);
+
+    vect_ const tag_vec = broadcast_(tag);
 
     zx_u32 stride = 0;
 
     zx_u32 meta_idx = cap_mask_ & ((zx_u32)(hash));
 
     zx_u8 const *meta = this->metadata;
-    while (true) {
-      zx_v128_u8 const group = zx_v128_loadu_u8(&meta[meta_idx]);
 
-      zx_u16 tag_match = zx_v128_movmsk_u8(zx_v128_cmpeq_u8(tag_vec, group));
-      zx_u16 const empty_match = zx_v128_movmsk_u8(group);
+    while (true) {
+      zx_u16 tag_match;
+      zx_u16 empty_match;
+      load_(&meta[meta_idx], tag_vec, &tag_match, &empty_match);
 
       while (tag_match != 0) {
         zx_u8 const tag_pos = zx_ctz_u16(tag_match);
@@ -157,18 +226,16 @@ struct ZXHashtable {
   inline T const *get_or_insert(zx_u64 hash, T const *entry, EqCtx eqctx) {
     zx_u8 const tag = (zx_u8)(hash >> 57);
     zx_u32 const cap_mask_ = this->cap_mask;
-    zx_v128_u8 const tag_vec = zx_v128_broadcast_u8(tag);
+    vect_ const tag_vec = broadcast_(tag);
     zx_u32 stride = 0;
 
     zx_u32 meta_idx = cap_mask_ & ((zx_u32)(hash));
 
     zx_u8 const *meta = this->metadata;
     while (true) {
-
-      zx_v128_u8 const group = zx_v128_loadu_u8(&meta[meta_idx]);
-
-      zx_u16 tag_match = zx_v128_movmsk_u8(zx_v128_cmpeq_u8(tag_vec, group));
-      zx_u16 const empty_match = zx_v128_movmsk_u8(group);
+      zx_u16 tag_match;
+      zx_u16 empty_match;
+      load_(&meta[meta_idx], tag_vec, &tag_match, &empty_match);
 
       while (tag_match != 0) {
         zx_u8 const tag_pos = zx_ctz_u16(tag_match);
@@ -221,18 +288,16 @@ struct ZXHashtable {
   inline T const *get(zx_u64 const hash, T const *entry, EqCtx eqctx) const {
     zx_u8 const tag = (zx_u8)(hash >> 57);
     zx_u32 const cap_mask_ = this->cap_mask;
-    zx_v128_u8 const tag_vec = zx_v128_broadcast_u8(tag);
+    vect_ const tag_vec = broadcast_(tag);
     zx_u32 stride = 0;
 
     zx_u32 meta_idx = cap_mask_ & ((zx_u32)(hash));
 
     zx_u8 const *meta = this->metadata;
     while (true) {
-      zx_v128_u8 const group = zx_v128_loadu_u8(&meta[meta_idx]);
+      vect_ const group = load_group_(&meta[meta_idx]);
 
-      zx_u16 tag_match = zx_v128_movmsk_u8(zx_v128_cmpeq_u8(tag_vec, group));
-      zx_u16 const empty_match = zx_v128_movmsk_u8(group);
-
+      zx_u16 tag_match = tag_match_(group, tag_vec);
       while (tag_match != 0) {
         zx_u8 const tag_pos = zx_ctz_u16(tag_match);
 
@@ -249,6 +314,7 @@ struct ZXHashtable {
         }
       }
 
+      zx_u16 const empty_match = empty_match_(group);
       if (empty_match != 0) [[likely]] {
         ZX_FUZZ_MARKER;
         return nullptr;

@@ -44,6 +44,9 @@ ZX: Library = Library(
 
 NOZ: Library = Library(
     source_files=set(["noz.cc"]),
+    test_targets={
+        "noz_test": set([]),
+    },
 )
 
 # STREAMVBYTE: Library = Library(

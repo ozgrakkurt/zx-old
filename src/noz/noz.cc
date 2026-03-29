@@ -2,7 +2,6 @@
 #include <zx/zx_assert.h>
 #include <zx/zx_def.h>
 #include <zx/zx_int.h>
-#include <zx/zx_vec.h>
 
 constexpr zx_u64 NOZ_UNROLL_ = 4;
 constexpr zx_u64 NOZ_VEC_SIZE_ = 64; // avx512
