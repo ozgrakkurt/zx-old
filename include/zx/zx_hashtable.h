@@ -84,17 +84,18 @@ struct ZXHashtable {
   inline bool insert(zx_u64 hash, T const *entry, EqCtx eqctx) {
     zx_u8 const tag = (zx_u8)(hash >> 57);
     zx_u32 const cap_mask_ = this->cap_mask;
+    zx_v128_u8 const tag_vec = zx_v128_broadcast_u8(tag);
+
     zx_u32 stride = 0;
 
     zx_u32 meta_idx = cap_mask_ & ((zx_u32)(hash));
 
     zx_u8 const *meta = this->metadata;
     while (true) {
-      zx_v128_u8 const tag_vec = zx_v128_broadcast_u8(tag);
-
       zx_v128_u8 const group = zx_v128_loadu_u8(&meta[meta_idx]);
 
       zx_u16 tag_match = zx_v128_movmsk_u8(zx_v128_cmpeq_u8(tag_vec, group));
+      zx_u16 const empty_match = zx_v128_movmsk_u8(group);
 
       while (tag_match != 0) {
         zx_u8 const tag_pos = zx_ctz_u16(tag_match);
@@ -114,7 +115,6 @@ struct ZXHashtable {
         }
       }
 
-      zx_u16 const empty_match = zx_v128_movmsk_u8(group);
       if (empty_match != 0) [[likely]] {
         ZX_FUZZ_MARKER;
 
@@ -157,17 +157,18 @@ struct ZXHashtable {
   inline T const *get_or_insert(zx_u64 hash, T const *entry, EqCtx eqctx) {
     zx_u8 const tag = (zx_u8)(hash >> 57);
     zx_u32 const cap_mask_ = this->cap_mask;
+    zx_v128_u8 const tag_vec = zx_v128_broadcast_u8(tag);
     zx_u32 stride = 0;
 
     zx_u32 meta_idx = cap_mask_ & ((zx_u32)(hash));
 
     zx_u8 const *meta = this->metadata;
     while (true) {
-      zx_v128_u8 const tag_vec = zx_v128_broadcast_u8(tag);
 
       zx_v128_u8 const group = zx_v128_loadu_u8(&meta[meta_idx]);
 
       zx_u16 tag_match = zx_v128_movmsk_u8(zx_v128_cmpeq_u8(tag_vec, group));
+      zx_u16 const empty_match = zx_v128_movmsk_u8(group);
 
       while (tag_match != 0) {
         zx_u8 const tag_pos = zx_ctz_u16(tag_match);
@@ -185,7 +186,6 @@ struct ZXHashtable {
         }
       }
 
-      zx_u16 const empty_match = zx_v128_movmsk_u8(group);
       if (empty_match != 0) [[likely]] {
         ZX_FUZZ_MARKER;
 
@@ -221,17 +221,17 @@ struct ZXHashtable {
   inline T const *get(zx_u64 const hash, T const *entry, EqCtx eqctx) const {
     zx_u8 const tag = (zx_u8)(hash >> 57);
     zx_u32 const cap_mask_ = this->cap_mask;
+    zx_v128_u8 const tag_vec = zx_v128_broadcast_u8(tag);
     zx_u32 stride = 0;
 
     zx_u32 meta_idx = cap_mask_ & ((zx_u32)(hash));
 
     zx_u8 const *meta = this->metadata;
     while (true) {
-      zx_v128_u8 const tag_vec = zx_v128_broadcast_u8(tag);
-
       zx_v128_u8 const group = zx_v128_loadu_u8(&meta[meta_idx]);
 
       zx_u16 tag_match = zx_v128_movmsk_u8(zx_v128_cmpeq_u8(tag_vec, group));
+      zx_u16 const empty_match = zx_v128_movmsk_u8(group);
 
       while (tag_match != 0) {
         zx_u8 const tag_pos = zx_ctz_u16(tag_match);
@@ -249,7 +249,6 @@ struct ZXHashtable {
         }
       }
 
-      zx_u16 const empty_match = zx_v128_movmsk_u8(group);
       if (empty_match != 0) [[likely]] {
         ZX_FUZZ_MARKER;
         return nullptr;

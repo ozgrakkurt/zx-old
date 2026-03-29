@@ -290,4 +290,17 @@ static inline bool zx_is_pow_two_u64(zx_u64 i) {
   return __builtin_popcountg(i) == 1;
 }
 
+static inline zx_u8 zx_popcnt_u8(zx_u8 i) {
+  return (zx_u8)__builtin_popcountg(i);
+}
+static inline zx_u8 zx_popcnt_u16(zx_u16 i) {
+  return (zx_u8)__builtin_popcountg(i);
+}
+static inline zx_u8 zx_popcnt_u32(zx_u32 i) {
+  return (zx_u8)__builtin_popcountg(i);
+}
+static inline zx_u8 zx_popcnt_u64(zx_u64 i) {
+  return (zx_u8)__builtin_popcountg(i);
+}
+
 #endif

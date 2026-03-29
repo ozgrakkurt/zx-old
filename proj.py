@@ -42,6 +42,10 @@ ZX: Library = Library(
     },
 )
 
+NOZ: Library = Library(
+    source_files=set(["noz.cc"]),
+)
+
 # STREAMVBYTE: Library = Library(
 #     source_files=set(["streamvbyte_0124_encode.cc", "streamvbyte_0124_decode.cc"]),
 #     test_targets={
@@ -55,7 +59,7 @@ ZX: Library = Library(
 #         "streamvbyte_bench": set([]),
 #     },
 # )
-#
+
 # FIBER: Library = Library(
 #     source_files=set(["fiber.cc"]),
 #     test_targets={
@@ -77,6 +81,7 @@ ZX: Library = Library(
 PROJECT: Project = Project(
     libraries={
         "zx": ZX,
+        "noz": NOZ,
         # "streamvbyte": STREAMVBYTE,
         # "fiber": FIBER,
         # "fio": FIO,
