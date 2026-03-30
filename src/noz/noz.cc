@@ -37,7 +37,7 @@ zx_u64 noz_compress(zx_u8 const *__restrict input, zx_u64 input_size,
             "vpcmpub $4, %%zmm0, %[zeros], %%k1\n\t"
             "kmovq %%k1, %[out0]\n\t"
             "kmovq %%k1, %[n_w]\n\t"
-            "vpcompressb %%zmm0, %%zmm1 %{%%k1%}%{z%}\n\t"
+            "vpcompressb %%zmm0, %%zmm1 %{%%k1%}\n\t"
             "vmovdqu8 %%zmm1, %[out1]\n\t"
             "popcntq %[n_w], %[n_w]\n\t"
             : [out0] "=m"(*(zx_u8(*)[8])output),
@@ -58,7 +58,7 @@ zx_u64 noz_compress(zx_u8 const *__restrict input, zx_u64 input_size,
             "vpcmpub $4, %%zmm0, %[zeros], %%k1\n\t"
             "kmovq %%k1, %[out0]\n\t"
             "kmovq %%k1, %[n_w]\n\t"
-            "vpcompressb %%zmm0, %%zmm1 %{%%k1%}%{z%}\n\t"
+            "vpcompressb %%zmm0, %%zmm1 %{%%k1%}\n\t"
             "vmovdqu8 %%zmm1, %[out1]\n\t"
             "popcntq %[n_w], %[n_w]\n\t"
             : [out0] "=m"(*(zx_u8(*)[8])output),

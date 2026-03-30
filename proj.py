@@ -50,6 +50,10 @@ NOZ: Library = Library(
     bench_targets={
         "noz_bench": set([]),
     },
+    fuzz_targets={
+        "noz_roundtrip_fuzz": set([]),
+        #         "streamvbyte_decode_fuzz": set([]),
+    },
 )
 
 # STREAMVBYTE: Library = Library(
