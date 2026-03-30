@@ -4,11 +4,6 @@
 #include <zx/zx_int.h>
 
 constexpr zx_u64 NOZ_VEC_SIZE_ = 64; // avx512
-// process data 128KB at a time when encoding.
-// this is to make two less dependant loops for encoding instead of one more
-// data dependant loop. we don't do two full loops since we want to keep the
-// intermediary data in L1 cache.
-// constexpr zx_u64 NOZ_BLOCK_SIZE_ = 1 << 17;
 
 zx_u64 noz_compress_bound(zx_u64 input_size) {
   zx_u64 const n_chunks =
@@ -42,12 +37,13 @@ zx_u64 noz_compress(zx_u8 const *__restrict input, zx_u64 input_size,
             "vpcmpub $4, %%zmm0, %[zeros], %%k1\n\t"
             "kmovq %%k1, %[out0]\n\t"
             "kmovq %%k1, %[n_w]\n\t"
-            "vpcompressb %%zmm0, %[out1] %{%%k1%}\n\t"
+            "vpcompressb %%zmm0, %%zmm1 %{%%k1%}%{z%}\n\t"
+            "vmovdqu8 %%zmm1, %[out1]\n\t"
             "popcntq %[n_w], %[n_w]\n\t"
             : [out0] "=m"(*(zx_u8(*)[8])output),
               [out1] "=m"(*(zx_u8(*)[64])(output + 8)), [n_w] "=r"(n_w)
             : [input] "m"(*(zx_u8 const(*)[64])input), [zeros] "v"(zeros)
-            : "zmm0", "k1");
+            : "zmm0", "zmm1", "k1");
 
     input += 64;
     output += n_w + sizeof(zx_u64);
@@ -62,13 +58,14 @@ zx_u64 noz_compress(zx_u8 const *__restrict input, zx_u64 input_size,
             "vpcmpub $4, %%zmm0, %[zeros], %%k1\n\t"
             "kmovq %%k1, %[out0]\n\t"
             "kmovq %%k1, %[n_w]\n\t"
-            "vpcompressb %%zmm0, %[out1] %{%%k1%}\n\t"
+            "vpcompressb %%zmm0, %%zmm1 %{%%k1%}%{z%}\n\t"
+            "vmovdqu8 %%zmm1, %[out1]\n\t"
             "popcntq %[n_w], %[n_w]\n\t"
             : [out0] "=m"(*(zx_u8(*)[8])output),
               [out1] "=m"(*(zx_u8(*)[64])(output + 8)), [n_w] "=r"(n_w)
             : [input] "m"(*(zx_u8 const(*)[64])input), [zeros] "v"(zeros),
               [loadmask] "k"(loadmask)
-            : "zmm0", "k1");
+            : "zmm0", "zmm1", "k1");
 
     output += n_w + sizeof(zx_u64);
   }
