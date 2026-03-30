@@ -20,9 +20,28 @@ static ZXStatus roundtrip(zx_u8 const *__restrict input,
       noz_compress(input, len, compressed, compress_bound);
   ZX_ERR_ASSERT((compressed_size <= compress_bound), err_stack);
 
+  // test unsafe
+  __builtin_memset(output, 0, len);
   zx_u64 const n_read = noz_decompress(compressed, output, len);
   ZX_ERR_ASSERT((n_read == compressed_size), err_stack);
+  ZX_ERR_ASSERT((__builtin_memcmp(input, output, len) == 0), err_stack);
 
+  // test safe pass compressed_size
+  __builtin_memset(output, 0, len);
+  zx_u64 n_read_safe = 0;
+  ZX_ERR_TRY((noz_decompress_safe(compressed, compressed_size, output, len,
+                                  &n_read_safe, err_stack)),
+             err_stack);
+  ZX_ERR_ASSERT((n_read_safe == compressed_size), err_stack);
+  ZX_ERR_ASSERT((__builtin_memcmp(input, output, len) == 0), err_stack);
+
+  // test safe pass compress_bound
+  __builtin_memset(output, 0, len);
+  n_read_safe = 0;
+  ZX_ERR_TRY((noz_decompress_safe(compressed, compress_bound, output, len,
+                                  &n_read_safe, err_stack)),
+             err_stack);
+  ZX_ERR_ASSERT((n_read_safe == compressed_size), err_stack);
   ZX_ERR_ASSERT((__builtin_memcmp(input, output, len) == 0), err_stack);
 
   return ZXStatus::Ok;

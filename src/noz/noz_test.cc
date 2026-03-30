@@ -21,9 +21,29 @@ static ZXStatus do_test(zx_u8 const *__restrict input,
       noz_compress(input, size, compressed, compress_bound);
   ZX_ERR_ASSERT((compressed_size <= compress_bound), err_stack);
 
+  // test unsafe variant
+  __builtin_memset(output, 0, size);
   zx_u64 const n_read = noz_decompress(compressed, output, size);
   ZX_ERR_ASSERT((n_read == compressed_size), err_stack);
+  ZX_ERR_ASSERT((__builtin_memcmp(input, output, size) == 0), err_stack);
 
+  // test safe variant
+  __builtin_memset(output, 0, size);
+  zx_u64 n_read_safe = 0;
+  ZX_ERR_TRY((noz_decompress_safe(compressed, compress_bound, output, size,
+                                  &n_read_safe, err_stack)),
+             err_stack);
+  ZX_ERR_ASSERT((n_read_safe == compressed_size), err_stack);
+  ZX_ERR_ASSERT((__builtin_memcmp(input, output, size) == 0), err_stack);
+
+  // try again with passing compressed_size instead of compress_bound to
+  // decompress function
+  __builtin_memset(output, 0, size);
+  n_read_safe = 0;
+  ZX_ERR_TRY((noz_decompress_safe(compressed, compressed_size, output, size,
+                                  &n_read_safe, err_stack)),
+             err_stack);
+  ZX_ERR_ASSERT((n_read_safe == compressed_size), err_stack);
   ZX_ERR_ASSERT((__builtin_memcmp(input, output, size) == 0), err_stack);
 
   return ZXStatus::Ok;

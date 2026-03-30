@@ -73,6 +73,45 @@ ZXStatus do_bench(ZXFmt *fmt, zx_u32 const *__restrict input,
   return ZXStatus::Ok;
 }
 
+ZXStatus do_bench_safe(ZXFmt *fmt, zx_u32 const *__restrict input,
+                       zx_u8 *__restrict compressed, zx_u32 *__restrict output,
+                       zx_u32 len, ZXErrStack *err_stack) {
+  ZX_ASSERT((input != nullptr));
+  ZX_ASSERT((compressed != nullptr));
+  ZX_ASSERT((output != nullptr));
+
+  zx_u64 const size = (zx_u64){len} * sizeof(zx_u32);
+
+  zx_u64 const compress_bound = noz_compress_bound(size);
+
+  ZXTimer timer = ZXTimer::init();
+
+  zx_u64 const compressed_size =
+      noz_compress((zx_u8 const *)input, size, compressed, compress_bound);
+
+  ZX_FMT(fmt, "Encode for Safe in ", timer.lap(), " ticks\n");
+
+  ZX_ERR_ASSERT((compressed_size <= compress_bound), err_stack);
+
+  zx_u64 n_read = 0;
+  ZX_ERR_TRY((noz_decompress_safe(compressed, compressed_size, (zx_u8 *)output,
+                                  size, &n_read, err_stack)),
+             err_stack);
+
+  ZX_FMT(fmt, "DecodeSafe in ", timer.lap(), " ticks\n");
+
+  ZX_ERR_ASSERT((n_read == compressed_size), err_stack);
+
+  ZX_ERR_ASSERT((__builtin_memcmp(input, output, sizeof(zx_u32) * len) == 0),
+                err_stack);
+
+  zx_u64 const ratio =
+      (zx_u64){compressed_size} * 100 / ((zx_u64){len} * sizeof(zx_u32));
+  ZX_FMT(fmt, "Ratio ", ratio, "%\n");
+
+  return ZXStatus::Ok;
+}
+
 static ZXStatus roundtrip(ZXAlloc *alloc, ZXErrStack *err_stack) {
   constexpr zx_u32 RATIO = sizeof(datatype) / sizeof(zx_u32);
 
@@ -109,6 +148,13 @@ static ZXStatus roundtrip(ZXAlloc *alloc, ZXErrStack *err_stack) {
 
   ZX_ERR_TRY((do_bench(&fmt, (zx_u32 const *)input, compressed,
                        (zx_u32 *)output, LEN * RATIO, err_stack)),
+             err_stack);
+
+  rand.fill((zx_u8 *)compressed, compress_bound);
+  rand.fill((zx_u8 *)output, sizeof(datatype) * LEN);
+
+  ZX_ERR_TRY((do_bench_safe(&fmt, (zx_u32 const *)input, compressed,
+                            (zx_u32 *)output, LEN * RATIO, err_stack)),
              err_stack);
 
   ZX_ERR_TRY_FATAL((zx_io_print(ZX_STDERR, &fmt, err_stack)), err_stack);
