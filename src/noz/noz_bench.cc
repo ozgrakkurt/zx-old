@@ -10,7 +10,7 @@
 
 typedef zx_u256 datatype;
 
-constexpr zx_u64 LEN = ((zx_u64){1} << 20) + 5;
+constexpr zx_u64 LEN = ((zx_u64){1} << 24) + 5;
 constexpr zx_u64 MEMORY_SIZE = (zx_u64){1} << 31;
 
 static ZXStatus do_memcpy(ZXFmt *fmt, zx_u32 const *__restrict input,
@@ -115,6 +115,9 @@ ZXStatus do_bench_safe(ZXFmt *fmt, zx_u32 const *__restrict input,
 static ZXStatus roundtrip(ZXAlloc *alloc, ZXErrStack *err_stack) {
   constexpr zx_u32 RATIO = sizeof(datatype) / sizeof(zx_u32);
 
+  zx_u8 *nouse = nullptr;
+  ZX_ERR_TRY((alloc->alloc<zx_u8>(69, &nouse, err_stack)), err_stack);
+
   datatype *input = nullptr;
   ZX_ERR_TRY((alloc->alloc<datatype>(LEN, &input, err_stack)), err_stack);
 
@@ -123,11 +126,17 @@ static ZXStatus roundtrip(ZXAlloc *alloc, ZXErrStack *err_stack) {
     input[i] = (zx_u32)rand.next();
   }
 
+  nouse = nullptr;
+  ZX_ERR_TRY((alloc->alloc<zx_u8>(69, &nouse, err_stack)), err_stack);
+
   zx_u64 const compress_bound =
       noz_compress_bound(LEN * RATIO * sizeof(zx_u32));
   zx_u8 *compressed = nullptr;
   ZX_ERR_TRY((alloc->alloc<zx_u8>(compress_bound, &compressed, err_stack)),
              err_stack);
+
+  nouse = nullptr;
+  ZX_ERR_TRY((alloc->alloc<zx_u8>(69, &nouse, err_stack)), err_stack);
 
   datatype *output = nullptr;
   ZX_ERR_TRY((alloc->alloc<datatype>(LEN, &output, err_stack)), err_stack);

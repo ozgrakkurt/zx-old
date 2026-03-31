@@ -56,15 +56,15 @@ NOZ: Library = Library(
     },
 )
 
-# FIBER: Library = Library(
-#     source_files=set(["fiber.cc"]),
-#     test_targets={
-#         "fiber_test": set([]),
-#     },
-#     bench_targets={
-#         "fiber_bench": set([]),
-#     },
-# )
+FIBER: Library = Library(
+    source_files=set(["fiber.cc"]),
+    test_targets={
+        "fiber_test": set([]),
+    },
+    bench_targets={
+        "fiber_bench": set([]),
+    },
+)
 #
 # FIO: Library = Library(
 #     dependencies=set(["fiber"]),
@@ -78,8 +78,7 @@ PROJECT: Project = Project(
     libraries={
         "zx": ZX,
         "noz": NOZ,
-        # "streamvbyte": STREAMVBYTE,
-        # "fiber": FIBER,
+        "fiber": FIBER,
         # "fio": FIO,
     },
 )
