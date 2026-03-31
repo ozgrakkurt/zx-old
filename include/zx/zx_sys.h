@@ -40,20 +40,24 @@ ZXStatus zx_sys_munmap(zx_u8 *mem, zx_u64 length, ZXErrStack *err_stack);
 ZXStatus zx_sys_madvise(zx_u8 *mem, zx_u64 length, zx_i32 advice,
                         ZXErrStack *err_stack);
 
+ZXStatus zx_sys_mprotect(zx_u8 *mem, zx_u64 length, zx_i32 prot,
+                         ZXErrStack *err_stack);
+
 // echo '#include <sys/mman.h>' | gcc -E - -dM | grep "#define MAP_"
-constexpr int ZX_SYS_MAP_SHARED = 0x01;
-constexpr int ZX_SYS_MAP_PRIVATE = 0x02;
-constexpr int ZX_SYS_MAP_ANONYMOUS = 0x20;
-constexpr int ZX_SYS_MAP_LOCKED = 0x02000;
-constexpr int ZX_SYS_MAP_POPULATE = 0x08000;
-constexpr int ZX_SYS_MAP_HUGETLB = 0x40000;
+constexpr zx_i32 ZX_SYS_MAP_SHARED = 0x01;
+constexpr zx_i32 ZX_SYS_MAP_PRIVATE = 0x02;
+constexpr zx_i32 ZX_SYS_MAP_ANONYMOUS = 0x20;
+constexpr zx_i32 ZX_SYS_MAP_LOCKED = 0x02000;
+constexpr zx_i32 ZX_SYS_MAP_POPULATE = 0x08000;
+constexpr zx_i32 ZX_SYS_MAP_HUGETLB = 0x40000;
 
-constexpr int ZX_SYS_MAP_HUGE_SHIFT = 26;
-constexpr int ZX_SYS_MAP_HUGE_2MB = (21 << ZX_SYS_MAP_HUGE_SHIFT);
-constexpr int ZX_SYS_MAP_HUGE_1GB = (30 << ZX_SYS_MAP_HUGE_SHIFT);
-constexpr int ZX_SYS_MADV_HUGEPAGE = 14;
+constexpr zx_i32 ZX_SYS_MAP_HUGE_SHIFT = 26;
+constexpr zx_i32 ZX_SYS_MAP_HUGE_2MB = (21 << ZX_SYS_MAP_HUGE_SHIFT);
+constexpr zx_i32 ZX_SYS_MAP_HUGE_1GB = (30 << ZX_SYS_MAP_HUGE_SHIFT);
+constexpr zx_i32 ZX_SYS_MADV_HUGEPAGE = 14;
 
-constexpr int ZX_SYS_PROT_READ = 0x1;
-constexpr int ZX_SYS_PROT_WRITE = 0x2;
+constexpr zx_i32 ZX_SYS_PROT_NONE = 0x0;
+constexpr zx_i32 ZX_SYS_PROT_READ = 0x1;
+constexpr zx_i32 ZX_SYS_PROT_WRITE = 0x2;
 
 #endif

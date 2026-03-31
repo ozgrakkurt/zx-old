@@ -139,6 +139,7 @@ constexpr zx_sys_reg ZX_SYSCALL_WRITE = 1;
 constexpr zx_sys_reg ZX_SYSCALL_OPEN = 2;
 constexpr zx_sys_reg ZX_SYSCALL_CLOSE = 3;
 constexpr zx_sys_reg ZX_SYSCALL_MMAP = 9;
+constexpr zx_sys_reg ZX_SYSCALL_MPROTECT = 10;
 constexpr zx_sys_reg ZX_SYSCALL_MUNMAP = 11;
 constexpr zx_sys_reg ZX_SYSCALL_MADVISE = 28;
 constexpr zx_sys_reg ZX_SYSCALL_EXIT_GROUP = 231;
@@ -254,6 +255,19 @@ ZXStatus zx_sys_madvise(zx_u8 *mem, zx_u64 length, zx_i32 advice,
                         ZXErrStack *err_stack) {
   zx_sys_reg const ret = zx_syscall3(ZX_SYSCALL_MADVISE, (zx_sys_reg)mem,
                                      (zx_sys_reg)length, (zx_sys_reg)advice);
+
+  ZXStatus const status = zx_sys_status(ret);
+  if (status != ZXStatus::Ok) {
+    ZX_ERR_RETURN(status, err_stack);
+  }
+
+  return ZXStatus::Ok;
+}
+
+ZXStatus zx_sys_mprotect(zx_u8 *mem, zx_u64 length, zx_i32 prot,
+                         ZXErrStack *err_stack) {
+  zx_sys_reg const ret = zx_syscall3(ZX_SYSCALL_MPROTECT, (zx_sys_reg)mem,
+                                     (zx_sys_reg)length, (zx_sys_reg)prot);
 
   ZXStatus const status = zx_sys_status(ret);
   if (status != ZXStatus::Ok) {

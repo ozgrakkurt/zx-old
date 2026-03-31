@@ -52,23 +52,9 @@ NOZ: Library = Library(
     },
     fuzz_targets={
         "noz_roundtrip_fuzz": set([]),
-        #         "streamvbyte_decode_fuzz": set([]),
+        "noz_decompress_safe_fuzz": set([]),
     },
 )
-
-# STREAMVBYTE: Library = Library(
-#     source_files=set(["streamvbyte_0124_encode.cc", "streamvbyte_0124_decode.cc"]),
-#     test_targets={
-#         "streamvbyte_test": set([]),
-#     },
-#     fuzz_targets={
-#         "streamvbyte_roundtrip_fuzz": set([]),
-#         "streamvbyte_decode_fuzz": set([]),
-#     },
-#     bench_targets={
-#         "streamvbyte_bench": set([]),
-#     },
-# )
 
 # FIBER: Library = Library(
 #     source_files=set(["fiber.cc"]),

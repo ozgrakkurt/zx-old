@@ -163,7 +163,7 @@ def make_cflags(profile: Profile, config: Config) -> List[str]:
         "-Werror",
         # Target arch, preferably 'native'.
         f"-march={config.march}",
-        # Use cpp20 standard.
+        # Use cpp standard.
         "--std=c++20",
         # we don't use libc but this might effect some compiler builtins?
         "-fno-math-errno",

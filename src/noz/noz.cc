@@ -144,6 +144,10 @@ ZXStatus noz_decompress_safe(zx_u8 const *__restrict input, zx_u64 input_size,
   zx_u64 out_offset = 0;
   for (; out_offset + 64 <= output_size; out_offset += 64) {
     ZX_FUZZ_MARKER;
+
+    zx_u64 const control_end = ((zx_u64)input) + sizeof(zx_u64);
+    ZX_ERR_ASSERT((control_end <= input_end), err_stack);
+
     register regt control __asm__("k1");
     __builtin_memcpy(&control, input, sizeof(regt));
 
@@ -165,6 +169,10 @@ ZXStatus noz_decompress_safe(zx_u8 const *__restrict input, zx_u64 input_size,
   regt const remainder = output_size - out_offset;
   if (remainder > 0) {
     ZX_FUZZ_MARKER;
+
+    zx_u64 const control_end = ((zx_u64)input) + sizeof(zx_u64);
+    ZX_ERR_ASSERT((control_end <= input_end), err_stack);
+
     register regt control __asm__("k1");
     __builtin_memcpy(&control, input, sizeof(regt));
 
