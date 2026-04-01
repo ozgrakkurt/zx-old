@@ -65,20 +65,20 @@ FIBER: Library = Library(
         "fiber_bench": set([]),
     },
 )
-#
-# FIO: Library = Library(
-#     dependencies=set(["fiber"]),
-#     source_files=set(["fio_uring.cc", "fio_exe.cc"]),
-#     test_targets={
-#         "fio_uring_test": set([]),
-#     },
-# )
+
+FIO: Library = Library(
+    dependencies=set(["fiber"]),
+    source_files=set(["fio_uring.cc", "fio_exe.cc"]),
+    test_targets={
+        "fio_uring_test": set([]),
+    },
+)
 
 PROJECT: Project = Project(
     libraries={
         "zx": ZX,
         "noz": NOZ,
         "fiber": FIBER,
-        # "fio": FIO,
+        "fio": FIO,
     },
 )

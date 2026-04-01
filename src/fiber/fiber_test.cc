@@ -25,6 +25,7 @@ typedef struct Ctx {
   zx_u64 iter_no;
 } Ctx;
 
+extern "C" {
 static void __attribute__((noreturn))
 myfib(FiberCtx const *parent_ctx, FiberCtx *fiber_ctx, void *usr_ctx) {
   Ctx *ctxp = (Ctx *)usr_ctx;
@@ -51,6 +52,7 @@ myfib(FiberCtx const *parent_ctx, FiberCtx *fiber_ctx, void *usr_ctx) {
 
   // don't implicitly return from this function
   ZX_ASSERT((false));
+}
 }
 
 constexpr zx_u64 STACK_SIZE = 512 * 1024;

@@ -4,9 +4,7 @@
 #error "only x86_64 targets are supported"
 #endif
 
-#ifdef __cplusplus
 extern "C" {
-#endif
 
 typedef unsigned long sizet;
 static_assert(sizeof(void *) == sizeof(sizet));
@@ -131,6 +129,4 @@ __attribute__((no_builtin)) int memcmp(void const *lhs, void const *rhs,
   return result;
 }
 
-#ifdef __cplusplus
-}
-#endif
+} // extern "C"

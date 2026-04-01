@@ -3,9 +3,7 @@
 
 #include <zx/zx_def.h>
 
-#ifdef __cplusplus
 extern "C" {
-#endif
 
 // This code is copied over from 'liburing' project and slightly modified.
 // Types are changed from zx_u8 style to zx_u8 style.
@@ -1086,8 +1084,6 @@ struct io_uring_zcrx_ifq_reg {
   zx_u64 __resv[3];
 };
 
-#ifdef __cplusplus
-}
-#endif
+} // extern "C"
 
 #endif

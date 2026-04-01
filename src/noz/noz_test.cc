@@ -53,7 +53,7 @@ static ZXStatus roundtrip(ZXAlloc *alloc, ZXErrStack *err_stack) {
   zx_u8 *input = nullptr;
   ZX_ERR_TRY((alloc->alloc<zx_u8>(MAX_SIZE, &input, err_stack)), err_stack);
   ZXXoshiro256 rand = ZXXoshiro256::init(0);
-  rand.fill((zx_u8 *)input, sizeof(zx_u32) * MAX_SIZE);
+  rand.fill((zx_u8 *)input, MAX_SIZE);
 
   zx_u64 const compress_bound = noz_compress_bound(MAX_SIZE);
   zx_u8 *compressed = nullptr;

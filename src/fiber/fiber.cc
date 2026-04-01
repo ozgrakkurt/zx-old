@@ -31,33 +31,33 @@ __asm__(".type fiber_start, @function\n"
         "popq %rbx\n\t"
         "ret\n\t");
 
-__asm__(".type fiber_switch, @function\n"
-        ".global fiber_switch\n"
-        "fiber_switch:\n\t"
-        "pushq %rbx\n\t"
-        "pushq %r12\n\t"
-        "pushq %r13\n\t"
-        "pushq %r14\n\t"
-        "pushq %r15\n\t"
-        "pushq %rbp\n\t"
-
-        // save instruction pointer to label '0' so it jumps back to the ret
-        // instruction
-        "leaq 0f(%rip), %rax\n\t"
-        // save current state to prev
-        "movq %rsp, 0(%rdi)\n\t"
-        "movq %rax, 8(%rdi)\n\t"
-
-        // transition into next state
-        "movq 0(%rsi), %rsp\n\t"
-        // jump to fiber
-        "jmpq *8(%rsi)\n\t"
-
-        "0:"
-        "popq %rbp\n\t"
-        "popq %r15\n\t"
-        "popq %r14\n\t"
-        "popq %r13\n\t"
-        "popq %r12\n\t"
-        "popq %rbx\n\t"
-        "ret\n\t");
+// __asm__(".type fiber_switch, @function\n"
+//         ".global fiber_switch\n"
+//         "fiber_switch:\n\t"
+//         "pushq %rbx\n\t"
+//         "pushq %r12\n\t"
+//         "pushq %r13\n\t"
+//         "pushq %r14\n\t"
+//         "pushq %r15\n\t"
+//         "pushq %rbp\n\t"
+//
+//         // save instruction pointer to label '0' so it jumps back to the ret
+//         // instruction
+//         "leaq 0f(%rip), %rax\n\t"
+//         // save current state to prev
+//         "movq %rsp, 0(%rdi)\n\t"
+//         "movq %rax, 8(%rdi)\n\t"
+//
+//         // transition into next state
+//         "movq 0(%rsi), %rsp\n\t"
+//         // jump to fiber
+//         "jmpq *8(%rsi)\n\t"
+//
+//         "0:"
+//         "popq %rbp\n\t"
+//         "popq %r15\n\t"
+//         "popq %r14\n\t"
+//         "popq %r13\n\t"
+//         "popq %r12\n\t"
+//         "popq %rbx\n\t"
+//         "ret\n\t");
