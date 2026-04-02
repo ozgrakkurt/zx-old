@@ -152,6 +152,9 @@ def make_cflags(profile: Profile, config: Config) -> List[str]:
         "-Wsign-conversion",
         "-Wmissing-field-initializers",
         "-Wshadow",
+        # We don't use any non-pod types, this can cause very bad bugs
+        # if we ever use types with constructors
+        "-Wno-reorder-init-list",
         # warn on variable length array usage
         "-Wvla",
         # these don't seem to catch much but enable anyways

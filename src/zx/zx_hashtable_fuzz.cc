@@ -8,18 +8,18 @@
 #include <zx/zx_page_alloc.h>
 #include <zx/zx_rapidhash_v3.h>
 
-typedef struct FuzzCtx {
+struct FuzzCtx {
   zx_u8 *mem;
   zx_u32 cap;
-} FuzzCtx;
+};
 
 typedef zx_u32 key_type;
 typedef zx_u32 val_type;
 
-typedef struct KeyVal {
+struct KeyVal {
   key_type key;
   val_type val;
-} KeyVal;
+};
 
 static inline bool keys_eql(void const *ctx, KeyVal const *l, KeyVal const *r) {
   (void)ctx;

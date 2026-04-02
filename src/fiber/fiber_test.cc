@@ -20,10 +20,10 @@ static inline zx_u64 make_hash(zx_u64 key) {
   return zx_rapidhash_v3((zx_u8 const *)&key, sizeof(zx_u64), 0);
 }
 
-typedef struct Ctx {
+struct Ctx {
   Hashtable *htable;
   zx_u64 iter_no;
-} Ctx;
+};
 
 extern "C" {
 static void __attribute__((noreturn))

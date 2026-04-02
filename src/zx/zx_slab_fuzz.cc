@@ -8,10 +8,10 @@
 #include <zx/zx_rapidhash_v3.h>
 #include <zx/zx_slab.h>
 
-typedef struct FuzzCtx {
+struct FuzzCtx {
   zx_u8 *mem;
   zx_u32 cap;
-} FuzzCtx;
+};
 
 using Slab = ZXSlab<zx_u64>;
 

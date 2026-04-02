@@ -26,13 +26,13 @@ static inline bool keys_eql(void const *ctx, key_type const *a,
 
 using Hashtable = ZXHashtable<key_type, void const *, keys_eql>;
 
-typedef struct Ctx {
+struct Ctx {
   ZXAlloc *alloc;
   ZXErrStack *err_stack;
   ZXFmt *fmt;
   bool *finished;
   zx_u64 switch_interval;
-} Ctx;
+};
 
 static void __attribute__((noreturn))
 myfib(FiberCtx const *parent_ctx, FiberCtx *fiber_ctx, void *usr_ctx) {
@@ -51,8 +51,6 @@ myfib(FiberCtx const *parent_ctx, FiberCtx *fiber_ctx, void *usr_ctx) {
   ZX_ASSERT((hashes != nullptr));
 
   for (zx_u64 x = 0; x < 5; x++) {
-    ZXTimer timer = ZXTimer::init();
-
     ZXXoshiro256 rand = ZXXoshiro256::init(0);
     for (zx_u64 i = 0; i < CAP; i++) {
       key_type key = 0;
@@ -66,9 +64,6 @@ myfib(FiberCtx const *parent_ctx, FiberCtx *fiber_ctx, void *usr_ctx) {
       }
     }
 
-    zx_u64 const hash_ticks_per_elem = timer.lap() / (CAP * N_FIBERS);
-    ZX_FMT(ctx.fmt, "Hash: ", hash_ticks_per_elem, " ticks per element.\n");
-
     for (zx_u64 i = 0; i < CAP; i++) {
       key_type const key = i;
       table.insert(hashes[i], &key, nullptr);
@@ -77,9 +72,6 @@ myfib(FiberCtx const *parent_ctx, FiberCtx *fiber_ctx, void *usr_ctx) {
       }
     }
 
-    zx_u64 const insert_ticks_per_elem = timer.lap() / (CAP * N_FIBERS);
-    ZX_FMT(ctx.fmt, "Insert: ", insert_ticks_per_elem, " ticks per element.\n");
-
     for (zx_u64 i = 0; i < CAP; i++) {
       key_type const key = i;
       ZX_ASSERT((nullptr != table.get(hashes[i], &key, nullptr)));
@@ -87,9 +79,6 @@ myfib(FiberCtx const *parent_ctx, FiberCtx *fiber_ctx, void *usr_ctx) {
         fiber_switch(fiber_ctx, parent_ctx);
       }
     }
-
-    zx_u64 const get_ticks_per_elem = timer.lap() / (CAP * N_FIBERS);
-    ZX_FMT(ctx.fmt, "Get: ", get_ticks_per_elem, " ticks per element.\n");
   }
 
   *ctx.finished = true;
@@ -147,6 +136,9 @@ ZXStatus dobench(ZXAlloc *alloc, ZXErrStack *err_stack) {
     fiber_start(&parent_ctx, &fiber_ctxes[fiber_idx], (void *)&ctxes[fiber_idx],
                 myfib, fiber_staxes[fiber_idx]);
   }
+
+  ZXTimer timer = ZXTimer::init();
+
   bool running = true;
   while (running) {
     running = false;
@@ -157,6 +149,10 @@ ZXStatus dobench(ZXAlloc *alloc, ZXErrStack *err_stack) {
       running |= !(*ctxes[fiber_idx].finished);
     }
   }
+
+  zx_u64 const total_ticks = timer.lap();
+  fmt.reset();
+  ZX_FMT(&fmt, "Total ticks: ", total_ticks, '\n');
 
   ZX_ERR_TRY_FATAL((zx_io_print(ZX_STDERR, &fmt, err_stack)), err_stack);
 

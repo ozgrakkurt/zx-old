@@ -39,11 +39,11 @@ do_decode(zx_u8 const *__restrict compressed, zx_u64 compressed_size,
   return ZXStatus::Ok;
 }
 
-typedef struct FuzzCtx {
+struct FuzzCtx {
   zx_u8 *compressed;
   zx_u8 *compressed2;
   zx_u8 *uncompressed;
-} FuzzCtx;
+};
 
 constexpr zx_u64 COMPRESSED_CAP = 1 << 12;
 constexpr zx_u64 UNCOMPRESSED_CAP = 1 << 14;

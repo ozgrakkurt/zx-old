@@ -47,12 +47,12 @@ static ZXStatus roundtrip(zx_u8 const *__restrict input,
   return ZXStatus::Ok;
 }
 
-typedef struct FuzzCtx {
+struct FuzzCtx {
   zx_u8 *input;
   zx_u8 *compressed;
   zx_u8 *output;
   zx_u64 compressed_cap;
-} FuzzCtx;
+};
 
 constexpr zx_u32 IN_OUT_CAP = 1 << 12;
 

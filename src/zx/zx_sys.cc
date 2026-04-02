@@ -277,7 +277,7 @@ ZXStatus zx_sys_mprotect(zx_u8 *mem, zx_u64 length, zx_i32 prot,
   return ZXStatus::Ok;
 }
 
-ZXStatus zx_sys_io_uring_setup(zx_u32 n_entries, struct io_uring_params *params,
+ZXStatus zx_sys_io_uring_setup(zx_u32 n_entries, io_uring_params *params,
                                zx_i32 *fd, ZXErrStack *err_stack) {
   zx_sys_reg const ret = zx_syscall2(ZX_SYSCALL_IO_URING_SETUP,
                                      (zx_sys_reg)n_entries, (zx_sys_reg)params);

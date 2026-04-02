@@ -16,6 +16,14 @@ constexpr zx_i32 ZX_STDIN = 0;
 constexpr zx_i32 ZX_STDOUT = 1;
 constexpr zx_i32 ZX_STDERR = 2;
 
+extern "C" {
+struct ZXSysIoVec {
+  zx_u8 *iov_base;
+  zx_u64 iov_len;
+};
+} // extern "C"
+static_assert(sizeof(ZXSysIoVec) == sizeof(void *) * 2);
+
 ZXStatus zx_sys_read(zx_i32 fd, zx_u8 *buf, zx_u64 size, zx_u64 *n_read,
                      ZXErrStack *err_stack);
 

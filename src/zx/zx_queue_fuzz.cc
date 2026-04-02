@@ -8,10 +8,10 @@
 #include <zx/zx_queue.h>
 #include <zx/zx_rapidhash_v3.h>
 
-typedef struct FuzzCtx {
+struct FuzzCtx {
   zx_u8 *mem;
   zx_u32 cap;
-} FuzzCtx;
+};
 
 using Queue = ZXQueue<zx_u32>;
 
