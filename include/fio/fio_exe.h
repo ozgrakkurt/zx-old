@@ -11,28 +11,6 @@
 #include <zx/zx_slab.h>
 #include <zx/zx_time.h>
 
-struct FioFiber {
-  FiberCtx fib_ctx;
-};
-
-struct FioExe {
-  // io_uring interface for regular IO
-  FioUring io_ring;
-  // io_uring interface for Direct IO
-  FioUring polled_io_ring;
-  // book-keeping for fibers
-  FioWake fiber_wake;
-  // Slab(Fiber)
-  ZXSlab fibers;
-  zx_u8 *fiber_stacks;
-  // book-keeping for Future objects
-  FioWake future_wake;
-  // Slab(FutureEntry)
-  ZXSlab futures;
-  zx_i32 *io_results;
-  zx_u64 yield_after_n_ticks;
-};
-
 struct FioExeParams {
   // Handle for sharing kernel SQ_POLL between different instances
   // 0 means no handle.
@@ -52,6 +30,24 @@ struct FioExeParams {
   zx_u64 io_buf_size;
   // yield_if_needed will return true after a future has been running this
   // number of ticks.
+  zx_u64 yield_after_n_ticks;
+};
+
+struct FioExe {
+  // io_uring interface for regular IO
+  FioUring io_ring;
+  // io_uring interface for Direct IO
+  FioUring polled_io_ring;
+  // book-keeping for fibers
+  FioWake fiber_wake;
+  // Slab(Fiber)
+  ZXSlab fibers;
+  zx_u8 *fiber_stacks;
+  // book-keeping for Future objects
+  FioWake future_wake;
+  // Slab(FutureEntry)
+  ZXSlab futures;
+  zx_i32 *io_results;
   zx_u64 yield_after_n_ticks;
 };
 
