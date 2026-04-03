@@ -1,5 +1,6 @@
 #include <noz/noz.h>
 #include <zx/zx_alloc.h>
+#include <zx/zx_debug_alloc.h>
 #include <zx/zx_def.h>
 #include <zx/zx_err.h>
 #include <zx/zx_fuzz.h>
@@ -101,34 +102,28 @@ static ZXStatus fuzz_one(void *usr_ctx, ZXFuzzInput *fuzz_input,
 }
 
 int main(void) {
-  constexpr zx_u64 MEM_CAP = (zx_u64){1} << 30;
+  constexpr zx_u64 MEM_CAP = (zx_u64){1} << 28;
+  constexpr zx_u64 FUZZER_MEM_CAP = (zx_u64){1} << 27;
 
   ZXErrStack err_stack = ZXErrStack::init();
 
-  zx_u8 *mem = nullptr;
-  ZX_ERR_TRY_FATAL((zx_page_alloc_thp_2mb(MEM_CAP, &mem, &err_stack)),
+  ZXDebugAlloc dbg_alloc;
+  ZX_ERR_TRY_FATAL((ZXDebugAlloc::init(MEM_CAP, &dbg_alloc, &err_stack)),
                    &err_stack);
 
   zx_u8 *f_compressed = nullptr;
   ZX_ERR_TRY_FATAL(
-      (zx_page_alloc_4kb(COMPRESSED_CAP * 2, &f_compressed, &err_stack)),
+      dbg_alloc.alloc<zx_u8>(COMPRESSED_CAP, &f_compressed, &err_stack),
       &err_stack);
-
-  ZX_ERR_TRY_FATAL(
-      (zx_sys_mprotect(&f_compressed[COMPRESSED_CAP], COMPRESSED_CAP,
-                       ZX_SYS_PROT_NONE, &err_stack)),
-      &err_stack);
-
-  ZXAlloc alloc = ZXAlloc::init(mem, MEM_CAP);
 
   zx_u8 *f_uncompressed = nullptr;
   ZX_ERR_TRY_FATAL(
-      alloc.alloc<zx_u8>(UNCOMPRESSED_CAP, &f_uncompressed, &err_stack),
+      dbg_alloc.alloc<zx_u8>(UNCOMPRESSED_CAP, &f_uncompressed, &err_stack),
       &err_stack);
 
   zx_u8 *f_compressed2 = nullptr;
   ZX_ERR_TRY_FATAL(
-      alloc.alloc<zx_u8>(COMPRESSED_CAP, &f_compressed2, &err_stack),
+      dbg_alloc.alloc<zx_u8>(COMPRESSED_CAP, &f_compressed2, &err_stack),
       &err_stack);
 
   __builtin_memset(f_uncompressed, 0, UNCOMPRESSED_CAP);
@@ -149,6 +144,13 @@ int main(void) {
       .tgt_file_filter = tgt_file_filter,
       .tgt_file_filter_len = (zx_u16)__builtin_strlen(tgt_file_filter),
   };
+
+  zx_u8 *alloc_mem = nullptr;
+  ZX_ERR_TRY_FATAL(
+      dbg_alloc.alloc<zx_u8>(FUZZER_MEM_CAP, &alloc_mem, &err_stack),
+      &err_stack);
+
+  ZXAlloc alloc = ZXAlloc::init(alloc_mem, FUZZER_MEM_CAP);
 
   // initiate main loop
   ZX_ERR_TRY_FATAL((zx_fuzz_main(&alloc, &params, &err_stack)), &err_stack);
