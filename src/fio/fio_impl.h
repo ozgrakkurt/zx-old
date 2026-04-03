@@ -161,7 +161,7 @@ static inline void Fio_yield(Fio const *fio, FiberCtx *current_fib_ctx) {
           return;
         }
 
-        // Make cpu relax. Emits x86_64 `PAUSE` instruction.
+        // Make cpu relax since we are busy looping while we wait io to finish. Emits x86_64 `PAUSE` instruction.
         __builtin_ia32_pause();
       }
     }

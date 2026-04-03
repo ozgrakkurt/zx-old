@@ -10,7 +10,7 @@
 
 typedef zx_u256 datatype;
 
-constexpr zx_u32 LEN = 10123123;
+constexpr zx_u32 LEN = 1 << 20;
 constexpr zx_u32 MEM_ALIGN = 1 << 21;
 constexpr zx_u32 MEMORY_SIZE =
     (LEN * sizeof(datatype) * 4 + MEM_ALIGN - 1) / MEM_ALIGN * MEM_ALIGN;

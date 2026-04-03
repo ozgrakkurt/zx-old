@@ -150,6 +150,7 @@ def make_cflags(profile: Profile, config: Config) -> List[str]:
         "-Wextra",
         "-Wconversion",
         "-Wsign-conversion",
+        "-Wmissing-field-initializers",
         # warn on variable length array usage
         "-Wvla",
         # these don't seem to catch much but enable anyways
