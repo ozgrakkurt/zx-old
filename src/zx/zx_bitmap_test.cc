@@ -64,6 +64,56 @@ static inline ZXStatus zero_size_test(ZXAlloc *alloc, ZXErrStack *err_stack) {
   return ZXStatus::Ok;
 }
 
+static inline ZXStatus reset_test(ZXAlloc *alloc, ZXErrStack *err_stack) {
+  ZXBitmap bitmap;
+  ZX_ERR_TRY((ZXBitmap::init(alloc, CAP, &bitmap, err_stack)), err_stack);
+
+  for (zx_u32 i = 0; i < CAP; i++) {
+    bitmap.set(i);
+  }
+
+  bitmap.reset();
+
+  for (zx_u32 i = 0; i < CAP; i++) {
+    ZX_ERR_ASSERT((!bitmap.get(i)), err_stack);
+  }
+
+  return ZXStatus::Ok;
+}
+
+static inline ZXStatus boundary_test(ZXAlloc *alloc, ZXErrStack *err_stack) {
+  ZXBitmap bitmap;
+  // Test with a size that is not a multiple of 64
+  zx_u32 n_bits = 70;
+  ZX_ERR_TRY((ZXBitmap::init(alloc, n_bits, &bitmap, err_stack)), err_stack);
+
+  for (zx_u32 i = 0; i < n_bits; i++) {
+    ZX_ERR_ASSERT((!bitmap.get(i)), err_stack);
+  }
+
+  // Set first and last bits
+  bitmap.set(0);
+  bitmap.set(n_bits - 1);
+
+  ZX_ERR_ASSERT((bitmap.get(0)), err_stack);
+  ZX_ERR_ASSERT((bitmap.get(n_bits - 1)), err_stack);
+  ZX_ERR_ASSERT((!bitmap.get(1)), err_stack);
+  ZX_ERR_ASSERT((!bitmap.get(n_bits - 2)), err_stack);
+
+  // Test iterator with boundary bits
+  zx_u32 idx = 0;
+  int count = 0;
+  ZXBitmapIter iter = bitmap.iter();
+  while (iter.next(&idx)) {
+    count++;
+  }
+  ZX_ERR_ASSERT((count == 2), err_stack);
+  ZX_ERR_ASSERT((idx == n_bits - 1),
+                err_stack); // Last idx should be the last bit set
+
+  return ZXStatus::Ok;
+}
+
 int main(void) {
   ZXErrStack err_stack = ZXErrStack::init();
 
@@ -77,6 +127,13 @@ int main(void) {
   alloc.reset();
 
   ZX_ERR_TRY_FATAL((zero_size_test(&alloc, &err_stack)), &err_stack);
+  alloc.reset();
+
+  ZX_ERR_TRY_FATAL((reset_test(&alloc, &err_stack)), &err_stack);
+  alloc.reset();
+
+  ZX_ERR_TRY_FATAL((boundary_test(&alloc, &err_stack)), &err_stack);
+  alloc.reset();
 
   ZX_ERR_TRY_FATAL((zx_page_alloc_free(mem, MEMORY_SIZE, &err_stack)),
                    &err_stack);

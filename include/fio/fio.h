@@ -10,11 +10,19 @@
 #include <zx/zx_slab.h>
 #include <zx/zx_time.h>
 
+constexpr zx_u64 FIO_STACK_CANARY = 0xe3d2df15226c69d1;
+
 // Entry is used by the executor to keep info about a Fiber.
 // Entry is also used by both the executor and the fiber itself for
 // communicating with each other.
 struct FioFiberEntry {
   FiberCtx fib_ctx;
+  // This is a pointer to a 64bit value that should be equal to
+  // `FIO_STACK_CANARY`. This is intended to be used for detecting stack
+  // overflow. The executor will check if this value changed every time a fiber
+  // yields to detect stack overflow and it will crash the program if that is
+  // the case.
+  zx_u8 *stack_canary;
   zx_u64 io_is_finished;
   zx_u64 io_is_pending;
 };
@@ -52,7 +60,7 @@ struct Fio {
     ZX_ASSERT((is_filled != ZX_U64_MAX));
 
     // bit index of the first zero
-    zx_u8 const io_id = zx_ctz_u64(~is_filled);
+    zx_u8 const io_id = zx_chk_sub_u8(zx_ctz_u64(~is_filled), 1);
     zx_u64 const mask = zx_chk_shl_u64(1, io_id);
 
     FioSQE *sqe = nullptr;
@@ -113,7 +121,7 @@ struct Fio {
 
       zx_u64 const mask = zx_chk_shl_u64(1, io_id);
       ZX_ASSERT(((fib_entry->io_is_pending & mask) != 0));
-      ZX_ASSERT(((fib_entry->io_is_finished & mask) != ZX_U64_MAX));
+      ZX_ASSERT(((fib_entry->io_is_finished & mask) == 0));
       fib_entry->io_is_pending &= ~mask;
       fib_entry->io_is_finished |= mask;
 

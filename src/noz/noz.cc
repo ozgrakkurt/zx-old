@@ -95,11 +95,11 @@ zx_u64 noz_decompress(zx_u8 const *__restrict input, zx_u8 *__restrict output,
     register regt control __asm__("k1");
     __builtin_memcpy(&control, input, sizeof(regt));
 
-    __asm__("vpexpandb %[input], %%zmm0 %{%[conrol]%}%{z%}\n\t"
+    __asm__("vpexpandb %[input], %%zmm0 %{%[control]%}%{z%}\n\t"
             "vmovdqu8 %%zmm0, %[output]\n\t"
             : [output] "=m"(*(zx_u8(*)[64])output)
             : [input] "m"(*(zx_u8 const(*)[64])(input + sizeof(zx_u64))),
-              [conrol] "k"(control)
+              [control] "k"(control)
             : "zmm0");
 
     output += 64;
@@ -155,11 +155,11 @@ ZXStatus noz_decompress_safe(zx_u8 const *__restrict input, zx_u64 input_size,
     zx_u64 const step_end = ((zx_u64)input) + step;
     ZX_ERR_ASSERT((step_end <= input_end), err_stack);
 
-    __asm__("vpexpandb %[input], %%zmm0 %{%[conrol]%}%{z%}\n\t"
+    __asm__("vpexpandb %[input], %%zmm0 %{%[control]%}%{z%}\n\t"
             "vmovdqu8 %%zmm0, %[output]\n\t"
             : [output] "=m"(*(zx_u8(*)[64])output)
             : [input] "m"(*(zx_u8 const(*)[64])(input + sizeof(zx_u64))),
-              [conrol] "k"(control)
+              [control] "k"(control)
             : "zmm0");
 
     output += 64;
