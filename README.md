@@ -20,29 +20,6 @@ byte masking to compress out the zero bytes. It is intended to be at least as fa
 This is intended to be used for doing async-io.
 - A library for doing async-io using `io_uring` and the `fiber` library, this library is named `fio`.
 
-## Programming Language 
-
-All code is written using `C++` with `c++20` standard, and compiled using `clang++`.
-
-The specific compiler/linker flags used are defined in `configure.py` and are mostly constant.
-
-We use `.h` for header files and `.cc` for source files. **ALL** code is **C** style **C++**.
-**ALL** code is compiled by `clang++`.
-
-## C++ Features
-
-Code is mostly written in style of `C` despite being compiled as `C++`.
-
-Only C++ features used are templates, template specialization and class enums.
-No other C++ feature should be used except these. 
-
-For example, we do **NOT** use features like:
-- Namespaces.
-- C++ template library.
-- Constructors/Destructors.
-- private/public method differentiation on structs.
-- classes.
-
 ## Build System
 
 We use a build system that is comprised of `python` scripts that generate `build.ninja` files.
@@ -181,6 +158,34 @@ Read more about this in Fuzz Testing topic.
 
 ## Code Style
 
+### Programming Language 
+
+All code is written using `C++` with `c++20` standard, and compiled using `clang++`.
+
+The specific compiler/linker flags used are defined in `configure.py` and are mostly constant.
+
+We use `.h` for header files and `.cc` for source files. **ALL** code is **C** style **C++**.
+**ALL** code is compiled by `clang++`.
+
+### C++ Features
+
+Code is mostly written in style of `C` despite being compiled as `C++`.
+
+Only C++ features used are templates, template specialization and class enums.
+No other C++ feature should be used except these. 
+
+For example, we do **NOT** use features like:
+- Namespaces.
+- C++ template library.
+- Constructors/Destructors.
+- private/public method differentiation on structs.
+- classes.
+
+Usage of templates should be very carefully considered and templates should not be used unless it is really
+essential like it is when implementing container types like a hashtable or a linked list.
+
+Usage of preprocessor macros should also be very carefully considered and be avoided if possible.
+
 ### Documenting Code
 
 Implementation and architecture of the code itself should always be documented inside the source files and never
@@ -189,11 +194,40 @@ outside of the source files.
 Obvious code should never be documented. Comments should be kept as short as possible to avoid fatigue when
 reading code.
 
+Complicated code that is difficult to make sense of should have extensive documentation that explains how things
+come together to make sense.
+
 ### Error Handling
 
 ### Memory Allocation
 
-### String Formatting
+We allocate memory from the operating system using **mmap** syscall and give memory memory back to os using the
+**munmap** syscall. This is named as **page allocation** and the interface for it is in `<zx/zx_page_alloc.h>`
+and the implementation is in `./src/zx/zx_page_alloc.cc`.
+
+We then utilize the memory we acquired from the OS using the `ZXAlloc` interface. This interface implements
+and allocator that gives out memory chunks.
+
+`ZXAlloc` is essentially an `arena allocator` that lets the user make allocations and then do a `reset` to invalidate
+all allocations at once and bring the allocator back to it's max capacity.
+
+`ZXAlloc` is implemented by the `ZXArenaAlloc` and the `ZXDebugAlloc`.
+
+`ZXArenaAlloc` just takes a pointer and a capacity and uses that memory as the it's pool.
+
+`ZXDebugAlloc` takes in a capacity and directly allocates memory from the os itself. It also inserts
+protected regions between the allocations to catch buffer overflows and out of bounds reads. This has a
+significant runtime performance hit so we only use this allocator in tests and fuzz tests.
+
+All tests and fuzz tests should use `ZXDebugAlloc`.
+
+`ZXAlloc` interface is defined in `<zx/zx_alloc.h>`.
+`ZXArenaAlloc` interface is defined in `<zx/zx_arena_alloc.h>`.
+`ZXDebugAlloc` interface is defined in `<zx/zx_debug_alloc.h>`.
+
+Example `ZXDebugAlloc` usage can be found in most `test`/`fuzz test`/`bench` target implementations.
+
+### String Formatting and Printing
 
 ### System Calls
 
@@ -208,9 +242,13 @@ All syscalls interfaces are defined in `<zx/zx_sys.h>` and implemented in `./src
 Tests are written into files that have a regular `int main(void)` function and they are defined as regular programs
 that don't print anything.
 
+Tests are expected to abort or just return a non-zero return code from the main function to indicate failure. They
+are expected to also write failure information into stderr in this case.
+
 Tests are supposed to build and run instantly on any profile.
 
-For example doing `./configure.py && ninja -C build/debug test` on a fresh build should be instant (`<1sec`).
+For example doing `./configure.py && ninja -C build/debug test` on a fresh build should feel instant.
+Same should be the case when using `opt_debug` profile or `release` profile too.
 
 Tests should not be flaky. If doing a flaky test is useful, it should be implemented as an executable target.
 
@@ -232,6 +270,22 @@ Time is only measured in terms of cycles and never in terms of time units like n
 ### Writing Benchmarks 
 
 ### Writing Fuzz Tests 
+
+### Instrumenting Code for Fuzz Tests
+
+The instrumentation macros are defined in `<zx/zx_fuzz_instr.h>` and they are used for marking code paths.
+
+The fuzzer will try to engineer inputs based on how many code paths are hit and which code paths are hit.
+
+The fuzzer also will display how many code paths it was able to reach so far and how many it couldn't reach yet.
+It will also show the specific target code paths that it couldn't reach yet. The developer that is running or writing
+the fuzz test is expected to look at this information to improve the fuzz test and also is expected to use this
+information to decide when to stop the fuzz test.
+
+The error handling and assertion macros implicitly put fuzz instrumentation into the code so the developer
+does have to manually put fuzz markers around error handling or assertion code.
+
+An example of instrumentation can be found in `./include/zx/zx_hashtable.h`.
 
 ### API Versioning
 
@@ -283,14 +337,14 @@ unless it is extremely clear that an operation can't overflow or divide-by-zero 
 
 ### Data Structures
 
-We always use `struct` and never use `class`.
+We always use `struct` and never use `class` for defining data structures.
 We use `class enum` for defining enums and never use regular `C` style `enum`.
 We never use constructors/destructors.
 
 The typical function that would be used to initialize a data structure is defined like this:
 ```c++
 struct MyStructure {
-    static inline ZXStatus init(zx_u64 mysize, MyStructure* data, ZXErrStack *err_stack) {...}
+    static inline ZXStatus init(ZXAlloc alloc, zx_u64 mysize, MyStructure* data, ZXErrStack *err_stack) {...}
 };
 ```
 This method would report errors using the returned `ZXStatus` and
