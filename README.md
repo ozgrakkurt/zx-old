@@ -182,9 +182,10 @@ For example, we do **NOT** use features like:
 - classes.
 
 Usage of templates should be very carefully considered and templates should not be used unless it is really
-essential like it is when implementing container types like a hashtable or a linked list.
+essential. An example where templates are a good trade-off is container types like a hashtable or a linked list.
 
-Usage of preprocessor macros should also be very carefully considered and be avoided if possible.
+Usage of preprocessor macros should also be very carefully considered and be avoided if possible. Always prefer
+constexpr to using macros.
 
 ### Documenting Code
 
@@ -198,6 +199,73 @@ Complicated code that is difficult to make sense of should have extensive docume
 come together to make sense.
 
 ### Error Handling
+
+Errors are returned using `ZXStatus` from functions. A function that can fail might look like this:
+```c++
+ZXStatus falliblefunc(...) {...}
+```
+`ZXStatus` is a class enum. `ZXStatus::Ok` means success,
+so the function would return `ZXStatus::Ok` if an error didn't occur.
+
+We also always pass in an `ZXErrStack*` into fallible functions. The error stack is used for recording the stack
+trace of an error.
+```c++
+ZXStatus falliblefunc(..., ZXErrStack* err_stack) {...}
+```
+We can collect the stack trace into a string for arbitrary usage or just print it to stderr and abort.
+
+Stack traces work exactly the same on any build type so they are reliable to use in optimized and stripped builds.
+
+Error handling is implemented by a series of macros.
+
+A full fallible function might look like this:
+```c++
+ZXStatus falliblefunc(ZXAlloc const* alloc, ZXErrStack* err_stack) {
+    // return AssertFail error if alloc is a null pointer.
+    // also push the source location where ZX_ERR_RETURN macro was used into
+    // the error stack.
+    if (alloc == nullptr) {
+        ZX_ERR_RETURN((ZXStatus::AssertFail), err_stack);
+    }
+
+    // return AssertFail error if alloc is a null pointer.
+    // same as the above but just takes a predicate and returns
+    // AssertFail error if predicate evaluates to false.
+    ZX_ERR_ASSERT((alloc != nullptr), err_stack);
+
+    zx_u8* mem = nullptr;
+    // allocate 1024 bytes and assign the pointer to mem, return error if that fails.
+    // both code positions (this location and the original err location inside alloc code)
+    // will be pushed to the error stack in case of an error.
+    ZX_ERR_TRY((alloc->alloc<zx_u8>(1024, &mem, err_stack)), err_stack);
+
+    // Same as ZX_ERR_TRY but will print a stack trace to stderr and 
+    // abort the program instead of just early returning from the function.
+    ZX_ERR_TRY_FATAL((alloc->alloc<zx_u8>(1024, &mem, err_stack)), err_stack);
+
+    return ZXStatus::Ok;
+}
+```
+
+All of these macros work exactly the same on all builds and they aren't disable on optimized and stripped builds.
+
+All of these types, functions and macros are defined in `<zx/zx_err.h>`. It is recommended to at least skim over that code
+to understand error handling.
+
+### Assertions
+
+Assertions are implemented using `ZX_ASSERT((my_predicate))` and `ZX_DBG_ASSERT((my_predicate))` macros.
+
+Both macros print source location and abort the program if predicate evaluates to false.
+
+`ZX_ASSERT` is always enabled regardless of the build profile.
+
+`ZX_DBG_ASSERT` is disabled in builds that use the `release` profile.
+
+It is recommended to use `ZX_ASSERT` even in performance critical contexts, unless there is a visible
+performance difference.
+
+All functionality related to these macros are defined in `<zx/zx_assert.h>`
 
 ### Memory Allocation
 
@@ -228,6 +296,26 @@ All tests and fuzz tests should use `ZXDebugAlloc`.
 Example `ZXDebugAlloc` usage can be found in most `test`/`fuzz test`/`bench` target implementations.
 
 ### String Formatting and Printing
+
+String formatting is done through the `ZXFmt` type and `ZX_FMT` macro defined in `<zx/zx_fmt.h>`.
+
+`ZXFmt` is a container that holds the string that is being formatted.
+
+`ZX_FMT(fmt, arg0, arg1, ...)` is used for pushing into the `ZXFmt` container.
+
+`ZX_FMT` takes any type of argument that is supported in any position. It can take up-to 16 parameters at once.
+Multiple calls must be used if more parameters are neeeded.
+
+Example of formatter usage can be found in benchmarking code.
+
+All functions relating to formatting **DO NOT** do error handling. They silently ignore if underlying
+buffer is out of capacity. The result will be that the buffer will be partially written.
+
+Printing is implemented by `zx_io_print` function defined in `<zx/zx_io.h>`. This function is a thin wrapper
+around the `write` syscall. It can be used with `ZX_STDERR` or `ZX_STDOUT` for printing to the "console".
+
+A `ZXFmt` instance can be reset after printing to start creating a new message using the same memory allocation.
+This is done by calling the `reset` method on it.
 
 ### System Calls
 
@@ -268,6 +356,23 @@ Time is only measured in terms of cycles and never in terms of time units like n
 `<zx/zx_time.h>` implements `ZXTimer` which is used for measuring the cycles.
 
 ### Writing Benchmarks 
+
+Benchmarks are just regular programs that print arbitrary information. They have a regular `int main(void)` that 
+is expected to call all relevant functions.
+
+An example might be a benchmark that benchmarks a compression function. It will do some setup, call some functions
+while measuring their running time (in terms of cycles, see Measuring Time section). And then it will print this
+information.
+
+Writing benchmarks is hard so it is often the better option to not even try. Just getting some low hanging benefit
+by doing a crude program is often the right trade-off.
+
+Benchmarks will be more accurate and useful as they are done on the higher levels of a program. This is because
+performance depends on so many things that it is basically impossible to understand or evaluate benchmarks that
+are just running a tiny portion of a program like a hashtable lookup. This kind of benchmark will only give a 
+crude idea of if that function is running roughly as expected.
+
+A good example of a simple and primitive benchmark is `./src/noz/noz_bench.cc`.
 
 ### Writing Fuzz Tests 
 
@@ -344,7 +449,7 @@ We never use constructors/destructors.
 The typical function that would be used to initialize a data structure is defined like this:
 ```c++
 struct MyStructure {
-    static inline ZXStatus init(ZXAlloc alloc, zx_u64 mysize, MyStructure* data, ZXErrStack *err_stack) {...}
+    static inline ZXStatus init(ZXAlloc const* alloc, zx_u64 mysize, MyStructure* data, ZXErrStack *err_stack) {...}
 };
 ```
 This method would report errors using the returned `ZXStatus` and
