@@ -246,6 +246,8 @@ ZXStatus falliblefunc(ZXAlloc const* alloc, ZXErrStack* err_stack) {
     return ZXStatus::Ok;
 }
 ```
+Notice that we wrap arguments to error handling macros
+in paranthesis so the commas in the argument don't confuse the preprocessor.
 
 All of these macros work exactly the same on all builds and they aren't disable on optimized and stripped builds.
 
@@ -261,6 +263,11 @@ Both macros print source location and abort the program if predicate evaluates t
 `ZX_ASSERT` is always enabled regardless of the build profile.
 
 `ZX_DBG_ASSERT` is disabled in builds that use the `release` profile.
+
+`ZX_ASSERT` and `ZX_DBG_ASSERT` are macros so individual arguments have to be wrapped in paranthesis to avoid confusing the preprocessor.
+```c++
+ZX_ASSERT((my_predicate_func(my_val0, my_val1)));
+```
 
 It is recommended to use `ZX_ASSERT` even in performance critical contexts, unless there is a visible
 performance difference.
@@ -306,6 +313,11 @@ String formatting is done through the `ZXFmt` type and `ZX_FMT` macro defined in
 `ZX_FMT` takes any type of argument that is supported in any position. It can take up-to 16 parameters at once.
 Multiple calls must be used if more parameters are neeeded.
 
+`ZX_FMT` is a macro so individual arguments have to be wrapped in paranthesis to avoid confusing the preprocessor.
+```c++
+ZX_FMT(&fmt, (ZXFmtStr { .str = "123", .len = 3 }));
+```
+
 Example of formatter usage can be found in benchmarking code.
 
 All functions relating to formatting **DO NOT** do error handling. They silently ignore if underlying
@@ -316,6 +328,17 @@ around the `write` syscall. It can be used with `ZX_STDERR` or `ZX_STDOUT` for p
 
 A `ZXFmt` instance can be reset after printing to start creating a new message using the same memory allocation.
 This is done by calling the `reset` method on it.
+
+### String Functions
+
+We don't have access to `<cstring>` header since we disable standard headers.
+
+We use the `__builtin_` variant of those functions:
+- `__builtin_memcpy`
+- `__builtin_memcmp`
+- `__builtin_memset`
+- `__builtin_strlen`
+- ...
 
 ### System Calls
 
