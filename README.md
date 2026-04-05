@@ -376,6 +376,22 @@ A good example of a simple and primitive benchmark is `./src/noz/noz_bench.cc`.
 
 ### Writing Fuzz Tests 
 
+Fuzz tests are implemented using instrumentation via macros defined in `<zx/zx_fuzz_instr.h>`. These macros are 
+used in the code that is expected to be fuzzed.
+
+The fuzz target is written using functionality defined in `<zx/zx_fuzz.h>`. Fuzz target will define a function that
+the fuzzer will call repeatedly with different `ZXFuzzInput`s.
+
+The fuzz input consists of some `zx_u64` values that the fuzzed function can pull.
+
+Each `zx_u64` value is a knob that the fuzzer will try to adjust. The fuzzer will always and only modify an entire `zx_u64`
+at a time.
+
+The fuzz target implementation should treat every separate `zx_u64` coming from the fuzz input as a separate knob.
+
+It is recommended to read existing fuzz tests like `./src/zx/zx_hashtable_fuzz.cc` and
+even the fuzzer implementation in `./src/zx/zx_fuzz.cc` to understand fuzzing more.
+
 ### Instrumenting Code for Fuzz Tests
 
 The instrumentation macros are defined in `<zx/zx_fuzz_instr.h>` and they are used for marking code paths.
