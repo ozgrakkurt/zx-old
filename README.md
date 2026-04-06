@@ -7,18 +7,20 @@ designed to be very minimal and understandable. Code for the `zx` library is a g
 
 This document is intended to be read from start to finish. It is not intended to be used as a reference.
 
+## Project Content
+
 This project includes:
-- A light build generator written in python. This system generates `ninja.build` files
+- **configure.py**: A light build generator written in python. This system generates `ninja.build` files
 so the project can be built, tested, benchmarked, fuzz tested etc. using `ninja`.
 The entry point for the build generation is `configure.py`, this file depends on the
 other python files that are in the root of the project.
-- A base library named `zx` which replaces `libc` APIs so the project doesn't require linking `libc`.
+- **zx**: A base library named `zx` which replaces `libc` APIs so the project doesn't require linking `libc`.
 It also includes type definitions, utilities and data structures that would be expected from a standard library.
-- A compression library named `noz`. `noz` is a very simple compression library that uses
+- **noz**: A compression library named `noz`. `noz` is a very simple compression library that uses
 byte masking to compress out the zero bytes. It is intended to be at least as fast as `memcpy`.
-- A library for implementing user-space context switching, this library is named `fiber`.
+- **fiber**: A library for implementing user-space context switching, this library is named `fiber`.
 This is intended to be used for doing async-io.
-- A library for doing async-io using `io_uring` and the `fiber` library, this library is named `fio`.
+- **fio**: A library for doing async-io using `io_uring` and the `fiber` library, this library is named `fio`.
 
 ## Build System
 
@@ -220,28 +222,28 @@ Error handling is implemented by a series of macros.
 
 A full fallible function might look like this:
 ```c++
-ZXStatus falliblefunc(ZXAlloc const* alloc, ZXErrStack* err_stack) {
-    // return AssertFail error if alloc is a null pointer.
+ZXStatus falliblefunc(ZXAlloc alloc, ZXErrStack* err_stack) {
+    // return AssertFail error if err_stack is a null pointer.
     // also push the source location where ZX_ERR_RETURN macro was used into
     // the error stack.
-    if (alloc == nullptr) {
+    if (err_stack == nullptr) {
         ZX_ERR_RETURN((ZXStatus::AssertFail), err_stack);
     }
 
-    // return AssertFail error if alloc is a null pointer.
-    // same as the above but just takes a predicate and returns
+    // return AssertFail error if err_stack is a null pointer.
+    // Functionally same as the above, but shorted. ZX_ERR_ASSERT Takes a predicate and returns
     // AssertFail error if predicate evaluates to false.
-    ZX_ERR_ASSERT((alloc != nullptr), err_stack);
+    ZX_ERR_ASSERT((alloc != err_stack), err_stack);
 
     zx_u8* mem = nullptr;
     // allocate 1024 bytes and assign the pointer to mem, return error if that fails.
     // both code positions (this location and the original err location inside alloc code)
     // will be pushed to the error stack in case of an error.
-    ZX_ERR_TRY((alloc->alloc<zx_u8>(1024, &mem, err_stack)), err_stack);
+    ZX_ERR_TRY((alloc.alloc<zx_u8>(1024, &mem, err_stack)), err_stack);
 
     // Same as ZX_ERR_TRY but will print a stack trace to stderr and 
     // abort the program instead of just early returning from the function.
-    ZX_ERR_TRY_FATAL((alloc->alloc<zx_u8>(1024, &mem, err_stack)), err_stack);
+    ZX_ERR_TRY_FATAL((alloc.alloc<zx_u8>(1024, &mem, err_stack)), err_stack);
 
     return ZXStatus::Ok;
 }
@@ -294,11 +296,22 @@ all allocations at once and bring the allocator back to it's max capacity.
 protected regions between the allocations to catch buffer overflows and out of bounds reads. This has a
 significant runtime performance hit so we only use this allocator in tests and fuzz tests.
 
-All tests and fuzz tests should use `ZXDebugAlloc`.
+`ZXAlloc` is created from an implementation by calling `make_alloc` on it. As an example, to create a
+`ZXAlloc` you would:
+- Create a `ZXDebugAlloc` using the `init` method.
+- Call `make_alloc` on it.
+
+`ZXAlloc` just holds a pointer to the original alloc implementation so it can be passed around by value.
+And it will get effected by the operations on the original allocation, for example calling `reset` on
+the original `ZXDebugAlloc` will effect the derived `ZXAlloc` since `ZXAlloc` is just a pointer to the
+`ZXDebugAlloc`.
+
+All tests and fuzz tests should use `ZXDebugAlloc`. Production binaries or benchmarks that 
+get effected by `ZXDebugAlloc` overhead should use `ZXArenaAlloc`.
 
 `ZXAlloc` interface is defined in `<zx/zx_alloc.h>`.
-`ZXArenaAlloc` interface is defined in `<zx/zx_arena_alloc.h>`.
-`ZXDebugAlloc` interface is defined in `<zx/zx_debug_alloc.h>`.
+`ZXArenaAlloc` is implemented in `<zx/zx_arena_alloc.h>`.
+`ZXDebugAlloc` is implemented in `<zx/zx_debug_alloc.h>`.
 
 Example `ZXDebugAlloc` usage can be found in most `test`/`fuzz test`/`bench` target implementations.
 
