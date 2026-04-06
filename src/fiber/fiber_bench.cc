@@ -163,7 +163,7 @@ int main(void) {
   ZXErrStack err_stack = ZXErrStack::init();
 
   zx_u8 *mem = nullptr;
-  ZX_ERR_TRY_FATAL((zx_page_alloc_huge_1gb(MEMORY_SIZE, &mem, &err_stack)),
+  ZX_ERR_TRY_FATAL((zx_page_alloc_thp_2mb(MEMORY_SIZE, &mem, &err_stack)),
                    &err_stack);
 
   ZXAlloc alloc = ZXAlloc::init(mem, MEMORY_SIZE);
