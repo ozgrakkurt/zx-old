@@ -15,7 +15,7 @@ template <typename T> struct ZXQueue {
   zx_u32 cap_mask;
   zx_u32 capacity;
 
-  static inline ZXStatus init(ZXAlloc *alloc, zx_u32 capacity, ZXQueue *queue,
+  static inline ZXStatus init(ZXAlloc alloc, zx_u32 capacity, ZXQueue *queue,
                               ZXErrStack *err_stack) {
     ZX_ASSERT((alloc != nullptr));
     ZX_ASSERT((queue != nullptr));
@@ -24,7 +24,7 @@ template <typename T> struct ZXQueue {
     zx_u32 const cap = zx_next_pow_two_u32(capacity);
 
     T *entries = nullptr;
-    ZX_ERR_TRY((alloc->alloc<T>(capacity, &entries, err_stack)), err_stack);
+    ZX_ERR_TRY((alloc.alloc<T>(capacity, &entries, err_stack)), err_stack);
 
     *queue = (ZXQueue){
         .entries = entries,

@@ -6,7 +6,12 @@ from definition import Executable, Library, Project, Profile
 PROFILES: Dict[str, Profile] = {
     "debug": Profile(),
     "opt_debug": Profile(opt_level=2),
-    "release": Profile(opt_level=2, enable_debug_assert=False, enable_debug_info=False),
+    "release": Profile(
+        opt_level=2,
+        enable_debug_assert=False,
+        enable_debug_info=False,
+        enable_memory_safety=False,
+    ),
     "fuzz": Profile(opt_level=2, enable_fuzzing=True),
     "fuzz_debug": Profile(enable_fuzzing=True),
 }

@@ -1,12 +1,12 @@
 #include <zx/zx_alloc.h>
 #include <zx/zx_bitmap.h>
+#include <zx/zx_debug_alloc.h>
 #include <zx/zx_err.h>
-#include <zx/zx_page_alloc.h>
 
 constexpr zx_u64 MEMORY_SIZE = 1 << 12;
 constexpr zx_u32 CAP = 3169;
 
-static inline ZXStatus iter_test(ZXAlloc *alloc, ZXBitmap const *bmap,
+static inline ZXStatus iter_test(ZXAlloc alloc, ZXBitmap const *bmap,
                                  ZXErrStack *err_stack) {
   ZXBitmap bitmap;
   ZX_ERR_TRY((ZXBitmap::init(alloc, bmap->n_bits(), &bitmap, err_stack)),
@@ -26,7 +26,7 @@ static inline ZXStatus iter_test(ZXAlloc *alloc, ZXBitmap const *bmap,
   return ZXStatus::Ok;
 }
 
-static inline ZXStatus smoke_test(ZXAlloc *alloc, ZXErrStack *err_stack) {
+static inline ZXStatus smoke_test(ZXAlloc alloc, ZXErrStack *err_stack) {
   ZXBitmap bitmap;
   ZX_ERR_TRY((ZXBitmap::init(alloc, CAP, &bitmap, err_stack)), err_stack);
 
@@ -55,7 +55,7 @@ static inline ZXStatus smoke_test(ZXAlloc *alloc, ZXErrStack *err_stack) {
   return ZXStatus::Ok;
 }
 
-static inline ZXStatus zero_size_test(ZXAlloc *alloc, ZXErrStack *err_stack) {
+static inline ZXStatus zero_size_test(ZXAlloc alloc, ZXErrStack *err_stack) {
   ZXBitmap bitmap;
   ZX_ERR_TRY((ZXBitmap::init(alloc, 0, &bitmap, err_stack)), err_stack);
 
@@ -64,7 +64,7 @@ static inline ZXStatus zero_size_test(ZXAlloc *alloc, ZXErrStack *err_stack) {
   return ZXStatus::Ok;
 }
 
-static inline ZXStatus reset_test(ZXAlloc *alloc, ZXErrStack *err_stack) {
+static inline ZXStatus reset_test(ZXAlloc alloc, ZXErrStack *err_stack) {
   ZXBitmap bitmap;
   ZX_ERR_TRY((ZXBitmap::init(alloc, CAP, &bitmap, err_stack)), err_stack);
 
@@ -81,7 +81,7 @@ static inline ZXStatus reset_test(ZXAlloc *alloc, ZXErrStack *err_stack) {
   return ZXStatus::Ok;
 }
 
-static inline ZXStatus boundary_test(ZXAlloc *alloc, ZXErrStack *err_stack) {
+static inline ZXStatus boundary_test(ZXAlloc alloc, ZXErrStack *err_stack) {
   ZXBitmap bitmap;
   // Test with a size that is not a multiple of 64
   zx_u32 n_bits = 70;
@@ -117,25 +117,22 @@ static inline ZXStatus boundary_test(ZXAlloc *alloc, ZXErrStack *err_stack) {
 int main(void) {
   ZXErrStack err_stack = ZXErrStack::init();
 
-  zx_u8 *mem = nullptr;
-  ZX_ERR_TRY_FATAL((zx_page_alloc_4kb(MEMORY_SIZE, &mem, &err_stack)),
+  ZXDebugAlloc dbg_alloc;
+  ZX_ERR_TRY_FATAL((ZXDebugAlloc::init(MEMORY_SIZE, &dbg_alloc, &err_stack)),
                    &err_stack);
+  ZXAlloc alloc = dbg_alloc.make_alloc();
 
-  ZXAlloc alloc = ZXAlloc::init(mem, MEMORY_SIZE);
+  ZX_ERR_TRY_FATAL((smoke_test(alloc, &err_stack)), &err_stack);
+  dbg_alloc.reset();
 
-  ZX_ERR_TRY_FATAL((smoke_test(&alloc, &err_stack)), &err_stack);
-  alloc.reset();
+  ZX_ERR_TRY_FATAL((zero_size_test(alloc, &err_stack)), &err_stack);
+  dbg_alloc.reset();
 
-  ZX_ERR_TRY_FATAL((zero_size_test(&alloc, &err_stack)), &err_stack);
-  alloc.reset();
+  ZX_ERR_TRY_FATAL((reset_test(alloc, &err_stack)), &err_stack);
+  dbg_alloc.reset();
 
-  ZX_ERR_TRY_FATAL((reset_test(&alloc, &err_stack)), &err_stack);
-  alloc.reset();
+  ZX_ERR_TRY_FATAL((boundary_test(alloc, &err_stack)), &err_stack);
+  dbg_alloc.reset();
 
-  ZX_ERR_TRY_FATAL((boundary_test(&alloc, &err_stack)), &err_stack);
-  alloc.reset();
-
-  ZX_ERR_TRY_FATAL((zx_page_alloc_free(mem, MEMORY_SIZE, &err_stack)),
-                   &err_stack);
   return 0;
 }

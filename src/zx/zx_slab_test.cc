@@ -56,9 +56,8 @@ static inline ZXStatus zero_size_test(ZXAlloc *alloc, ZXErrStack *err_stack) {
 int main(void) {
   ZXErrStack err_stack = ZXErrStack::init();
 
-  zx_u8 *mem = nullptr;
-  ZX_ERR_TRY_FATAL((zx_page_alloc_4kb(MEMORY_SIZE, &mem, &err_stack)),
-                   &err_stack);
+  ZXDebugAlloc dbg_alloc;
+  ZX_ERR_TRY_FATAL(());
 
   ZXAlloc alloc = ZXAlloc::init(mem, MEMORY_SIZE);
 
@@ -67,7 +66,5 @@ int main(void) {
 
   ZX_ERR_TRY_FATAL((zero_size_test(&alloc, &err_stack)), &err_stack);
 
-  ZX_ERR_TRY_FATAL((zx_page_alloc_free(mem, MEMORY_SIZE, &err_stack)),
-                   &err_stack);
   return 0;
 }

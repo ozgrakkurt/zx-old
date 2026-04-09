@@ -10,7 +10,7 @@ typedef zx_u256 key_type;
 
 using Queue = ZXQueue<key_type>;
 
-static inline ZXStatus smoke_test(ZXAlloc *alloc, ZXErrStack *err_stack) {
+static inline ZXStatus smoke_test(ZXAlloc alloc, ZXErrStack *err_stack) {
   Queue queue;
   ZX_ERR_TRY((Queue::init(alloc, CAP, &queue, err_stack)), err_stack);
 
@@ -43,7 +43,7 @@ static inline ZXStatus smoke_test(ZXAlloc *alloc, ZXErrStack *err_stack) {
   return ZXStatus::Ok;
 }
 
-static inline ZXStatus smoke_test_in_place(ZXAlloc *alloc,
+static inline ZXStatus smoke_test_in_place(ZXAlloc alloc,
                                            ZXErrStack *err_stack) {
   Queue queue;
   ZX_ERR_TRY((Queue::init(alloc, CAP, &queue, err_stack)), err_stack);
@@ -79,7 +79,7 @@ static inline ZXStatus smoke_test_in_place(ZXAlloc *alloc,
   return ZXStatus::Ok;
 }
 
-static inline ZXStatus zero_size_test(ZXAlloc *alloc, ZXErrStack *err_stack) {
+static inline ZXStatus zero_size_test(ZXAlloc alloc, ZXErrStack *err_stack) {
   Queue queue;
   ZX_ERR_TRY((Queue::init(alloc, 0, &queue, err_stack)), err_stack);
 
@@ -98,21 +98,19 @@ static inline ZXStatus zero_size_test(ZXAlloc *alloc, ZXErrStack *err_stack) {
 int main(void) {
   ZXErrStack err_stack = ZXErrStack::init();
 
-  zx_u8 *mem = nullptr;
-  ZX_ERR_TRY_FATAL((zx_page_alloc_4kb(MEMORY_SIZE, &mem, &err_stack)),
+  ZXDebugAlloc dbg_alloc;
+  ZX_ERR_TRY_FATAL((ZXDebugAlloc::init(MEMORY_SIZE, &dbg_alloc, &err_stack)),
                    &err_stack);
+  ZXAlloc alloc = dbg_alloc.make_alloc();
 
-  ZXAlloc alloc = ZXAlloc::init(mem, MEMORY_SIZE);
+  ZX_ERR_TRY_FATAL((smoke_test(alloc, &err_stack)), &err_stack);
+  dbg_alloc.reset();
 
-  ZX_ERR_TRY_FATAL((smoke_test(&alloc, &err_stack)), &err_stack);
-  alloc.reset();
+  ZX_ERR_TRY_FATAL((zero_size_test(alloc, &err_stack)), &err_stack);
+  dbg_alloc.reset();
 
-  ZX_ERR_TRY_FATAL((zero_size_test(&alloc, &err_stack)), &err_stack);
-  alloc.reset();
+  ZX_ERR_TRY_FATAL((smoke_test_in_place(alloc, &err_stack)), &err_stack);
+  dbg_alloc.reset();
 
-  ZX_ERR_TRY_FATAL((smoke_test_in_place(&alloc, &err_stack)), &err_stack);
-
-  ZX_ERR_TRY_FATAL((zx_page_alloc_free(mem, MEMORY_SIZE, &err_stack)),
-                   &err_stack);
   return 0;
 }

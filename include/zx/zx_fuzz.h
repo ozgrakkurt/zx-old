@@ -9,28 +9,25 @@
 #include <zx/zx_err.h>
 
 struct ZXFuzzInput {
-  zx_u64 *input;
-  zx_u32 input_len;
-  zx_u32 consumed_count_;
+  ZXSlice<zx_u64> m_input;
+  zx_u64 m_consumed_count;
 
-  static inline ZXFuzzInput init(zx_u64 *input, zx_u32 input_len) {
+  static inline ZXFuzzInput init(ZXSlice<zx_u64> input) {
     return ZXFuzzInput{
-        .input = input,
-        .input_len = input_len,
-        .consumed_count_ = 0,
+        .m_input = input,
+        .m_consumed_count = 0,
     };
   }
 
   __attribute__((always_inline)) inline zx_u64 next() {
-    zx_u32 const offset = this->consumed_count_;
-    ZX_ASSERT((this->input_len > offset));
-    this->consumed_count_ = offset + 1;
-
-    return this->input[offset];
+    zx_u32 const offset = this->m_consumed_count;
+    ZX_ASSERT((this->m_input.len() > offset));
+    this->m_consumed_count = offset + 1;
+    return this->m_input.ptr()[offset];
   }
 
-  __attribute__((always_inline)) inline zx_u32 consumed_count() const {
-    return this->consumed_count_;
+  __attribute__((always_inline)) inline zx_u64 consumed_count() const {
+    return this->m_consumed_count;
   }
 };
 
@@ -40,11 +37,10 @@ typedef ZXStatus (*zx_fuzz_one_fn)(void *usr_ctx, ZXFuzzInput *fuzz_input,
 struct ZXFuzzParams {
   void *usr_ctx;
   zx_fuzz_one_fn fuzz_one;
-  char const *tgt_file_filter;
-  zx_u16 tgt_file_filter_len;
+  ZXSlice<char> tgt_file_filter;
 };
 
-ZXStatus zx_fuzz_main(ZXAlloc *alloc, ZXFuzzParams const *params,
+ZXStatus zx_fuzz_main(ZXAlloc alloc, ZXFuzzParams const *params,
                       ZXErrStack *err_stack);
 
 #endif // ifdef ZX_FUZZING_ENABLED

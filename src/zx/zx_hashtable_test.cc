@@ -1,4 +1,5 @@
 #include <zx/zx_alloc.h>
+#include <zx/zx_debug_alloc.h>
 #include <zx/zx_err.h>
 #include <zx/zx_hashtable.h>
 #include <zx/zx_page_alloc.h>
@@ -16,7 +17,7 @@ static inline bool keys_eql(void const *ctx, key_type const *a,
 
 using HTable = ZXHashtable<key_type, void const *, keys_eql>;
 
-static inline ZXStatus smoke_test(ZXAlloc *alloc, ZXErrStack *err_stack) {
+static inline ZXStatus smoke_test(ZXAlloc alloc, ZXErrStack *err_stack) {
   HTable table;
   ZX_ERR_TRY((HTable::init(alloc, CAP, &table, err_stack)), err_stack);
 
@@ -72,7 +73,7 @@ static inline ZXStatus smoke_test(ZXAlloc *alloc, ZXErrStack *err_stack) {
   return ZXStatus::Ok;
 }
 
-static inline ZXStatus zero_size_test(ZXAlloc *alloc, ZXErrStack *err_stack) {
+static inline ZXStatus zero_size_test(ZXAlloc alloc, ZXErrStack *err_stack) {
   HTable table;
   ZX_ERR_TRY((HTable::init(alloc, 0, &table, err_stack)), err_stack);
 
@@ -82,18 +83,15 @@ static inline ZXStatus zero_size_test(ZXAlloc *alloc, ZXErrStack *err_stack) {
 int main(void) {
   ZXErrStack err_stack = ZXErrStack::init();
 
-  zx_u8 *mem = nullptr;
-  ZX_ERR_TRY_FATAL((zx_page_alloc_4kb(MEMORY_SIZE, &mem, &err_stack)),
+  ZXDebugAlloc dbg_alloc;
+  ZX_ERR_TRY_FATAL((ZXDebugAlloc::init(MEMORY_SIZE, &dbg_alloc, &err_stack)),
                    &err_stack);
+  ZXAlloc alloc = dbg_alloc.make_alloc();
 
-  ZXAlloc alloc = ZXAlloc::init(mem, MEMORY_SIZE);
+  ZX_ERR_TRY_FATAL((smoke_test(alloc, &err_stack)), &err_stack);
+  dbg_alloc.reset();
 
-  ZX_ERR_TRY_FATAL((smoke_test(&alloc, &err_stack)), &err_stack);
-  alloc.reset();
+  ZX_ERR_TRY_FATAL((zero_size_test(alloc, &err_stack)), &err_stack);
 
-  ZX_ERR_TRY_FATAL((zero_size_test(&alloc, &err_stack)), &err_stack);
-
-  ZX_ERR_TRY_FATAL((zx_page_alloc_free(mem, MEMORY_SIZE, &err_stack)),
-                   &err_stack);
   return 0;
 }

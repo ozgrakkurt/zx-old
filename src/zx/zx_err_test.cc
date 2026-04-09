@@ -21,9 +21,7 @@ ZXStatus err_func(zx_u64 depth, ZXErrStack *err_stack) {
   return ZXStatus::Ok;
 }
 
-ZXStatus test(ZXAlloc *alloc, ZXErrStack *err_stack) {
-  (void)alloc;
-
+ZXStatus test(ZXErrStack *err_stack) {
   ZX_ERR_TRY((err_func(1, err_stack)), err_stack);
 
   return ZXStatus::Ok;
@@ -34,21 +32,12 @@ constexpr zx_u64 MEMORY_SIZE = 1 << 16;
 int main(void) {
   ZXErrStack err_stack = ZXErrStack::init();
 
-  zx_u8 *mem = nullptr;
-  ZX_ERR_TRY_FATAL((zx_page_alloc_4kb(MEMORY_SIZE, &mem, &err_stack)),
-                   &err_stack);
-
-  ZXAlloc alloc = ZXAlloc::init(mem, MEMORY_SIZE);
-
-  ZXStatus const status = test(&alloc, &err_stack);
+  ZXStatus const status = test(&err_stack);
   // ZX_ERR_TRY_FATAL((status), &err_stack);
   (void)status;
 
   // ZX_DBG_ASSERT(false);
   // ZX_ASSERT(false);
   // zx_page_alloc_free(nullptr, MEMORY_SIZE);
-
-  ZX_ERR_TRY_FATAL((zx_page_alloc_free(mem, MEMORY_SIZE, &err_stack)),
-                   &err_stack);
   return 0;
 }

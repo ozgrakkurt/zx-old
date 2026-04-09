@@ -3,71 +3,76 @@
 
 #include <zx/zx_def.h>
 #include <zx/zx_int.h>
-
-struct ZXFmtStr {
-  char const *str;
-  zx_u32 len;
-};
+#include <zx/zx_slice.h>
 
 struct ZXFmt {
-  char *buf_;
-  zx_u32 capacity;
-  zx_u32 offset;
+  // Backing memory
+  ZXSliceMut<zx_u8> m_mem;
+  // Current write slice.
+  // This slice is advanced as we write into it.
+  ZXSliceMut<zx_u8> m_write;
 
-  static inline ZXFmt init(char *buf, zx_u32 capacity) {
+  // Create a new formatter with given memory. The formatter will
+  // use this memory for writing the characters.
+  static inline ZXFmt init(ZXSlice<zx_u8> mem) {
+    mem.memset(0);
     return ZXFmt{
-        .buf_ = buf,
-        .capacity = capacity,
-        .offset = 0,
+        .m_mem = mem,
+        .m_offset = 0,
     };
   }
 
-  inline zx_u32 n_written() const { return this->offset; }
+  // Return a slice that points to the characters written so far.
+  inline ZXSlice<zx_u8> written() const {
+    return this->m_mem.slice(0, this->m_offset);
+  }
 
-  inline char const *buf() const { return this->buf_; }
+  inline void reset() {
+    this->m_mem.memset(0);
+    this->m_offset = 0;
+  }
 
-  inline void reset() { this->offset = 0; }
-
+  // Dummy func so we get a compile error if formatting isn't implemented for
+  // `T`
   template <typename T> inline void format(T val) {
     static_assert(sizeof(T) == 0);
     (void)val;
   }
 
-  template <> inline void format<ZXFmtStr>(ZXFmtStr str) {
-    zx_u32 const capacity_left = zx_chk_sub_u32(this->capacity, this->offset);
-    zx_u64 const n_write = zx_int_min_u64(capacity_left, str.len);
-    __builtin_memcpy(&this->buf_[this->offset], str.str, n_write);
-    this->offset += n_write;
+  template <> inline void format<ZXSlice<char>>(ZXSlice<char> str) {
+    zx_u64 const capacity_left =
+        zx_chk_sub_u64(this->m_mem.len(), this->m_offset);
+    zx_u64 const n_write = zx_int_min_u64(capacity_left, str.len());
+    ZXSliceMut<zx_u8> const w_slice =
+        this->m_mem.slice(this->m_offset, n_write) zx_slice_copy(w_slice, str);
+    __builtin_memcpy(&this->m_mem.ptr()[this->m_offset], str.ptr(), n_write);
+    this->m_offset += n_write;
   }
 
   template <> inline void format<char const *>(char const *cstr) {
-    this->format<ZXFmtStr>(
-        ZXFmtStr{.str = cstr, .len = (zx_u32)__builtin_strlen(cstr)});
-  }
-
-  template <> inline void format<char *>(char *cstr) {
-    this->format<char const *>(cstr);
+    this->format<ZXSlice<char>>(zx_slice_from_cstr(cstr));
   }
 
   template <> inline void format<char>(char ch) {
-    zx_u32 const capacity_left = zx_chk_sub_u32(this->capacity, this->offset);
+    zx_u64 const capacity_left =
+        zx_chk_sub_u64(this->m_mem.len(), this->m_offset);
     if (capacity_left > 0) {
-      this->buf_[this->offset] = ch;
-      this->offset += 1;
+      this->m_mem.ptr()[this->m_offset] = ch;
+      this->m_offset += 1;
     }
   }
 
   template <> inline void format<zx_u64>(zx_u64 val) {
-    constexpr zx_u32 MAX_NUM_DIGITS = 20;
+    constexpr zx_u64 MAX_NUM_DIGITS = 20;
     char digits[MAX_NUM_DIGITS];
 
-    zx_u32 pos = MAX_NUM_DIGITS;
+    zx_u64 pos = MAX_NUM_DIGITS;
     do {
       pos--;
       digits[pos] = '0' + (char)(val % 10);
       val /= 10;
     } while (val > 0);
-    zx_u32 const len = MAX_NUM_DIGITS - pos;
+    zx_u64 const len = MAX_NUM_DIGITS - pos;
 
     this->format<ZXFmtStr>(ZXFmtStr{.str = &digits[pos], .len = len});
   }
@@ -88,10 +93,11 @@ struct ZXFmt {
     if (val >= 0) {
       this->format<zx_u64>((zx_u64)val);
     } else {
-      zx_u32 const capacity_left = zx_chk_sub_u32(this->capacity, this->offset);
+      zx_u64 const capacity_left =
+          zx_chk_sub_u64(this->m_mem.len(), this->m_offset);
       if (capacity_left > 0) {
-        this->buf_[this->offset] = '-';
-        this->offset += 1;
+        this->m_mem.ptr()[this->m_offset] = '-';
+        this->m_offset += 1;
         this->format<zx_u64>((zx_u64)-val);
       }
     }

@@ -33,4 +33,5 @@ class Profile:
     opt_level: int = 0
     enable_debug_info: bool = True
     enable_debug_assert: bool = True
+    enable_memory_safety: bool = True
     enable_fuzzing: bool = False

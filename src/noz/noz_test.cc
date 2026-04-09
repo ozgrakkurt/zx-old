@@ -49,23 +49,24 @@ static ZXStatus do_test(zx_u8 const *__restrict input,
   return ZXStatus::Ok;
 }
 
-static ZXStatus roundtrip(ZXAlloc *alloc, ZXErrStack *err_stack) {
+static ZXStatus roundtrip(ZXAlloc alloc, ZXErrStack *err_stack) {
   zx_u8 *input = nullptr;
-  ZX_ERR_TRY((alloc->alloc<zx_u8>(MAX_SIZE, &input, err_stack)), err_stack);
+  ZX_ERR_TRY((alloc.alloc<zx_u8>(MAX_SIZE, &input, err_stack)), err_stack);
   ZXXoshiro256 rand = ZXXoshiro256::init(0);
   rand.fill((zx_u8 *)input, MAX_SIZE);
 
   zx_u64 const compress_bound = noz_compress_bound(MAX_SIZE);
   zx_u8 *compressed = nullptr;
-  ZX_ERR_TRY((alloc->alloc<zx_u8>(compress_bound, &compressed, err_stack)),
+  ZX_ERR_TRY((alloc.alloc<zx_u8>(compress_bound, &compressed, err_stack)),
              err_stack);
 
   zx_u8 *output = nullptr;
-  ZX_ERR_TRY((alloc->alloc<zx_u8>(MAX_SIZE, &output, err_stack)), err_stack);
+  ZX_ERR_TRY((alloc.alloc<zx_u8>(MAX_SIZE, &output, err_stack)), err_stack);
 
   constexpr zx_u64 SIZES[] = {0, 1, 69, 1033, 1024, 2009, 2048};
   constexpr zx_u64 N_SIZES = sizeof(SIZES) / sizeof(SIZES[0]);
 
+  // TODO: align buffers to right so we hit oob errors.
   for (zx_u64 i = 0; i < N_SIZES; i++) {
     __builtin_memset(compressed, 0, compress_bound);
     __builtin_memset(output, 0, MAX_SIZE);
@@ -81,15 +82,11 @@ static ZXStatus roundtrip(ZXAlloc *alloc, ZXErrStack *err_stack) {
 int main(void) {
   ZXErrStack err_stack = ZXErrStack::init();
 
-  zx_u8 *mem = nullptr;
-  ZX_ERR_TRY_FATAL((zx_page_alloc_4kb(MEMORY_SIZE, &mem, &err_stack)),
+  ZXDebugAlloc dbg_alloc;
+  ZX_ERR_TRY_FATAL((ZXDebugAlloc::init(MEMORY_SIZE, &dbg_alloc, &err_stack)),
                    &err_stack);
+  ZXAlloc alloc = dbg_alloc.make_alloc();
 
-  ZXAlloc alloc = ZXAlloc::init(mem, MEMORY_SIZE);
-
-  ZX_ERR_TRY_FATAL((roundtrip(&alloc, &err_stack)), &err_stack);
-
-  ZX_ERR_TRY_FATAL((zx_page_alloc_free(mem, MEMORY_SIZE, &err_stack)),
-                   &err_stack);
+  ZX_ERR_TRY_FATAL((roundtrip(alloc, &err_stack)), &err_stack);
   return 0;
 }

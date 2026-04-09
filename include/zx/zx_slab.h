@@ -15,14 +15,14 @@ template <typename T> struct ZXSlab {
   zx_u32 n_occupied_;
   zx_u32 capacity;
 
-  static inline ZXStatus init(ZXAlloc *alloc, zx_u32 capacity, ZXSlab *slab,
+  static inline ZXStatus init(ZXAlloc alloc, zx_u32 capacity, ZXSlab *slab,
                               ZXErrStack *err_stack) {
     ZX_ASSERT((alloc != nullptr));
     ZX_ASSERT((slab != nullptr));
     ZX_ASSERT((err_stack != nullptr));
 
     bool *is_occupied = nullptr;
-    ZX_ERR_TRY((alloc->alloc<bool>(capacity, &is_occupied, err_stack)),
+    ZX_ERR_TRY((alloc.alloc<bool>(capacity, &is_occupied, err_stack)),
                err_stack);
     __builtin_memset(is_occupied, 0, sizeof(bool) * capacity);
 

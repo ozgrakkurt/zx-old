@@ -11,11 +11,11 @@
 template <typename T, typename EqCtx,
           bool EqFn(EqCtx ctx, T const *a, T const *b)>
 struct ZXHashtable {
-  T *entries;
-  zx_u8 *metadata;
-  zx_u32 cap_mask;
-  zx_u32 capacity_left_;
-  zx_u32 capacity;
+  ZXSliceMut<T> m_entries;
+  ZXSliceMut<zx_u8> m_metadata;
+  zx_u32 m_cap_mask;
+  zx_u32 m_capacity_left;
+  zx_u32 m_capacity;
 
   typedef zx_u8 vect_ __attribute__((vector_size(16)));
   typedef unsigned long regt;
@@ -27,7 +27,6 @@ struct ZXHashtable {
 
   static inline ZXStatus init(ZXAlloc *alloc, zx_u32 capacity,
                               ZXHashtable *table, ZXErrStack *err_stack) {
-    ZX_ASSERT((alloc != nullptr));
     ZX_ASSERT((table != nullptr));
     ZX_ASSERT((err_stack != nullptr));
 
@@ -37,45 +36,46 @@ struct ZXHashtable {
     ZX_ASSERT((cap > 0));
     // check it is a power of two
     ZX_ASSERT((zx_is_pow_two_u32(cap)));
-    zx_u32 const cap_mask_ = zx_chk_sub_u32(cap, 1);
+    zx_u32 const cap_mask = zx_chk_sub_u32(cap, 1);
 
     // allocate extra sizeof(simd) bytes so we can do simd loads on any byte
     // index also have to mirror the first group with the extra group at the end
     // to have simple read path.
     zx_u32 const metadata_size = zx_chk_add_u32(cap, GROUP_SIZE_);
-    zx_u8 *metadata = nullptr;
+    ZXSliceMut<zx_u8> metadata;
     ZX_ERR_TRY((alloc->alloc<zx_u8>(metadata_size, &metadata, err_stack)),
                err_stack);
-    __builtin_memset(metadata, EMPTY_TAG_, metadata_size);
+    metadata.memset(EMPTY_TAG_);
 
-    T *entries = nullptr;
+    ZXSliceMut<T> entries;
     ZX_ERR_TRY((alloc->alloc<T>(cap, &entries, err_stack)), err_stack);
+#ifdef ZX_MEMORY_SAFETY_ENABLED
+    entries.memset(0xf0);
+#endif
 
     *table = ZXHashtable{
-        .entries = entries,
-        .metadata = metadata,
-        .cap_mask = cap_mask_,
-        .capacity_left_ = capacity,
-        .capacity = capacity,
+        .m_entries = entries,
+        .m_metadata = metadata,
+        .m_cap_mask = cap_mask,
+        .m_capacity_left = capacity,
+        .m_capacity = capacity,
     };
 
     return ZXStatus::Ok;
   }
 
   __attribute__((always_inline)) inline zx_u32 capacity_left() const {
-    return this->capacity_left_;
+    return this->m_capacity_left;
   }
 
   inline void reset() {
-    zx_u32 const cap = zx_chk_add_u32(this->cap_mask, 1);
-    zx_u32 const metadata_size = zx_chk_add_u32(cap, GROUP_SIZE_);
-    __builtin_memset(this->metadata, EMPTY_TAG_, metadata_size);
-    this->capacity_left_ = this->capacity;
+    this->m_metadata.memset(EMPTY_TAG_);
+    this->m_capacity_left = this->m_capacity;
   }
 
   __attribute__((always_inline)) static inline zx_u32
-  maybe_mirror_index_(zx_u32 cap_mask_, zx_u32 index) {
-    return ((index - GROUP_SIZE_) & cap_mask_) + GROUP_SIZE_;
+  maybe_mirror_index_(zx_u32 cap_mask, zx_u32 index) {
+    return ((index - GROUP_SIZE_) & cap_mask) + GROUP_SIZE_;
   }
 
   __attribute__((always_inline)) static inline void load_(void const *group_ptr,
@@ -149,27 +149,25 @@ struct ZXHashtable {
   // matching entry doesn't exist in the table already.
   inline bool insert(zx_u64 hash, T const *entry, EqCtx eqctx) {
     zx_u8 const tag = (zx_u8)(hash >> 57);
-    zx_u32 const cap_mask_ = this->cap_mask;
-
     vect_ const tag_vec = broadcast_(tag);
 
     zx_u32 stride = 0;
 
-    zx_u32 meta_idx = cap_mask_ & ((zx_u32)(hash));
+    zx_u32 const cap_mask = this->m_cap_mask;
 
-    zx_u8 const *meta = this->metadata;
-
+    zx_u32 meta_idx = cap_mask & ((zx_u32)(hash));
     while (true) {
       zx_u16 tag_match;
       zx_u16 empty_match;
-      load_(&meta[meta_idx], tag_vec, &tag_match, &empty_match);
+      load_(this->m_metadata.index(meta_idx), tag_vec, &tag_match,
+            &empty_match);
 
       while (tag_match != 0) {
         zx_u8 const tag_pos = zx_ctz_u16(tag_match);
 
-        zx_u32 const index = (meta_idx + tag_pos) & cap_mask_;
+        zx_u32 const index = (meta_idx + tag_pos) & cap_mask;
 
-        T *entry_p = &this->entries[index];
+        T *entry_p = this->m_entries.index(index);
         if (EqFn(eqctx, entry_p, entry)) [[likely]] {
           ZX_FUZZ_MARKER;
 
@@ -187,26 +185,26 @@ struct ZXHashtable {
 
         zx_u8 const tag_pos = zx_ctz_u16(empty_match);
 
-        zx_u32 const index = (meta_idx + tag_pos) & cap_mask_;
+        zx_u32 const index = (meta_idx + tag_pos) & cap_mask;
 
-        zx_u32 const maybe_mirror_idx = maybe_mirror_index_(cap_mask_, index);
-        zx_u32 const cap_left = this->capacity_left_;
+        zx_u32 const maybe_mirror_idx = maybe_mirror_index_(cap_mask, index);
+        zx_u32 const cap_left = this->m_capacity_left;
         ZX_ASSERT((cap_left > 0));
-        zx_u8 *metas = this->metadata;
+        ZXSlice<zx_u8> metadata = this->m_metadata;
 
-        this->capacity_left_ = cap_left - (zx_u32){1};
-        this->entries[index] = *entry;
-        metas[index] = tag;
-        metas[maybe_mirror_idx] = tag;
+        *metadata.index(index) = tag;
+        *metadata.index(maybe_mirror_idx) = tag;
+        this->m_capacity_left = cap_left - (zx_u32){1};
+        *this->m_entries.index(index) = *entry;
 
         return false;
       }
 
       // Should have found an empty slot by now
-      ZX_DBG_ASSERT((stride <= cap_mask_));
+      ZX_DBG_ASSERT((stride <= cap_mask));
 
       stride += GROUP_SIZE_;
-      meta_idx = (meta_idx + stride) & cap_mask_;
+      meta_idx = (meta_idx + stride) & cap_mask;
 
       ZX_FUZZ_MARKER;
     }
@@ -223,24 +221,24 @@ struct ZXHashtable {
   // matching entry doesn't exist in the table already.
   inline T const *get_or_insert(zx_u64 hash, T const *entry, EqCtx eqctx) {
     zx_u8 const tag = (zx_u8)(hash >> 57);
-    zx_u32 const cap_mask_ = this->cap_mask;
+    zx_u32 const cap_mask = this->m_cap_mask;
     vect_ const tag_vec = broadcast_(tag);
     zx_u32 stride = 0;
 
-    zx_u32 meta_idx = cap_mask_ & ((zx_u32)(hash));
+    zx_u32 meta_idx = cap_mask & ((zx_u32)(hash));
 
-    zx_u8 const *meta = this->metadata;
     while (true) {
       zx_u16 tag_match;
       zx_u16 empty_match;
-      load_(&meta[meta_idx], tag_vec, &tag_match, &empty_match);
+      load_(this->m_metadata.index(meta_idx), tag_vec, &tag_match,
+            &empty_match);
 
       while (tag_match != 0) {
         zx_u8 const tag_pos = zx_ctz_u16(tag_match);
 
-        zx_u32 const index = (meta_idx + tag_pos) & cap_mask_;
+        zx_u32 const index = (meta_idx + tag_pos) & cap_mask;
 
-        T *entry_p = &this->entries[index];
+        T *entry_p = this->m_entries.index(index);
         if (EqFn(eqctx, entry_p, entry)) [[likely]] {
           ZX_FUZZ_MARKER;
           return entry_p;
@@ -255,27 +253,27 @@ struct ZXHashtable {
         ZX_FUZZ_MARKER;
 
         zx_u8 const tag_pos = zx_ctz_u16(empty_match);
-        zx_u32 const index = (meta_idx + tag_pos) & cap_mask_;
+        zx_u32 const index = (meta_idx + tag_pos) & cap_mask;
 
-        zx_u32 const maybe_mirror_idx = maybe_mirror_index_(cap_mask_, index);
-        zx_u32 const cap_left = this->capacity_left_;
+        zx_u32 const maybe_mirror_idx = maybe_mirror_index_(cap_mask, index);
+        zx_u32 const cap_left = this->m_capacity_left;
         ZX_ASSERT((cap_left > 0));
-        zx_u8 *metas = this->metadata;
-        T *entry_p = &this->entries[index];
+        ZXSliceMut<zx_u8> metadata = this->metadata;
+        T *entry_p = this->m_entries.index(index);
 
-        this->capacity_left_ = cap_left - (zx_u32){1};
         *entry_p = *entry;
-        metas[index] = tag;
-        metas[maybe_mirror_idx] = tag;
+        *metadata.index(index) = tag;
+        *metadata.index(maybe_mirror_idx) = tag;
+        this->m_capacity_left = cap_left - (zx_u32){1};
 
         return entry_p;
       }
 
       // Should have found an empty slot by now
-      ZX_DBG_ASSERT((stride <= cap_mask_));
+      ZX_DBG_ASSERT((stride <= cap_mask));
 
       stride += GROUP_SIZE_;
-      meta_idx = (meta_idx + stride) & cap_mask_;
+      meta_idx = (meta_idx + stride) & cap_mask;
 
       ZX_FUZZ_MARKER;
     }
@@ -285,23 +283,22 @@ struct ZXHashtable {
   // returns nullptr if a matching entry isn't found.
   inline T const *get(zx_u64 const hash, T const *entry, EqCtx eqctx) const {
     zx_u8 const tag = (zx_u8)(hash >> 57);
-    zx_u32 const cap_mask_ = this->cap_mask;
+    zx_u32 const cap_mask = this->cap_mask;
     vect_ const tag_vec = broadcast_(tag);
     zx_u32 stride = 0;
 
-    zx_u32 meta_idx = cap_mask_ & ((zx_u32)(hash));
+    zx_u32 meta_idx = cap_mask & ((zx_u32)(hash));
 
-    zx_u8 const *meta = this->metadata;
     while (true) {
-      vect_ const group = load_group_(&meta[meta_idx]);
+      vect_ const group = load_group_(this->m_metadata.index(meta_idx));
 
       zx_u16 tag_match = tag_match_(group, tag_vec);
       while (tag_match != 0) {
         zx_u8 const tag_pos = zx_ctz_u16(tag_match);
 
-        zx_u32 const index = (meta_idx + tag_pos) & cap_mask_;
+        zx_u32 const index = (meta_idx + tag_pos) & cap_mask;
 
-        T const *entry_p = &this->entries[index];
+        T const *entry_p = this->m_entries.index(index);
         if (EqFn(eqctx, entry_p, entry)) [[likely]] {
           ZX_FUZZ_MARKER;
           return entry_p;
@@ -319,10 +316,10 @@ struct ZXHashtable {
       }
 
       // Should have found an empty slot by now
-      ZX_DBG_ASSERT((stride <= cap_mask_));
+      ZX_DBG_ASSERT((stride <= cap_mask));
 
       stride += GROUP_SIZE_;
-      meta_idx = (meta_idx + stride) & cap_mask_;
+      meta_idx = (meta_idx + stride) & cap_mask;
 
       ZX_FUZZ_MARKER;
     }

@@ -1,5 +1,6 @@
 #include <fiber/fiber.h>
 #include <zx/zx_alloc.h>
+#include <zx/zx_debug_alloc.h>
 #include <zx/zx_def.h>
 #include <zx/zx_err.h>
 #include <zx/zx_hashtable.h>
@@ -59,11 +60,11 @@ constexpr zx_u64 STACK_SIZE = 512 * 1024;
 
 constexpr zx_u64 NUM_ITER = STEP * 69;
 
-ZXStatus dotest(ZXAlloc *alloc, ZXErrStack *err_stack) {
+ZXStatus dotest(ZXAlloc alloc, ZXErrStack *err_stack) {
   zx_u8 *fiber_stack_alloc = nullptr;
-  ZX_ERR_TRY((alloc->aligned_alloc<zx_u8>(
-                 FIBER_STACK_ALIGN, FIBER_STACK_RED_ZONE_SIZE + STACK_SIZE,
-                 &fiber_stack_alloc, err_stack)),
+  ZX_ERR_TRY((alloc.aligned_alloc<zx_u8>(FIBER_STACK_ALIGN,
+                                         FIBER_STACK_RED_ZONE_SIZE + STACK_SIZE,
+                                         &fiber_stack_alloc, err_stack)),
              err_stack);
 
   zx_u8 *fiber_stack = &fiber_stack_alloc[STACK_SIZE];
@@ -112,14 +113,12 @@ constexpr zx_u64 MEMORY_SIZE = 1 << 22;
 int main(void) {
   ZXErrStack err_stack = ZXErrStack::init();
 
-  zx_u8 *mem = nullptr;
-  ZX_ERR_TRY_FATAL((zx_page_alloc_4kb(MEMORY_SIZE, &mem, &err_stack)),
+  ZXDebugAlloc dbg_alloc;
+  ZX_ERR_TRY_FATAL((ZXDebugAlloc::init(MEMORY_SIZE, &dbg_alloc, &err_stack)),
                    &err_stack);
+  ZXAlloc alloc = dbg_alloc.make_alloc();
 
-  ZXAlloc alloc = ZXAlloc::init(mem, MEMORY_SIZE);
-  ZX_ERR_TRY_FATAL((dotest(&alloc, &err_stack)), &err_stack);
+  ZX_ERR_TRY_FATAL((dotest(alloc, &err_stack)), &err_stack);
 
-  ZX_ERR_TRY_FATAL((zx_page_alloc_free(mem, MEMORY_SIZE, &err_stack)),
-                   &err_stack);
   return 0;
 }

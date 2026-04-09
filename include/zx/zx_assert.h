@@ -9,8 +9,8 @@
     bool const zx_assert_success_ = (expr);                                    \
     if (!zx_assert_success_) [[unlikely]] {                                    \
       ZX_FUZZ_ABORT_MARKER;                                                    \
-      zx_assert_abort_(__FILE_NAME__, __builtin_strlen(__FILE_NAME__),         \
-                       __LINE__);                                              \
+      zx_assert_abort_(__FILE_NAME__, (zx_u8)__builtin_strlen(__FILE_NAME__),  \
+                       (zx_u16)__LINE__);                                      \
     }                                                                          \
     ZX_FUZZ_MARKER;                                                            \
   } while (false)
