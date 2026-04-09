@@ -30,6 +30,7 @@ template <typename T> struct ZXSliceMut {
     ZX_ASSERT((this->m_ptr != nullptr));
     zx_u64 const addr = (zx_u64)this->m_ptr;
     ZX_ASSERT((addr % alignof(T) == 0));
+    ZX_ASSERT((ZX_U64_MAX / sizeof(T) > this->m_len));
 #endif
   }
 
@@ -128,8 +129,7 @@ template <typename T> struct ZXSliceMut {
 
 #ifdef ZX_MEMORY_SAFETY_ENABLED
     ZX_ASSERT((this->m_len == src.len()));
-    ZX_ASSERT((src.is_overlapping(this->as_const())));
-    ZX_ASSERT((!zx_slice_is_overlapping<T>(this->as_const(), src)));
+    ZX_ASSERT((!src.is_overlapping(this->as_const())));
     zx_u64 const n_bytes = zx_chk_mul_u64(sizeof(T), this->m_len);
 #else
     zx_u64 const n_bytes = sizeof(T) * this->m_len;
@@ -189,6 +189,7 @@ template <typename T> struct ZXSlice {
     ZX_ASSERT((this->m_ptr != nullptr));
     zx_u64 const addr = (zx_u64)this->m_ptr;
     ZX_ASSERT((addr % alignof(T) == 0));
+    ZX_ASSERT((ZX_U64_MAX / sizeof(T) > this->m_len));
 #endif
   }
 
@@ -274,6 +275,7 @@ template <typename T> struct ZXSlice {
   }
 
   // Returns true iff the given slice is overlapping with `this`.
+  // Considers zero sized slices with same pointer to be overlapping.
   inline bool is_overlapping(ZXSlice<T> other) const {
     this->self_check_();
     other.self_check_();
@@ -288,7 +290,7 @@ template <typename T> struct ZXSlice {
     zx_u64 const other_end = other_start + other.m_len;
 #endif
 
-    return !((self_end < other_end) || (other_end < self_end));
+    return !((self_end < other_start) || (other_end < self_start));
   }
 };
 
