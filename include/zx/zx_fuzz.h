@@ -23,7 +23,7 @@ struct ZXFuzzInput {
     zx_u32 const offset = this->m_consumed_count;
     ZX_ASSERT((this->m_input.len() > offset));
     this->m_consumed_count = offset + 1;
-    return this->m_input.ptr()[offset];
+    return *this->m_input.index(offset);
   }
 
   __attribute__((always_inline)) inline zx_u64 consumed_count() const {

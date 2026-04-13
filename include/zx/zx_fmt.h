@@ -8,9 +8,8 @@
 struct ZXFmt {
   // Backing memory
   ZXSliceMut<zx_u8> m_mem;
-  // Current write slice.
-  // This slice is advanced as we write into it.
-  ZXSliceMut<zx_u8> m_write;
+  // Current write offset;
+  zx_u64 m_offset;
 
   // Create a new formatter with given memory. The formatter will
   // use this memory for writing the characters.
@@ -44,8 +43,8 @@ struct ZXFmt {
         zx_chk_sub_u64(this->m_mem.len(), this->m_offset);
     zx_u64 const n_write = zx_int_min_u64(capacity_left, str.len());
     ZXSliceMut<zx_u8> const w_slice =
-        this->m_mem.slice(this->m_offset, n_write) zx_slice_copy(w_slice, str);
-    __builtin_memcpy(&this->m_mem.ptr()[this->m_offset], str.ptr(), n_write);
+        this->m_mem.slice(this->m_offset, n_write);
+    w_slice.memcpy_from(str.scast::<ZXSlice<zx_u8>>());
     this->m_offset += n_write;
   }
 
@@ -57,7 +56,7 @@ struct ZXFmt {
     zx_u64 const capacity_left =
         zx_chk_sub_u64(this->m_mem.len(), this->m_offset);
     if (capacity_left > 0) {
-      this->m_mem.ptr()[this->m_offset] = ch;
+      *this->m_mem.index(this->m_offset) = (zx_u8){ch};
       this->m_offset += 1;
     }
   }
@@ -72,9 +71,8 @@ struct ZXFmt {
       digits[pos] = '0' + (char)(val % 10);
       val /= 10;
     } while (val > 0);
-    zx_u64 const len = MAX_NUM_DIGITS - pos;
-
-    this->format<ZXFmtStr>(ZXFmtStr{.str = &digits[pos], .len = len});
+    zx_u64 const len = zx_chk_sub_u64(MAX_NUM_DIGITS, pos);
+    this->format<ZXSlice<char>>(ZXSlice<char>::init(digits, len));
   }
 
   template <> inline void format<zx_u8>(zx_u8 val) {
@@ -96,7 +94,7 @@ struct ZXFmt {
       zx_u64 const capacity_left =
           zx_chk_sub_u64(this->m_mem.len(), this->m_offset);
       if (capacity_left > 0) {
-        this->m_mem.ptr()[this->m_offset] = '-';
+        *this->m_mem.index(this->m_offset) = (zx_u8){'-'};
         this->m_offset += 1;
         this->format<zx_u64>((zx_u64)-val);
       }

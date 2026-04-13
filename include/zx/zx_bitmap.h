@@ -58,6 +58,7 @@ struct ZXBitmap {
   }
 
   inline void reset() const {
+    this->m_storage.memset(0);
     zx_u32 const bitmap_len = zx_chk_add_u32(this->m_n_bits, 63) / 64;
     zx_u32 const byte_size = zx_chk_mul_u32(bitmap_len, sizeof(zx_u64));
     __builtin_memset(this->m_storage, 0, byte_size);

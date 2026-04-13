@@ -7,11 +7,14 @@
 #include <zx/zx_int.h>
 #include <zx/zx_slice.h>
 
+// Linear allocator allocating memory.
 struct ZXAlloc {
   ZXSliceMut<zx_u8> m_mem;
   zx_u64 m_offset;
 
   static inline ZXAlloc init(ZXSliceMut<zx_u8> mem) {
+    ZX_ASSERT((!mem.is_invalid()));
+
     return ZXAlloc{
         .m_mem = mem,
         .m_offset = 0,
@@ -27,11 +30,16 @@ struct ZXAlloc {
     this->m_offset = 0;
   }
 
+  // Allocates requested memory using the backing memory that this allocator
+  // has. Then sets `*ptr = new_memory_slice`. Passed in ZXSliceMut<T> instance
+  // should initially be `invalid`.
   template <typename T>
   inline ZXStatus aligned_alloc(zx_u16 align, zx_u64 len, ZXSliceMut<T> *ptr,
                                 ZXErrStack *err_stack) {
     ZX_ASSERT((err_stack != nullptr));
     ZX_ASSERT((ptr != nullptr));
+    // passed in slice is expected to be invalid.
+    ZX_ASSERT((ptr->is_invalid()));
 
     constexpr zx_u16 MAX_ALIGN = 128;
     ZX_ASSERT((align <= MAX_ALIGN));
@@ -52,12 +60,15 @@ struct ZXAlloc {
       ZX_ERR_RETURN((ZXStatus::OutOfMemory), err_stack);
     }
 
-    *ptr = this->m_mem.slice(this->m_offset + padding, size);
+    *ptr = this->m_mem.slice(this->m_offset + padding, size).rtcast<T>();
     this->m_offset = new_offset;
 
     return ZXStatus::Ok;
   }
 
+  // Allocates requested memory using the backing memory that this allocator
+  // has. Then sets `*ptr = new_memory_slice`. Passed in ZXSliceMut<T> instance
+  // should initially be `invalid`.
   template <typename T>
   inline ZXStatus alloc(zx_u64 len, ZXSliceMut<T> *ptr, ZXErrStack *err_stack) {
     ZX_ERR_TRY((this->aligned_alloc(alignof(T), len, ptr, err_stack)),

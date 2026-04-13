@@ -258,7 +258,7 @@ struct ZXHashtable {
         zx_u32 const maybe_mirror_idx = maybe_mirror_index_(cap_mask, index);
         zx_u32 const cap_left = this->m_capacity_left;
         ZX_ASSERT((cap_left > 0));
-        ZXSliceMut<zx_u8> metadata = this->metadata;
+        ZXSliceMut<zx_u8> metadata = this->m_metadata;
         T *entry_p = this->m_entries.index(index);
 
         *entry_p = *entry;

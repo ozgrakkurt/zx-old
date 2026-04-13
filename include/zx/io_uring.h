@@ -10,6 +10,9 @@ extern "C" {
 // https://github.com/axboe/liburing/blob/master/src/include/liburing/io_uring.h
 // Commit 6e7d75b
 //
+// Changed all primitive types to zx_ variants.
+// Removed code that requires types from linux headers.
+//
 // Original license for the code:
 // Copyright 2020 Jens Axboe
 //

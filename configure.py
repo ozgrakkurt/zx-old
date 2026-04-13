@@ -195,6 +195,9 @@ def make_cflags(profile: Profile, config: Config) -> List[str]:
         "-fno-strict-aliasing",
         # disable undefined behavior on signed integer overflow
         "-fno-strict-overflow",
+        # Don't delete `ptr == nullptr` kind of checks. And don't interpret passing nullptr on some places as
+        # undefined behavior.
+        "-fno-delete-null-pointer-checks",
         # disable some c++ features
         "-fno-exceptions",
         "-fno-rtti",

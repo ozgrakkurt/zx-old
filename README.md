@@ -173,7 +173,7 @@ We use `.h` for header files and `.cc` for source files. **ALL** code is **C** s
 
 Code is mostly written in style of `C` despite being compiled as `C++`.
 
-Only C++ features used are templates, template specialization and class enums.
+Only C++ features used are templates, template specialization and enum class.
 No other C++ feature should be used except these. 
 
 For example, we do **NOT** use features like:
@@ -206,7 +206,7 @@ Errors are returned using `ZXStatus` from functions. A function that can fail mi
 ```c++
 ZXStatus falliblefunc(...) {...}
 ```
-`ZXStatus` is a class enum. `ZXStatus::Ok` means success,
+`ZXStatus` is an enum class. `ZXStatus::Ok` means success,
 so the function would return `ZXStatus::Ok` if an error didn't occur.
 
 We also always pass in an `ZXErrStack*` into fallible functions. The error stack is used for recording the stack
@@ -495,7 +495,7 @@ unless it is extremely clear that an operation can't overflow or divide-by-zero 
 ### Data Structures
 
 We always use `struct` and never use `class` for defining data structures.
-We use `class enum` for defining enums and never use regular `C` style `enum`.
+We use `enum class` for defining enums and never use regular `C` style `enum`.
 We never use constructors/destructors.
 
 The typical function that would be used to initialize a data structure is defined like this:
