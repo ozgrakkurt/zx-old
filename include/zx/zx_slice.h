@@ -5,7 +5,7 @@
 #include <zx/zx_def.h>
 #include <zx/zx_int.h>
 
-enum class ZXCmp: unsigned char {
+enum class ZXCmp : unsigned char {
   Equal = 0,
   Greater,
   Less,
@@ -26,9 +26,7 @@ template <typename T> struct ZXPtr {
     return ZXPtr<T> { .m_ptr = ptr; };
   }
 
-  static inline ZXPtr<T> init_null() {
-    return ZXPtr<T> { .m_ptr = nullptr };
-  }
+  static inline ZXPtr<T> init_null() { return ZXPtr<T>{.m_ptr = nullptr}; }
 
   inline bool is_null() const { return this->m_ptr == nullptr; }
 
@@ -249,8 +247,10 @@ template <typename T> struct ZXSlice {
     zx_u64 const other_size = other.m_len * sizeof(T);
 #endif
 
-    // should be fine as long as T is an integral type and we are on little-endian.
-    int const res = __builtin_memcmp(this->m_ptr, self_size, other.m_ptr, other_size);
+    // should be fine as long as T is an integral type and we are on
+    // little-endian.
+    int const res =
+        __builtin_memcmp(this->m_ptr, self_size, other.m_ptr, other_size);
     if (res == 0) {
       return ZXCmp::Equal;
     } else if (res > 0) {

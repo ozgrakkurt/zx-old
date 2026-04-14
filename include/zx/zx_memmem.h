@@ -2,14 +2,15 @@
 #define ZX_MEMMEM_H
 
 #include <zx/zx_def.h>
-#include <zx/zx_slice.h>
 #include <zx/zx_int.h>
+#include <zx/zx_slice.h>
 
 static_assert(sizeof(void *) == sizeof(zx_u64));
 
-// Tries to find the `needle` in the `haystack`. Returns true and a 
+// Tries to find the `needle` in the `haystack`. Returns true and a
 // `position` into the the `haystack` if found. Returns false if not found.
-static inline bool zx_memmem(ZXSlice<zx_u8> haystack, ZXSlice<zx_u8> needle, zx_u64* position) const {
+static inline bool zx_memmem(ZXSlice<zx_u8> haystack, ZXSlice<zx_u8> needle,
+                             zx_u64 *position) const {
   if (needle.len() == 0) {
     *position = 0;
     return true;
