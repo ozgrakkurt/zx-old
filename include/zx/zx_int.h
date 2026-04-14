@@ -58,14 +58,17 @@ constexpr zx_i16_raw ZX_I16_RAW_MAX = (zx_i16_raw)(ZX_U16_RAW_MAX >> 1);
 constexpr zx_i32_raw ZX_I32_RAW_MAX = (zx_i32_raw)(ZX_U32_RAW_MAX >> 1);
 constexpr zx_i64_raw ZX_I64_RAW_MAX = (zx_i64_raw)(ZX_U64_RAW_MAX >> 1);
 constexpr zx_i128_raw ZX_I128_RAW_MAX = (zx_i128_raw)(ZX_U128_RAW_MAX >> 1);
+constexpr zx_i256_raw ZX_I256_RAW_MAX = (zx_i256_raw)(ZX_U256_RAW_MAX >> 1);
 constexpr zx_i8_raw ZX_I8_RAW_MIN = ~ZX_I8_RAW_MAX;
 constexpr zx_i16_raw ZX_I16_RAW_MIN = ~ZX_I16_RAW_MAX;
 constexpr zx_i32_raw ZX_I32_RAW_MIN = ~ZX_I32_RAW_MAX;
 constexpr zx_i64_raw ZX_I64_RAW_MIN = ~ZX_I64_RAW_MAX;
+constexpr zx_i128_raw ZX_I128_RAW_MIN = ~ZX_I128_RAW_MAX;
+constexpr zx_i256_raw ZX_I256_RAW_MIN = ~ZX_I256_RAW_MAX;
 
-template <typename raw_t, typename wide_t, raw_t MAX> class zx_int_unsigned_ {
+template <typename raw_t> class zx_int_unsigned_ {
 private:
-  using self_t = zx_int_unsigned_<raw_t, wide_t, MAX>;
+  using self_t = zx_int_unsigned_<raw_t>;
 
   raw_t m_val;
 
@@ -89,23 +92,24 @@ public:
       __builtin_trap();
     }
 #endif
-
-    wide_t const res = (wide_t){this->m_val} + (wide_t){other.m_val};
-    if (res > MAX) [[unlikely]] {
+    raw_t res;
+    if (__builtin_add_overflow(this->m_val, other.m_val, &res)) [[unlikely]] {
       *failure = true;
     }
-    return self_t((raw_t)res);
+    return self_t(res);
   }
 
   __attribute__((always_inline)) constexpr inline self_t
   add_unsafe(self_t other) const {
-    wide_t const res = (wide_t)this->m_val + (wide_t)other.m_val;
 #ifdef ZX_DEV
-    if (res > MAX) [[unlikely]] {
+    raw_t res;
+    if (__builtin_add_overflow(this->m_val, other.m_val, &res)) [[unlikely]] {
       __builtin_trap();
     }
+    return res;
+#else
+    return self_t(this->m_val + other.m_val);
 #endif
-    return self_t((raw_t)res);
   }
 
   __attribute__((always_inline)) constexpr inline self_t
@@ -125,21 +129,24 @@ public:
       __builtin_trap();
     }
 #endif
-
-    if (this->m_val < other.m_val) [[unlikely]] {
+    raw_t res;
+    if (__builtin_sub_overflow(this->m_val, other.m_val, &res)) [[unlikely]] {
       *failure = true;
     }
-    return self_t(this->m_val - other.m_val);
+    return self_t(res);
   }
 
   __attribute__((always_inline)) constexpr inline self_t
   sub_unsafe(self_t other) const {
 #ifdef ZX_DEV
-    if (this->m_val < other.m_val) [[unlikely]] {
+    raw_t res;
+    if (__builtin_sub_overflow(this->m_val, other.m_val, &res)) [[unlikely]] {
       __builtin_trap();
     }
-#endif
+    return res;
+#else
     return self_t(this->m_val - other.m_val);
+#endif
   }
 
   __attribute__((always_inline)) constexpr inline self_t
@@ -149,11 +156,11 @@ public:
 
   __attribute__((always_inline)) constexpr inline self_t
   saturating_mul(self_t other) const {
-    wide_t const res = (wide_t){this->m_val} * (wide_t){other.m_val};
-    if (res > MAX) [[unlikely]] {
-      return MAX;
+    raw_t res;
+    if (__builtin_mul_overflow(this->m_val, other.m_val, &res)) [[unlikely]] {
+      return self_t(~(raw_t){0});
     } else {
-      return (raw_t)res;
+      return self_t(res);
     }
   }
 
@@ -164,23 +171,24 @@ public:
       __builtin_trap();
     }
 #endif
-
-    wide_t const res = (wide_t){this->m_val} * (wide_t){other.m_val};
-    if (res > MAX) [[unlikely]] {
+    raw_t res;
+    if (__builtin_mul_overflow(this->m_val, other.m_val, &res)) [[unlikely]] {
       *failure = true;
     }
-    return self_t((raw_t)res);
+    return self_t(res);
   }
 
   __attribute__((always_inline)) constexpr inline self_t
   mul_unsafe(self_t other) const {
-    wide_t const res = (wide_t)this->m_val * (wide_t)other.m_val;
 #ifdef ZX_DEV
-    if (res > MAX) [[unlikely]] {
+    raw_t res;
+    if (__builtin_mul_overflow(this->m_val, other.m_val, &res)) [[unlikely]] {
       __builtin_trap();
     }
+    return res;
+#else
+    return self_t(this->m_val * other.m_val);
 #endif
-    return self_t((raw_t)res);
   }
 
   __attribute__((always_inline)) constexpr inline self_t
@@ -284,36 +292,35 @@ public:
     return this->m_val <= other.m_val;
   }
 
-  // shr, shl, use __builtin_add_overflow.
+  // shr, shl.
 };
 
-using zx_u8 = zx_int_unsigned_<zx_u8_raw, zx_u16_raw, ZX_U8_RAW_MAX>;
+using zx_u8 = zx_int_unsigned_<zx_u8_raw>;
 constexpr zx_u8 ZX_U8_MAX = zx_u8(ZX_U8_RAW_MAX);
 static_assert(sizeof(zx_u8) == sizeof(zx_u8_raw));
 static_assert(alignof(zx_u8) == alignof(zx_u8_raw));
 
-using zx_u16 = zx_int_unsigned_<zx_u16_raw, zx_u32_raw, ZX_U16_RAW_MAX>;
+using zx_u16 = zx_int_unsigned_<zx_u16_raw>;
 constexpr zx_u16 ZX_U16_MAX = zx_u16(ZX_U16_RAW_MAX);
 static_assert(sizeof(zx_u16) == sizeof(zx_u16_raw));
 static_assert(alignof(zx_u16) == alignof(zx_u16_raw));
 
-using zx_u32 = zx_int_unsigned_<zx_u32_raw, zx_u64_raw, ZX_U32_RAW_MAX>;
+using zx_u32 = zx_int_unsigned_<zx_u32_raw>;
 constexpr zx_u32 ZX_U32_MAX = zx_u32(ZX_U32_RAW_MAX);
 static_assert(sizeof(zx_u32) == sizeof(zx_u32_raw));
 static_assert(alignof(zx_u32) == alignof(zx_u32_raw));
 
-using zx_u64 = zx_int_unsigned_<zx_u64_raw, zx_u128_raw, ZX_U64_RAW_MAX>;
+using zx_u64 = zx_int_unsigned_<zx_u64_raw>;
 constexpr zx_u64 ZX_U64_MAX = zx_u64(ZX_U64_RAW_MAX);
 static_assert(sizeof(zx_u64) == sizeof(zx_u64_raw));
 static_assert(alignof(zx_u64) == alignof(zx_u64_raw));
 
-using zx_u128 = zx_int_unsigned_<zx_u128_raw, zx_u256_raw, ZX_U128_RAW_MAX>;
+using zx_u128 = zx_int_unsigned_<zx_u128_raw>;
 constexpr zx_u128 ZX_U128_MAX = zx_u128(ZX_U128_RAW_MAX);
 static_assert(sizeof(zx_u128) == sizeof(zx_u128_raw));
 static_assert(alignof(zx_u128) == alignof(zx_u128_raw));
 
-using zx_u256 =
-    zx_int_unsigned_<zx_u256_raw, unsigned _BitInt(512), ZX_U256_RAW_MAX>;
+using zx_u256 = zx_int_unsigned_<zx_u256_raw>;
 constexpr zx_u256 ZX_U256_MAX = zx_u256(ZX_U256_RAW_MAX);
 static_assert(sizeof(zx_u256) == sizeof(zx_u256_raw));
 static_assert(alignof(zx_u256) == alignof(zx_u256_raw));
