@@ -730,21 +730,25 @@ static_assert(alignof(zx_u64) == alignof(zx_u64_raw));
 
 using zx_i8 = zx_int_signed_<zx_i8_raw>;
 constexpr zx_i8 ZX_I8_MAX = zx_i8(ZX_I8_RAW_MAX);
+constexpr zx_i8 ZX_I8_MIN = zx_i8(ZX_I8_RAW_MIN);
 static_assert(sizeof(zx_i8) == sizeof(zx_i8_raw));
 static_assert(alignof(zx_i8) == alignof(zx_i8_raw));
 
 using zx_i16 = zx_int_signed_<zx_i16_raw>;
 constexpr zx_i16 ZX_I16_MAX = zx_i16(ZX_I16_RAW_MAX);
+constexpr zx_i16 ZX_I16_MIN = zx_i16(ZX_I16_RAW_MIN);
 static_assert(sizeof(zx_i16) == sizeof(zx_i16_raw));
 static_assert(alignof(zx_i16) == alignof(zx_i16_raw));
 
 using zx_i32 = zx_int_signed_<zx_i32_raw>;
 constexpr zx_i32 ZX_I32_MAX = zx_i32(ZX_I32_RAW_MAX);
+constexpr zx_i32 ZX_I32_MIN = zx_i32(ZX_I32_RAW_MIN);
 static_assert(sizeof(zx_i32) == sizeof(zx_i32_raw));
 static_assert(alignof(zx_i32) == alignof(zx_i32_raw));
 
 using zx_i64 = zx_int_signed_<zx_i64_raw>;
 constexpr zx_i64 ZX_I64_MAX = zx_i64(ZX_I64_RAW_MAX);
+constexpr zx_i64 ZX_I64_MIN = zx_i64(ZX_I64_RAW_MIN);
 static_assert(sizeof(zx_i64) == sizeof(zx_i64_raw));
 static_assert(alignof(zx_i64) == alignof(zx_i64_raw));
 
