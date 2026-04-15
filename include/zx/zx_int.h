@@ -84,9 +84,10 @@ public:
   // type is able to hold any value of `this` type.
   template <typename tgt_t>
   __attribute__((always_inline)) constexpr inline tgt_t scast() const {
-    return tgt_t(static_cast<tgt_t::raw_t>(this->m_val));
+    return tgt_t(typename tgt_t::raw_t{this->m_val});
   }
 
+  // Cast to target type with a runtime check.
   template <typename tgt_t>
   __attribute__((always_inline)) constexpr inline tgt_t
   rtcast(bool *failure) const {
@@ -98,6 +99,7 @@ public:
     return tgt_t((typename tgt_t::raw_t)this->m_val);
   }
 
+  // Cast to target type with a DEV mode only runtime check.
   template <typename tgt_t>
   __attribute__((always_inline)) constexpr inline tgt_t rtcast_unsafe() const {
 #ifdef ZX_DEV
@@ -110,6 +112,8 @@ public:
     return tgt_t((typename tgt_t::raw_t)this->m_val);
   }
 
+  // Cast to target type using a c style cast. This works for truncation or
+  // other lossy casts, but other cast methods should be preffered if possible.
   template <typename tgt_t>
   __attribute__((always_inline)) constexpr inline tgt_t unsafecast() const {
     return tgt_t((typename tgt_t::raw_t)this->m_val);
@@ -335,63 +339,59 @@ public:
   }
 
   __attribute__((always_inline)) constexpr inline self_t
-  shl(zx_u8 amt, bool *failure) const {
+  shl(zx_u8 shft, bool *failure) const {
 #ifdef ZX_DEV
     if (failure == nullptr) [[unlikely]] {
       __builtin_trap();
     }
 #endif
-    zx_u8_raw const shft = amt.raw();
-    if (shft >= N_BITS) [[unlikely]] {
+    if (shft >= zx_u8(N_BITS)) [[unlikely]] {
       *failure = true;
       return self_t(0);
     }
-    return self_t(this->m_val << shft);
+    return self_t(this->m_val << shft.scast<self_t>().m_val);
   }
 
   __attribute__((always_inline)) constexpr inline self_t
-  shl_unsafe(zx_u8 amt) const {
-    zx_u8_raw const shft = amt.raw();
+  shl_unsafe(zx_u8 shft) const {
 #ifdef ZX_DEV
-    if (shft >= N_BITS) [[unlikely]] {
+    if (shft >= zx_u8(N_BITS)) [[unlikely]] {
       __builtin_trap();
     }
 #else
-    if (shft >= N_BITS) [[unlikely]] {
+    if (shft >= zx_u8(N_BITS)) [[unlikely]] {
       return self_t(0);
     }
 #endif
-    return self_t(this->m_val << shft);
+    return self_t(this->m_val << shft.scast<self_t>().m_val);
   }
 
   __attribute__((always_inline)) constexpr inline self_t
-  shr(zx_u8 amt, bool *failure) const {
-    zx_u8_raw const shft = amt.raw();
+  shr(zx_u8 shft, bool *failure) const {
 #ifdef ZX_DEV
     if (failure == nullptr) [[unlikely]] {
       __builtin_trap();
     }
 #endif
-    if (shft >= N_BITS) [[unlikely]] {
+    if (shft >= zx_u8(N_BITS)) [[unlikely]] {
       *failure = true;
       return self_t(0);
     }
-    return self_t(this->m_val >> shft);
+    return self_t(this->m_val >> shft.scast<self_t>().m_val);
   }
 
   __attribute__((always_inline)) constexpr inline self_t
-  shr_unsafe(zx_u8 amt) const {
-    zx_u8_raw const shft = amt.raw();
+  shr_unsafe(zx_u8 shft) const {
 #ifdef ZX_DEV
-    if (shft >= N_BITS) [[unlikely]] {
+    if (shft >= zx_u8(N_BITS)) [[unlikely]] {
       __builtin_trap();
     }
 #else
-    if (shft >= N_BITS) [[unlikely]] {
+    if (shft >= zx_u8(N_BITS)) [[unlikely]] {
       return self_t(0);
     }
 #endif
-    return self_t(this->m_val >> shft);
+    return self_t(this->m_val >> shft.scast<self_t>().m_val);
   }
 
   __attribute__((always_inline)) constexpr inline self_t
@@ -475,6 +475,239 @@ public:
   }
 }; // class zx_int_unsigned_
 
+template <typename raw_type> class zx_int_signed_ {
+private:
+  static_assert(sizeof(raw_type) <= 8);
+  static constexpr zx_u8_raw N_BITS = sizeof(raw_type) * 8;
+  using zx_u8 = zx_int_signed_<zx_u8_raw>;
+  using self_t = zx_int_signed_<raw_type>;
+
+  raw_type m_val;
+
+public:
+  using raw_t = raw_type;
+
+  constexpr explicit zx_int_signed_(raw_t val) : m_val(val) {}
+
+  // Statically cast to target type. This will only compile if the target
+  // type is able to hold any value of `this` type.
+  template <typename tgt_t>
+  __attribute__((always_inline)) constexpr inline tgt_t scast() const {
+    return tgt_t(typename tgt_t::raw_t{this->m_val});
+  }
+
+  // Cast to target type with a runtime check.
+  template <typename tgt_t>
+  __attribute__((always_inline)) constexpr inline tgt_t
+  rtcast(bool *failure) const {
+    if (__builtin_add_overflow_p(this->m_val, raw_t(0), tgt_t::raw_t(0)))
+        [[unlikely]] {
+      *failure = true;
+    }
+
+    return tgt_t((typename tgt_t::raw_t)this->m_val);
+  }
+
+  // Cast to target type with a DEV mode only runtime check.
+  template <typename tgt_t>
+  __attribute__((always_inline)) constexpr inline tgt_t rtcast_unsafe() const {
+#ifdef ZX_DEV
+    if (__builtin_add_overflow_p(this->m_val, raw_t(0), tgt_t::raw_t(0)))
+        [[unlikely]] {
+      *failure = true;
+    }
+#endif
+
+    return tgt_t((typename tgt_t::raw_t)this->m_val);
+  }
+
+  // Cast to target type using a c style cast. This works for truncation or
+  // other lossy casts, but other cast methods should be preffered if possible.
+  template <typename tgt_t>
+  __attribute__((always_inline)) constexpr inline tgt_t unsafecast() const {
+    return tgt_t((typename tgt_t::raw_t)this->m_val);
+  }
+
+  __attribute__((always_inline)) constexpr inline self_t
+  wrapping_add(self_t other) const {
+    return self_t(this->m_val + other.m_val);
+  }
+
+  __attribute__((always_inline)) constexpr inline self_t
+  saturating_add(self_t other) const {
+    return self_t(__builtin_elementwise_add_sat(this->m_val, other.m_val));
+  }
+
+  __attribute__((always_inline)) constexpr inline self_t
+  add(self_t other, bool *failure) const {
+#ifdef ZX_DEV
+    if (failure == nullptr) [[unlikely]] {
+      __builtin_trap();
+    }
+#endif
+    raw_t res;
+    if (__builtin_add_overflow(this->m_val, other.m_val, &res)) [[unlikely]] {
+      *failure = true;
+    }
+    return self_t(res);
+  }
+
+  __attribute__((always_inline)) constexpr inline self_t
+  add_unsafe(self_t other) const {
+#ifdef ZX_DEV
+    raw_t res;
+    if (__builtin_add_overflow(this->m_val, other.m_val, &res)) [[unlikely]] {
+      __builtin_trap();
+    }
+    return res;
+#else
+    return self_t(this->m_val + other.m_val);
+#endif
+  }
+
+  __attribute__((always_inline)) constexpr inline self_t
+  wrapping_sub(self_t other) const {
+    return self_t(this->m_val - other.m_val);
+  }
+
+  __attribute__((always_inline)) constexpr inline self_t
+  saturating_sub(self_t other) const {
+    return self_t(__builtin_elementwise_sub_sat(this->m_val, other.m_val));
+  }
+
+  __attribute__((always_inline)) constexpr inline self_t
+  sub(self_t other, bool *failure) const {
+#ifdef ZX_DEV
+    if (failure == nullptr) [[unlikely]] {
+      __builtin_trap();
+    }
+#endif
+    raw_t res;
+    if (__builtin_sub_overflow(this->m_val, other.m_val, &res)) [[unlikely]] {
+      *failure = true;
+    }
+    return self_t(res);
+  }
+
+  __attribute__((always_inline)) constexpr inline self_t
+  sub_unsafe(self_t other) const {
+#ifdef ZX_DEV
+    raw_t res;
+    if (__builtin_sub_overflow(this->m_val, other.m_val, &res)) [[unlikely]] {
+      __builtin_trap();
+    }
+    return self_t(res);
+#else
+    return self_t(this->m_val - other.m_val);
+#endif
+  }
+
+  __attribute__((always_inline)) constexpr inline self_t
+  wrapping_mul(self_t other) const {
+    return self_t(this->m_val * other.m_val);
+  }
+
+  __attribute__((always_inline)) constexpr inline self_t
+  saturating_mul(self_t other) const {
+    raw_t res;
+    if (__builtin_mul_overflow(this->m_val, other.m_val, &res)) [[unlikely]] {
+      return self_t(~(raw_t){0});
+    } else {
+      return self_t(res);
+    }
+  }
+
+  __attribute__((always_inline)) constexpr inline self_t
+  mul(self_t other, bool *failure) const {
+#ifdef ZX_DEV
+    if (failure == nullptr) [[unlikely]] {
+      __builtin_trap();
+    }
+#endif
+    raw_t res;
+    if (__builtin_mul_overflow(this->m_val, other.m_val, &res)) [[unlikely]] {
+      *failure = true;
+    }
+    return self_t(res);
+  }
+
+  __attribute__((always_inline)) constexpr inline self_t
+  mul_unsafe(self_t other) const {
+#ifdef ZX_DEV
+    raw_t res;
+    if (__builtin_mul_overflow(this->m_val, other.m_val, &res)) [[unlikely]] {
+      __builtin_trap();
+    }
+    return res;
+#else
+    return self_t(this->m_val * other.m_val);
+#endif
+  }
+
+  __attribute__((always_inline)) constexpr inline self_t
+  min(self_t other) const {
+    return (this->m_val < other.m_val) ? *this : other;
+  }
+
+  __attribute__((always_inline)) constexpr inline self_t
+  max(self_t other) const {
+    return (this->m_val > other.m_val) ? *this : other;
+  }
+
+  __attribute__((always_inline)) constexpr inline self_t inverse() const {
+    return self_t(~this->m_val + raw_t{1});
+  }
+
+  __attribute__((always_inline)) constexpr inline self_t operator~() const {
+    return self_t(~this->m_val);
+  }
+
+  __attribute__((always_inline)) constexpr inline self_t
+  operator&(self_t other) const {
+    return self_t(this->m_val & other.m_val);
+  }
+
+  __attribute__((always_inline)) constexpr inline self_t
+  operator|(self_t other) const {
+    return self_t(this->m_val | other.m_val);
+  }
+
+  __attribute__((always_inline)) constexpr inline self_t
+  operator^(self_t other) const {
+    return self_t(this->m_val ^ other.m_val);
+  }
+
+  __attribute__((always_inline)) constexpr inline bool
+  operator==(self_t other) const {
+    return this->m_val == other.m_val;
+  }
+
+  __attribute__((always_inline)) constexpr inline bool
+  operator!=(self_t other) const {
+    return this->m_val != other.m_val;
+  }
+
+  __attribute__((always_inline)) constexpr inline bool
+  operator>(self_t other) const {
+    return this->m_val > other.m_val;
+  }
+
+  __attribute__((always_inline)) constexpr inline bool
+  operator>=(self_t other) const {
+    return this->m_val >= other.m_val;
+  }
+
+  __attribute__((always_inline)) constexpr inline bool
+  operator<(self_t other) const {
+    return this->m_val < other.m_val;
+  }
+
+  __attribute__((always_inline)) constexpr inline bool
+  operator<=(self_t other) const {
+    return this->m_val <= other.m_val;
+  }
+}; // class zx_int_signed_
+
 using zx_u8 = zx_int_unsigned_<zx_u8_raw>;
 constexpr zx_u8 ZX_U8_MAX = zx_u8(ZX_U8_RAW_MAX);
 static_assert(sizeof(zx_u8) == sizeof(zx_u8_raw));
@@ -495,12 +728,32 @@ constexpr zx_u64 ZX_U64_MAX = zx_u64(ZX_U64_RAW_MAX);
 static_assert(sizeof(zx_u64) == sizeof(zx_u64_raw));
 static_assert(alignof(zx_u64) == alignof(zx_u64_raw));
 
-template <typename raw_t> class zx_int_big_ {
+using zx_i8 = zx_int_signed_<zx_i8_raw>;
+constexpr zx_i8 ZX_I8_MAX = zx_i8(ZX_I8_RAW_MAX);
+static_assert(sizeof(zx_i8) == sizeof(zx_i8_raw));
+static_assert(alignof(zx_i8) == alignof(zx_i8_raw));
+
+using zx_i16 = zx_int_signed_<zx_i16_raw>;
+constexpr zx_i16 ZX_I16_MAX = zx_i16(ZX_I16_RAW_MAX);
+static_assert(sizeof(zx_i16) == sizeof(zx_i16_raw));
+static_assert(alignof(zx_i16) == alignof(zx_i16_raw));
+
+using zx_i32 = zx_int_signed_<zx_i32_raw>;
+constexpr zx_i32 ZX_I32_MAX = zx_i32(ZX_I32_RAW_MAX);
+static_assert(sizeof(zx_i32) == sizeof(zx_i32_raw));
+static_assert(alignof(zx_i32) == alignof(zx_i32_raw));
+
+using zx_i64 = zx_int_signed_<zx_i64_raw>;
+constexpr zx_i64 ZX_I64_MAX = zx_i64(ZX_I64_RAW_MAX);
+static_assert(sizeof(zx_i64) == sizeof(zx_i64_raw));
+static_assert(alignof(zx_i64) == alignof(zx_i64_raw));
+
+template <typename raw_type> class zx_int_big_ {
 private:
-  raw_t m_val;
+  raw_type m_val;
 
 public:
-  using raw_t = raw_t;
+  using raw_t = raw_type;
   constexpr explicit zx_int_big_(raw_t val) : m_val(val) {}
 };
 
@@ -525,7 +778,5 @@ constexpr zx_i256 ZX_I256_MAX = zx_i256(ZX_I256_RAW_MAX);
 constexpr zx_i256 ZX_I256_MIN = zx_i256(ZX_I256_RAW_MIN);
 static_assert(sizeof(zx_i256) == sizeof(zx_i256_raw));
 static_assert(alignof(zx_i256) == alignof(zx_i256_raw));
-
-// TODO: casts
 
 #endif
