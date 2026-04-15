@@ -215,7 +215,7 @@ def make_cflags(profile: Profile, config: Config) -> List[str]:
         cflags.append("-DZX_FUZZING_ENABLED=1")
 
     if profile.enable_memory_safety:
-        cflags.append("DZX_MEMORY_SAFETY_ENABLED=1")
+        cflags.append("-DZX_MEMORY_SAFETY_ENABLED=1")
 
     if config.thin_lto:
         cflags.append("-flto=thin")

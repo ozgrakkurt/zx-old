@@ -19,13 +19,13 @@ PROFILES: Dict[str, Profile] = {
 ZX: Library = Library(
     source_files=set(
         [
-            "zx_assert.cc",
-            "zx_err.cc",
-            "zx_fuzz.cc",
-            "zx_mem.cc",
-            "zx_page_alloc.cc",
+            # "zx_assert.cc",
+            # "zx_err.cc",
+            # "zx_fuzz.cc",
+            # "zx_mem.cc",
+            # "zx_page_alloc.cc",
             "zx_start.cc",
-            "zx_sys.cc",
+            # "zx_sys.cc",
         ]
     ),
     test_targets={
@@ -35,6 +35,7 @@ ZX: Library = Library(
         "zx_queue_test": set([]),
         "zx_slab_test": set([]),
         "zx_bitmap_test": set([]),
+        "zx_int_test": set([]),
     },
     bench_targets={
         "zx_hashtable_bench": set([]),

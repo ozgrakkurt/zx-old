@@ -68,7 +68,18 @@ constexpr zx_i256_raw ZX_I256_RAW_MIN = ~ZX_I256_RAW_MAX;
 
 template <typename raw_t> class zx_int_unsigned_ {
 private:
+  static_assert(sizeof(raw_t) <= 8);
+  static constexpr zx_u8_raw N_BITS = sizeof(raw_t) * 8;
+  using zx_u8 = zx_int_unsigned_<zx_u8_raw>;
   using self_t = zx_int_unsigned_<raw_t>;
+
+  static inline zx_u8_raw unwrap_u8(zx_u8 v) {
+    zx_u8_raw o;
+    static_assert(sizeof(zx_u8_raw) == sizeof(zx_u8));
+    static_assert(alignof(zx_u8_raw) == alignof(zx_u8));
+    __builtin_memcpy(&o, &v, sizeof(zx_u8));
+    return o;
+  }
 
   raw_t m_val;
 
@@ -143,7 +154,7 @@ public:
     if (__builtin_sub_overflow(this->m_val, other.m_val, &res)) [[unlikely]] {
       __builtin_trap();
     }
-    return res;
+    return self_t(res);
 #else
     return self_t(this->m_val - other.m_val);
 #endif
@@ -193,6 +204,11 @@ public:
 
   __attribute__((always_inline)) constexpr inline self_t
   div(self_t other, bool *failure) const {
+#ifdef ZX_DEV
+    if (failure == nullptr) [[unlikely]] {
+      __builtin_trap();
+    }
+#endif
     if (other.m_val == 0) [[unlikely]] {
       *failure = true;
       return 0;
@@ -237,6 +253,143 @@ public:
 #endif
 
     return self_t(this->m_val % other.m_val);
+  }
+
+  __attribute__((always_inline)) constexpr inline self_t
+  rand_mod(self_t other) const {
+    using wide_t = unsigned _BitInt(sizeof(raw_t) * 8 * 2);
+    wide_t const mul = (wide_t){this->m_val} * (wide_t){other.m_val};
+    return self_t((raw_t)(mul >> N_BITS));
+  }
+
+  __attribute__((always_inline)) constexpr inline self_t
+  next_multiple_of(self_t other, bool *failure) const {
+#ifdef ZX_DEV
+    if (failure == nullptr) [[unlikely]] {
+      __builtin_trap();
+    }
+#endif
+    return this->add(self_t(1), failure)
+        .div(other, failure)
+        .mul(other, failure);
+  }
+
+  __attribute__((always_inline)) constexpr inline self_t
+  next_multiple_of_unsafe(self_t other) const {
+    return this->add_unsafe(self_t(1)).div_unsafe(other).mul_unsafe(other);
+  }
+
+  __attribute__((always_inline)) constexpr inline self_t
+  min(self_t other) const {
+    return (this->m_val < other.m_val) ? *this : other;
+  }
+
+  __attribute__((always_inline)) constexpr inline self_t
+  max(self_t other) const {
+    return (this->m_val > other.m_val) ? *this : other;
+  }
+
+  __attribute__((always_inline)) constexpr inline zx_u8 ctz() const {
+    return zx_u8((zx_u8_raw)__builtin_ctzg(this->m_val, (int){N_BITS}));
+  }
+
+  __attribute__((always_inline)) constexpr inline zx_u8 clz() const {
+    return zx_u8((zx_u8_raw)__builtin_clzg(this->m_val, (int){N_BITS}));
+  }
+
+  __attribute__((always_inline)) constexpr inline zx_u8 popcnt() const {
+    return zx_u8((zx_u8_raw)__builtin_popcountg(this->m_val));
+  }
+
+  __attribute__((always_inline)) constexpr inline zx_u8 bit_width() const {
+    return zx_u8(zx_u8(N_BITS).sub_unsafe(this->clz()));
+  }
+
+  __attribute__((always_inline)) constexpr inline self_t
+  shl(zx_u8 amt, bool *failure) const {
+#ifdef ZX_DEV
+    if (failure == nullptr) [[unlikely]] {
+      __builtin_trap();
+    }
+#endif
+    zx_u8_raw const shft = unwrap_u8(amt);
+    if (shft >= N_BITS) [[unlikely]] {
+      *failure = true;
+      return self_t(0);
+    }
+    return self_t(this->m_val << shft);
+  }
+
+  __attribute__((always_inline)) constexpr inline self_t
+  shl_unsafe(zx_u8 amt) const {
+    zx_u8_raw const shft = unwrap_u8(amt);
+#ifdef ZX_DEV
+    if (shft >= N_BITS) [[unlikely]] {
+      __builtin_trap();
+    }
+#else
+    if (shft >= N_BITS) [[unlikely]] {
+      return self_t(0);
+    }
+#endif
+    return self_t(this->m_val << shft);
+  }
+
+  __attribute__((always_inline)) constexpr inline self_t
+  shr(zx_u8 amt, bool *failure) const {
+    zx_u8_raw const shft = unwrap_u8(amt);
+#ifdef ZX_DEV
+    if (failure == nullptr) [[unlikely]] {
+      __builtin_trap();
+    }
+#endif
+    if (shft >= N_BITS) [[unlikely]] {
+      *failure = true;
+      return self_t(0);
+    }
+    return self_t(this->m_val >> shft);
+  }
+
+  __attribute__((always_inline)) constexpr inline self_t
+  shr_unsafe(zx_u8 amt) const {
+    zx_u8_raw const shft = unwrap_u8(amt);
+#ifdef ZX_DEV
+    if (shft >= N_BITS) [[unlikely]] {
+      __builtin_trap();
+    }
+#else
+    if (shft >= N_BITS) [[unlikely]] {
+      return self_t(0);
+    }
+#endif
+    return self_t(this->m_val >> shft);
+  }
+
+  __attribute__((always_inline)) constexpr inline self_t
+  next_pow_two(bool *failure) const {
+#ifdef ZX_DEV
+    if (failure == nullptr) [[unlikely]] {
+      __builtin_trap();
+    }
+#endif
+    if (this->m_val == 0) {
+      return self_t(1);
+    }
+    zx_u8 const shift = self_t(this->m_val - raw_t(1)).bit_width();
+    return self_t(1).shl(shift, failure);
+  }
+
+  __attribute__((always_inline)) constexpr inline self_t
+  next_pow_two_unsafe() const {
+    if (this->m_val == 0) {
+      return self_t(1);
+    }
+    zx_u8 const shift = self_t(this->m_val - raw_t(1)).bit_width();
+    return self_t(1).shl_unsafe(shift);
+  }
+
+  __attribute__((always_inline)) constexpr inline bool is_pow_two() const {
+    return this->popcnt() == zx_u8(1);
   }
 
   __attribute__((always_inline)) constexpr inline self_t inverse() const {
@@ -291,9 +444,7 @@ public:
   operator<=(self_t other) const {
     return this->m_val <= other.m_val;
   }
-
-  // shr, shl.
-};
+}; // class zx_int_unsigned_
 
 using zx_u8 = zx_int_unsigned_<zx_u8_raw>;
 constexpr zx_u8 ZX_U8_MAX = zx_u8(ZX_U8_RAW_MAX);
@@ -315,313 +466,14 @@ constexpr zx_u64 ZX_U64_MAX = zx_u64(ZX_U64_RAW_MAX);
 static_assert(sizeof(zx_u64) == sizeof(zx_u64_raw));
 static_assert(alignof(zx_u64) == alignof(zx_u64_raw));
 
-using zx_u128 = zx_int_unsigned_<zx_u128_raw>;
-constexpr zx_u128 ZX_U128_MAX = zx_u128(ZX_U128_RAW_MAX);
-static_assert(sizeof(zx_u128) == sizeof(zx_u128_raw));
-static_assert(alignof(zx_u128) == alignof(zx_u128_raw));
-
-using zx_u256 = zx_int_unsigned_<zx_u256_raw>;
-constexpr zx_u256 ZX_U256_MAX = zx_u256(ZX_U256_RAW_MAX);
-static_assert(sizeof(zx_u256) == sizeof(zx_u256_raw));
-static_assert(alignof(zx_u256) == alignof(zx_u256_raw));
-
-constexpr zx_u8 ZX_U8_MAX = ~((zx_u8){0});
-constexpr zx_u16 ZX_U16_MAX = ~((zx_u16){0});
-constexpr zx_u32 ZX_U32_MAX = ~((zx_u32){0});
-constexpr zx_u64 ZX_U64_MAX = ~((zx_u64){0});
-
-static inline zx_u8 zx_chk_add_u8(zx_u8 a, zx_u8 b) {
-  zx_u16 const ret = (zx_u16){a} + (zx_u16){b};
-  ZX_ASSERT((ret <= ZX_U8_MAX));
-  return (zx_u8)ret;
-}
-
-static inline zx_u16 zx_chk_add_u16(zx_u16 a, zx_u16 b) {
-  zx_u32 const ret = (zx_u32){a} + (zx_u32){b};
-  ZX_ASSERT((ret <= ZX_U16_MAX));
-  return (zx_u16)ret;
-}
-
-static inline zx_u32 zx_chk_add_u32(zx_u32 a, zx_u32 b) {
-  zx_u64 const ret = (zx_u64){a} + (zx_u64){b};
-  ZX_ASSERT((ret <= ZX_U32_MAX));
-  return (zx_u32)ret;
-}
-
-static inline zx_u64 zx_chk_add_u64(zx_u64 a, zx_u64 b) {
-  zx_u128 const ret = (zx_u128){a} + (zx_u128){b};
-  ZX_ASSERT((ret <= ZX_U64_MAX));
-  return (zx_u64)ret;
-}
-
-static inline zx_u8 zx_chk_sub_u8(zx_u8 a, zx_u8 b) {
-  ZX_ASSERT((a >= b));
-  return a - b;
-}
-
-static inline zx_u16 zx_chk_sub_u16(zx_u16 a, zx_u16 b) {
-  ZX_ASSERT((a >= b));
-  return a - b;
-}
-
-static inline zx_u32 zx_chk_sub_u32(zx_u32 a, zx_u32 b) {
-  ZX_ASSERT((a >= b));
-  return a - b;
-}
-
-static inline zx_u64 zx_chk_sub_u64(zx_u64 a, zx_u64 b) {
-  ZX_ASSERT((a >= b));
-  return a - b;
-}
-
-static inline zx_u8 zx_chk_mul_u8(zx_u8 a, zx_u8 b) {
-  zx_u16 const ret = (zx_u16){a} * (zx_u16){b};
-  ZX_ASSERT((ret <= ZX_U8_MAX));
-  return (zx_u8)ret;
-}
-
-static inline zx_u16 zx_chk_mul_u16(zx_u16 a, zx_u16 b) {
-  zx_u32 const ret = (zx_u32){a} * (zx_u32){b};
-  ZX_ASSERT((ret <= ZX_U16_MAX));
-  return (zx_u16)ret;
-}
-
-static inline zx_u32 zx_chk_mul_u32(zx_u32 a, zx_u32 b) {
-  zx_u64 const ret = (zx_u64){a} * (zx_u64){b};
-  ZX_ASSERT((ret <= ZX_U32_MAX));
-  return (zx_u32)ret;
-}
-
-static inline zx_u64 zx_chk_mul_u64(zx_u64 a, zx_u64 b) {
-  zx_u128 const ret = (zx_u128){a} * (zx_u128){b};
-  ZX_ASSERT((ret <= ZX_U64_MAX));
-  return (zx_u64)ret;
-}
-
-static inline zx_u8 zx_chk_div_u8(zx_u8 a, zx_u8 b) {
-  ZX_ASSERT((b > 0));
-  return a / b;
-}
-
-static inline zx_u16 zx_chk_div_u16(zx_u16 a, zx_u16 b) {
-  ZX_ASSERT((b > 0));
-  return a / b;
-}
-
-static inline zx_u32 zx_chk_div_u32(zx_u32 a, zx_u32 b) {
-  ZX_ASSERT((b > 0));
-  return a / b;
-}
-
-static inline zx_u64 zx_chk_div_u64(zx_u64 a, zx_u64 b) {
-  ZX_ASSERT((b > 0));
-  return a / b;
-}
-
-static inline zx_u8 zx_next_multiple_of_u8(zx_u8 a, zx_u8 b) {
-  ZX_ASSERT((b > 0));
-  return (zx_chk_add_u8(a, b) - (zx_u8){1}) / b * b;
-}
-
-static inline zx_u16 zx_next_multiple_of_u16(zx_u16 a, zx_u16 b) {
-  ZX_ASSERT((b > 0));
-  return (zx_chk_add_u16(a, b) - (zx_u16){1}) / b * b;
-}
-
-static inline zx_u32 zx_next_multiple_of_u32(zx_u32 a, zx_u32 b) {
-  ZX_ASSERT((b > 0));
-  return (zx_chk_add_u32(a, b) - (zx_u32){1}) / b * b;
-}
-
-static inline zx_u64 zx_next_multiple_of_u64(zx_u64 a, zx_u64 b) {
-  ZX_ASSERT((b > 0));
-  return (zx_chk_add_u64(a, b) - (zx_u64){1}) / b * b;
-}
-
-static inline zx_u8 zx_int_min_u8(zx_u8 a, zx_u8 b) { return a > b ? b : a; }
-static inline zx_u16 zx_int_min_u16(zx_u16 a, zx_u16 b) {
-  return a > b ? b : a;
-}
-static inline zx_u32 zx_int_min_u32(zx_u32 a, zx_u32 b) {
-  return a > b ? b : a;
-}
-static inline zx_u64 zx_int_min_u64(zx_u64 a, zx_u64 b) {
-  return a > b ? b : a;
-}
-
-static inline zx_u8 zx_int_max_u8(zx_u8 a, zx_u8 b) { return a < b ? b : a; }
-static inline zx_u16 zx_int_max_u16(zx_u16 a, zx_u16 b) {
-  return a < b ? b : a;
-}
-static inline zx_u32 zx_int_max_u32(zx_u32 a, zx_u32 b) {
-  return a < b ? b : a;
-}
-static inline zx_u64 zx_int_max_u64(zx_u64 a, zx_u64 b) {
-  return a < b ? b : a;
-}
-
-// faster alternative for doing modulo on random numbers.
-// basically same as doing `rand() % b` if rand is uniformly random.
-static inline zx_u32 zx_rand_mod_u32(zx_u32 a, zx_u32 b) {
-  zx_u64 const mul = (zx_u64){a} * (zx_u64){b};
-  return (zx_u32)(mul >> 32);
-}
-
-// faster alternative for doing modulo on random numbers.
-// basically same as doing `rand() % b` if rand is uniformly random.
-static inline zx_u64 zx_rand_mod_u64(zx_u64 a, zx_u64 b) {
-  zx_u128 const mul = (zx_u128){a} * (zx_u128){b};
-  return (zx_u64)(mul >> 64);
-}
-
-static inline zx_u8 zx_ctz_u8(zx_u8 i) { return (zx_u8)__builtin_ctzg(i, 8); }
-
-static inline zx_u8 zx_ctz_u16(zx_u16 i) {
-  return (zx_u8)__builtin_ctzg(i, 16);
-}
-
-static inline zx_u8 zx_ctz_u32(zx_u32 i) {
-  return (zx_u8)__builtin_ctzg(i, 32);
-}
-
-static inline zx_u8 zx_ctz_u64(zx_u64 i) {
-  return (zx_u8)__builtin_ctzg(i, 64);
-}
-
-static inline zx_u8 zx_clz_u8(zx_u8 i) { return (zx_u8)__builtin_clzg(i, 8); }
-
-static inline zx_u8 zx_clz_u16(zx_u16 i) {
-  return (zx_u8)__builtin_clzg(i, 16);
-}
-
-static inline zx_u8 zx_clz_u32(zx_u32 i) {
-  return (zx_u8)__builtin_clzg(i, 32);
-}
-
-static inline zx_u8 zx_clz_u64(zx_u64 i) {
-  return (zx_u8)__builtin_clzg(i, 64);
-}
-
-static inline zx_u8 zx_bit_width_u8(zx_u8 i) {
-  return (zx_u8){8} - zx_clz_u8(i);
-}
-
-static inline zx_u8 zx_bit_width_u16(zx_u16 i) {
-  return (zx_u8){16} - zx_clz_u16(i);
-}
-
-static inline zx_u8 zx_bit_width_u32(zx_u32 i) {
-  return (zx_u8){32} - zx_clz_u32(i);
-}
-
-static inline zx_u8 zx_bit_width_u64(zx_u64 i) {
-  return (zx_u8){64} - zx_clz_u64(i);
-}
-
-static inline zx_u8 zx_chk_shl_u8(zx_u8 a, zx_u8 b) {
-  ZX_ASSERT((b < 8));
-  zx_u8 const max_shift = (zx_u8){8} - zx_bit_width_u8(a);
-  ZX_ASSERT((b <= max_shift));
-  return a << b;
-}
-
-static inline zx_u16 zx_chk_shl_u16(zx_u16 a, zx_u8 b) {
-  ZX_ASSERT((b < 16));
-  zx_u8 const max_shift = (zx_u8){16} - zx_bit_width_u16(a);
-  ZX_ASSERT((b <= max_shift));
-  return a << b;
-}
-
-static inline zx_u32 zx_chk_shl_u32(zx_u32 a, zx_u8 b) {
-  ZX_ASSERT((b < 32));
-  zx_u8 const max_shift = (zx_u8){32} - zx_bit_width_u32(a);
-  ZX_ASSERT((b <= max_shift));
-  return a << b;
-}
-
-static inline zx_u64 zx_chk_shl_u64(zx_u64 a, zx_u8 b) {
-  ZX_ASSERT((b < 64));
-  zx_u8 const max_shift = (zx_u8){64} - zx_bit_width_u64(a);
-  ZX_ASSERT((b <= max_shift));
-  return a << b;
-}
-
-static inline zx_u8 zx_chk_shr_u8(zx_u8 a, zx_u8 b) {
-  ZX_ASSERT((b < 8));
-  return a >> b;
-}
-
-static inline zx_u16 zx_chk_shr_u16(zx_u16 a, zx_u8 b) {
-  ZX_ASSERT((b < 16));
-  return a >> b;
-}
-
-static inline zx_u32 zx_chk_shr_u32(zx_u32 a, zx_u8 b) {
-  ZX_ASSERT((b < 32));
-  return a >> b;
-}
-
-static inline zx_u64 zx_chk_shr_u64(zx_u64 a, zx_u8 b) {
-  ZX_ASSERT((b < 64));
-  return a >> b;
-}
-
-static inline zx_u8 zx_next_pow_two_u8(zx_u8 i) {
-  if (i == 0) {
-    return 1;
-  }
-  zx_u8 const shift = zx_bit_width_u8(i - 1);
-  return zx_chk_shl_u8(1, shift);
-}
-
-static inline zx_u16 zx_next_pow_two_u16(zx_u16 i) {
-  if (i == 0) {
-    return 1;
-  }
-  zx_u8 const shift = zx_bit_width_u16(i - 1);
-  return zx_chk_shl_u16(1, shift);
-}
-
-static inline zx_u32 zx_next_pow_two_u32(zx_u32 i) {
-  if (i == 0) {
-    return 1;
-  }
-  zx_u8 const shift = zx_bit_width_u32(i - 1);
-  return zx_chk_shl_u32(1, shift);
-}
-
-static inline zx_u64 zx_next_pow_two_u64(zx_u64 i) {
-  if (i == 0) {
-    return 1;
-  }
-  zx_u8 const shift = zx_bit_width_u64(i - 1);
-  return zx_chk_shl_u64(1, shift);
-}
-
-static inline bool zx_is_pow_two_u8(zx_u8 i) {
-  return __builtin_popcountg(i) == 1;
-}
-static inline bool zx_is_pow_two_u16(zx_u16 i) {
-  return __builtin_popcountg(i) == 1;
-}
-static inline bool zx_is_pow_two_u32(zx_u32 i) {
-  return __builtin_popcountg(i) == 1;
-}
-static inline bool zx_is_pow_two_u64(zx_u64 i) {
-  return __builtin_popcountg(i) == 1;
-}
-
-static inline zx_u8 zx_popcnt_u8(zx_u8 i) {
-  return (zx_u8)__builtin_popcountg(i);
-}
-static inline zx_u8 zx_popcnt_u16(zx_u16 i) {
-  return (zx_u8)__builtin_popcountg(i);
-}
-static inline zx_u8 zx_popcnt_u32(zx_u32 i) {
-  return (zx_u8)__builtin_popcountg(i);
-}
-static inline zx_u8 zx_popcnt_u64(zx_u64 i) {
-  return (zx_u8)__builtin_popcountg(i);
-}
+// using zx_u128 = zx_int_unsigned_<zx_u128_raw>;
+// constexpr zx_u128 ZX_U128_MAX = zx_u128(ZX_U128_RAW_MAX);
+// static_assert(sizeof(zx_u128) == sizeof(zx_u128_raw));
+// static_assert(alignof(zx_u128) == alignof(zx_u128_raw));
+//
+// using zx_u256 = zx_int_unsigned_<zx_u256_raw>;
+// constexpr zx_u256 ZX_U256_MAX = zx_u256(ZX_U256_RAW_MAX);
+// static_assert(sizeof(zx_u256) == sizeof(zx_u256_raw));
+// static_assert(alignof(zx_u256) == alignof(zx_u256_raw));
 
 #endif
