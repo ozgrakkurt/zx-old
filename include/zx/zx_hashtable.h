@@ -39,8 +39,8 @@ struct ZXHashtable {
     zx_u32 const cap_mask = zx_chk_sub_u32(cap, 1);
 
     // allocate extra sizeof(simd) bytes so we can do simd loads on any byte
-    // index also have to mirror the first group with the extra group at the end
-    // to have simple read path.
+    // index also have to mirror the first group with the extra group at the
+    // end to have simple read path.
     zx_u32 const metadata_size = zx_chk_add_u32(cap, GROUP_SIZE_);
     ZXSliceMut<zx_u8> metadata;
     ZX_ERR_TRY((alloc->alloc<zx_u8>(metadata_size, &metadata, err_stack)),

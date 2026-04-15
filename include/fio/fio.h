@@ -55,8 +55,8 @@ struct FioTrampoline {
 // function.
 //
 // This function also acts as a finalizer when the fiber finishes. It asserts
-// everything is as expected. And releases the resources that were allocated for
-// the fiber.
+// everything is as expected. And releases the resources that were allocated
+// for the fiber.
 __attribute__((__noreturn__)) static inline void
 fio_trampoline_(FiberCtx const *exe_ctx_nouse, FiberCtx *self_ctx_nouse,
                 void *fio_trampoline) {
@@ -138,12 +138,11 @@ struct Fio {
   FioFiberEntry *self_entry;
   zx_u32 self_id;
 
-  // It is illegal to call this function when a future already has max number of
-  // pending/finished io.
-  // Returns a pointer to sqe entry and marks it as initialized if an empty
-  // entry can be found at this time. Returned entry should be immediately
-  // initialized after calling this function. Returns nullptr if an entry can't
-  // be found. Caller should retry later.
+  // It is illegal to call this function when a future already has max number
+  // of pending/finished io. Returns a pointer to sqe entry and marks it as
+  // initialized if an empty entry can be found at this time. Returned entry
+  // should be immediately initialized after calling this function. Returns
+  // nullptr if an entry can't be found. Caller should retry later.
   inline FioSQE *push_sqe_in_place_(bool polled_io) const {
     FioFiberEntry *entry = this->self_entry;
 

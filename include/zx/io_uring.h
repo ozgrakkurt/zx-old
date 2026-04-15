@@ -429,16 +429,15 @@ enum io_uring_op {
  *				If set, SEND[MSG]_ZC should report
  *				the zerocopy usage in cqe.res
  *				for the IORING_CQE_F_NOTIF cqe.
- *				0 is reported if zerocopy was actually possible.
- *				IORING_NOTIF_USAGE_ZC_COPIED if data was copied
- *				(at least partially).
+ *				0 is reported if zerocopy was actually
+ * possible. IORING_NOTIF_USAGE_ZC_COPIED if data was copied (at least
+ * partially).
  *
  * IORING_RECVSEND_BUNDLE	Used with IOSQE_BUFFER_SELECT. If set, send or
  *				recv will grab as many buffers from the buffer
- *				group ID given and send them all. The completion
- *				result 	will be the number of buffers send, with
- *				the starting buffer ID in cqe->flags as per
- *				usual for provided buffer usage. The buffers
+ *				group ID given and send them all. The
+ * completion result 	will be the number of buffers send, with the starting
+ * buffer ID in cqe->flags as per usual for provided buffer usage. The buffers
  *				will be	contiguous from the starting buffer ID.
  *
  * IORING_SEND_VECTORIZED	If set, SEND[_ZC] will take a pointer to a
@@ -883,10 +882,9 @@ struct io_uring_buf_ring {
 /*
  * Flags for IORING_REGISTER_PBUF_RING.
  *
- * IOU_PBUF_RING_MMAP:	If set, kernel will allocate the memory for the ring.
- *			The application must not set a ring_addr in struct
- *			io_uring_buf_reg, instead it must subsequently call
- *			mmap(2) with the offset set as:
+ * IOU_PBUF_RING_MMAP:	If set, kernel will allocate the memory for the
+ * ring. The application must not set a ring_addr in struct io_uring_buf_reg,
+ * instead it must subsequently call mmap(2) with the offset set as:
  *			IORING_OFF_PBUF_RING | (bgid << IORING_OFF_PBUF_SHIFT)
  *			to get a virtual mapping for the ring.
  * IOU_PBUF_RING_INC:	If set, buffers consumed from this buffer ring can be
@@ -966,7 +964,8 @@ enum {
 // };
 
 /*
- * Argument for io_uring_enter(2) with IORING_GETEVENTS | IORING_ENTER_EXT_ARG
+ * Argument for io_uring_enter(2) with IORING_GETEVENTS |
+ * IORING_ENTER_EXT_ARG
  */
 // struct io_uring_getevents_arg {
 //   zx_u64 sigmask;

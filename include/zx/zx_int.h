@@ -66,25 +66,54 @@ constexpr zx_i64_raw ZX_I64_RAW_MIN = ~ZX_I64_RAW_MAX;
 constexpr zx_i128_raw ZX_I128_RAW_MIN = ~ZX_I128_RAW_MAX;
 constexpr zx_i256_raw ZX_I256_RAW_MIN = ~ZX_I256_RAW_MAX;
 
-template <typename raw_t> class zx_int_unsigned_ {
+template <typename raw_type> class zx_int_unsigned_ {
 private:
-  static_assert(sizeof(raw_t) <= 8);
-  static constexpr zx_u8_raw N_BITS = sizeof(raw_t) * 8;
+  static_assert(sizeof(raw_type) <= 8);
+  static constexpr zx_u8_raw N_BITS = sizeof(raw_type) * 8;
   using zx_u8 = zx_int_unsigned_<zx_u8_raw>;
-  using self_t = zx_int_unsigned_<raw_t>;
+  using self_t = zx_int_unsigned_<raw_type>;
 
-  static inline zx_u8_raw unwrap_u8(zx_u8 v) {
-    zx_u8_raw o;
-    static_assert(sizeof(zx_u8_raw) == sizeof(zx_u8));
-    static_assert(alignof(zx_u8_raw) == alignof(zx_u8));
-    __builtin_memcpy(&o, &v, sizeof(zx_u8));
-    return o;
-  }
-
-  raw_t m_val;
+  raw_type m_val;
 
 public:
+  using raw_t = raw_type;
+
   constexpr explicit zx_int_unsigned_(raw_t val) : m_val(val) {}
+
+  // Statically cast to target type. This will only compile if the target
+  // type is able to hold any value of `this` type.
+  template <typename tgt_t>
+  __attribute__((always_inline)) constexpr inline tgt_t scast() const {
+    return tgt_t(static_cast<tgt_t::raw_t>(this->m_val));
+  }
+
+  template <typename tgt_t>
+  __attribute__((always_inline)) constexpr inline tgt_t
+  rtcast(bool *failure) const {
+    if (__builtin_add_overflow_p(this->m_val, raw_t(0), tgt_t::raw_t(0)))
+        [[unlikely]] {
+      *failure = true;
+    }
+
+    return tgt_t((typename tgt_t::raw_t)this->m_val);
+  }
+
+  template <typename tgt_t>
+  __attribute__((always_inline)) constexpr inline tgt_t rtcast_unsafe() const {
+#ifdef ZX_DEV
+    if (__builtin_add_overflow_p(this->m_val, raw_t(0), tgt_t::raw_t(0)))
+        [[unlikely]] {
+      *failure = true;
+    }
+#endif
+
+    return tgt_t((typename tgt_t::raw_t)this->m_val);
+  }
+
+  template <typename tgt_t>
+  __attribute__((always_inline)) constexpr inline tgt_t unsafecast() const {
+    return tgt_t((typename tgt_t::raw_t)this->m_val);
+  }
 
   __attribute__((always_inline)) constexpr inline self_t
   wrapping_add(self_t other) const {
@@ -312,7 +341,7 @@ public:
       __builtin_trap();
     }
 #endif
-    zx_u8_raw const shft = unwrap_u8(amt);
+    zx_u8_raw const shft = amt.raw();
     if (shft >= N_BITS) [[unlikely]] {
       *failure = true;
       return self_t(0);
@@ -322,7 +351,7 @@ public:
 
   __attribute__((always_inline)) constexpr inline self_t
   shl_unsafe(zx_u8 amt) const {
-    zx_u8_raw const shft = unwrap_u8(amt);
+    zx_u8_raw const shft = amt.raw();
 #ifdef ZX_DEV
     if (shft >= N_BITS) [[unlikely]] {
       __builtin_trap();
@@ -337,7 +366,7 @@ public:
 
   __attribute__((always_inline)) constexpr inline self_t
   shr(zx_u8 amt, bool *failure) const {
-    zx_u8_raw const shft = unwrap_u8(amt);
+    zx_u8_raw const shft = amt.raw();
 #ifdef ZX_DEV
     if (failure == nullptr) [[unlikely]] {
       __builtin_trap();
@@ -352,7 +381,7 @@ public:
 
   __attribute__((always_inline)) constexpr inline self_t
   shr_unsafe(zx_u8 amt) const {
-    zx_u8_raw const shft = unwrap_u8(amt);
+    zx_u8_raw const shft = amt.raw();
 #ifdef ZX_DEV
     if (shft >= N_BITS) [[unlikely]] {
       __builtin_trap();
@@ -466,14 +495,37 @@ constexpr zx_u64 ZX_U64_MAX = zx_u64(ZX_U64_RAW_MAX);
 static_assert(sizeof(zx_u64) == sizeof(zx_u64_raw));
 static_assert(alignof(zx_u64) == alignof(zx_u64_raw));
 
-// using zx_u128 = zx_int_unsigned_<zx_u128_raw>;
-// constexpr zx_u128 ZX_U128_MAX = zx_u128(ZX_U128_RAW_MAX);
-// static_assert(sizeof(zx_u128) == sizeof(zx_u128_raw));
-// static_assert(alignof(zx_u128) == alignof(zx_u128_raw));
-//
-// using zx_u256 = zx_int_unsigned_<zx_u256_raw>;
-// constexpr zx_u256 ZX_U256_MAX = zx_u256(ZX_U256_RAW_MAX);
-// static_assert(sizeof(zx_u256) == sizeof(zx_u256_raw));
-// static_assert(alignof(zx_u256) == alignof(zx_u256_raw));
+template <typename raw_t> class zx_int_big_ {
+private:
+  raw_t m_val;
+
+public:
+  using raw_t = raw_t;
+  constexpr explicit zx_int_big_(raw_t val) : m_val(val) {}
+};
+
+using zx_u128 = zx_int_big_<zx_u128_raw>;
+constexpr zx_u128 ZX_U128_MAX = zx_u128(ZX_U128_RAW_MAX);
+static_assert(sizeof(zx_u128) == sizeof(zx_u128_raw));
+static_assert(alignof(zx_u128) == alignof(zx_u128_raw));
+
+using zx_u256 = zx_int_big_<zx_u256_raw>;
+constexpr zx_u256 ZX_U256_MAX = zx_u256(ZX_U256_RAW_MAX);
+static_assert(sizeof(zx_u256) == sizeof(zx_u256_raw));
+static_assert(alignof(zx_u256) == alignof(zx_u256_raw));
+
+using zx_i128 = zx_int_big_<zx_i128_raw>;
+constexpr zx_i128 ZX_I128_MAX = zx_i128(ZX_I128_RAW_MAX);
+constexpr zx_i128 ZX_I128_MIN = zx_i128(ZX_I128_RAW_MIN);
+static_assert(sizeof(zx_i128) == sizeof(zx_i128_raw));
+static_assert(alignof(zx_i128) == alignof(zx_i128_raw));
+
+using zx_i256 = zx_int_big_<zx_i256_raw>;
+constexpr zx_i256 ZX_I256_MAX = zx_i256(ZX_I256_RAW_MAX);
+constexpr zx_i256 ZX_I256_MIN = zx_i256(ZX_I256_RAW_MIN);
+static_assert(sizeof(zx_i256) == sizeof(zx_i256_raw));
+static_assert(alignof(zx_i256) == alignof(zx_i256_raw));
+
+// TODO: casts
 
 #endif

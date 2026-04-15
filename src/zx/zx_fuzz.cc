@@ -1,6 +1,5 @@
 #ifdef ZX_FUZZING_ENABLED
 
-#include "./zx_fuzz_linker_set.h"
 #include <zx/zx_alloc.h>
 #include <zx/zx_assert.h>
 #include <zx/zx_err.h>
@@ -11,6 +10,8 @@
 #include <zx/zx_memmem.h>
 #include <zx/zx_rapidhash_v3.h>
 #include <zx/zx_xoshiro256.h>
+
+#include "./zx_fuzz_linker_set.h"
 
 static void zx_fuzz_clear_linker_set(ZXFuzzLinkerSet const *linker_set) {
   __builtin_memset(linker_set->marker_hit, 0, linker_set->n_markers);
