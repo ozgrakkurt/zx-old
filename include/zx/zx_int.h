@@ -78,7 +78,13 @@ private:
 public:
   using raw_t = raw_type;
 
-  constexpr explicit zx_int_unsigned_(raw_t val) : m_val(val) {}
+  constexpr static inline self_t init(raw_t val) {
+    return self_t { .m_val = val };
+  }
+
+  constexpr inline raw_t raw() const {
+    return this->m_val;
+  }
 
   // Statically cast to target type. This will only compile if the target
   // type is able to hold any value of `this` type.
@@ -121,12 +127,12 @@ public:
 
   __attribute__((always_inline)) constexpr inline self_t
   wrapping_add(self_t other) const {
-    return self_t(this->m_val + other.m_val);
+    return self_t::init(this->m_val + other.m_val);
   }
 
   __attribute__((always_inline)) constexpr inline self_t
   saturating_add(self_t other) const {
-    return self_t(__builtin_elementwise_add_sat(this->m_val, other.m_val));
+    return self_t::(__builtin_elementwise_add_sat(this->m_val, other.m_val));
   }
 
   __attribute__((always_inline)) constexpr inline self_t
@@ -140,7 +146,7 @@ public:
     if (__builtin_add_overflow(this->m_val, other.m_val, &res)) [[unlikely]] {
       *failure = true;
     }
-    return self_t(res);
+    return self_t::init(res);
   }
 
   __attribute__((always_inline)) constexpr inline self_t
@@ -152,18 +158,18 @@ public:
     }
     return res;
 #else
-    return self_t(this->m_val + other.m_val);
+    return self_t::init(this->m_val + other.m_val);
 #endif
   }
 
   __attribute__((always_inline)) constexpr inline self_t
   wrapping_sub(self_t other) const {
-    return self_t(this->m_val - other.m_val);
+    return self_t::init(this->m_val - other.m_val);
   }
 
   __attribute__((always_inline)) constexpr inline self_t
   saturating_sub(self_t other) const {
-    return self_t(__builtin_elementwise_sub_sat(this->m_val, other.m_val));
+    return self_t::init(__builtin_elementwise_sub_sat(this->m_val, other.m_val));
   }
 
   __attribute__((always_inline)) constexpr inline self_t
@@ -177,7 +183,7 @@ public:
     if (__builtin_sub_overflow(this->m_val, other.m_val, &res)) [[unlikely]] {
       *failure = true;
     }
-    return self_t(res);
+    return self_t::init(res);
   }
 
   __attribute__((always_inline)) constexpr inline self_t
@@ -187,24 +193,24 @@ public:
     if (__builtin_sub_overflow(this->m_val, other.m_val, &res)) [[unlikely]] {
       __builtin_trap();
     }
-    return self_t(res);
+    return self_t::init(res);
 #else
-    return self_t(this->m_val - other.m_val);
+    return self_t::init(this->m_val - other.m_val);
 #endif
   }
 
   __attribute__((always_inline)) constexpr inline self_t
   wrapping_mul(self_t other) const {
-    return self_t(this->m_val * other.m_val);
+    return self_t::init(this->m_val * other.m_val);
   }
 
   __attribute__((always_inline)) constexpr inline self_t
   saturating_mul(self_t other) const {
     raw_t res;
     if (__builtin_mul_overflow(this->m_val, other.m_val, &res)) [[unlikely]] {
-      return self_t(~(raw_t){0});
+      return self_t::init(~(raw_t){0});
     } else {
-      return self_t(res);
+      return self_t::init(res);
     }
   }
 
@@ -219,7 +225,7 @@ public:
     if (__builtin_mul_overflow(this->m_val, other.m_val, &res)) [[unlikely]] {
       *failure = true;
     }
-    return self_t(res);
+    return self_t::init(res);
   }
 
   __attribute__((always_inline)) constexpr inline self_t
@@ -231,7 +237,7 @@ public:
     }
     return res;
 #else
-    return self_t(this->m_val * other.m_val);
+    return self_t::init(this->m_val * other.m_val);
 #endif
   }
 
@@ -246,7 +252,7 @@ public:
       *failure = true;
       return 0;
     }
-    return self_t(this->m_val / other.m_val);
+    return self_t::init(this->m_val / other.m_val);
   }
 
   __attribute__((always_inline)) constexpr inline self_t
@@ -257,11 +263,11 @@ public:
     }
 #else
     if (other.m_val == 0) [[unlikely]] {
-      return self_t(0);
+      return self_t::init(0);
     }
 #endif
 
-    return self_t(this->m_val / other.m_val);
+    return self_t::init(this->m_val / other.m_val);
   }
 
   __attribute__((always_inline)) constexpr inline self_t
@@ -270,7 +276,7 @@ public:
       *failure = true;
       return 0;
     }
-    return self_t(this->m_val % other.m_val);
+    return self_t::init(this->m_val % other.m_val);
   }
 
   __attribute__((always_inline)) constexpr inline self_t
@@ -281,18 +287,18 @@ public:
     }
 #else
     if (other.m_val == 0) [[unlikely]] {
-      return self_t(0);
+      return self_t::init(0);
     }
 #endif
 
-    return self_t(this->m_val % other.m_val);
+    return self_t::init(this->m_val % other.m_val);
   }
 
   __attribute__((always_inline)) constexpr inline self_t
   rand_mod(self_t other) const {
     using wide_t = unsigned _BitInt(sizeof(raw_t) * 8 * 2);
     wide_t const mul = (wide_t){this->m_val} * (wide_t){other.m_val};
-    return self_t((raw_t)(mul >> N_BITS));
+    return self_t::init((raw_t)(mul >> N_BITS));
   }
 
   __attribute__((always_inline)) constexpr inline self_t
@@ -349,7 +355,7 @@ public:
       *failure = true;
       return self_t(0);
     }
-    return self_t(this->m_val << shft.scast<self_t>().m_val);
+    return self_t(this->m_val << shft.raw());
   }
 
   __attribute__((always_inline)) constexpr inline self_t
@@ -363,7 +369,7 @@ public:
       return self_t(0);
     }
 #endif
-    return self_t(this->m_val << shft.scast<self_t>().m_val);
+    return self_t(this->m_val << shft.raw());
   }
 
   __attribute__((always_inline)) constexpr inline self_t
@@ -377,7 +383,7 @@ public:
       *failure = true;
       return self_t(0);
     }
-    return self_t(this->m_val >> shft.scast<self_t>().m_val);
+    return self_t(this->m_val >> shft.raw());
   }
 
   __attribute__((always_inline)) constexpr inline self_t
@@ -391,7 +397,7 @@ public:
       return self_t(0);
     }
 #endif
-    return self_t(this->m_val >> shft.scast<self_t>().m_val);
+    return self_t(this->m_val >> shft.raw());
   }
 
   __attribute__((always_inline)) constexpr inline self_t
@@ -486,8 +492,14 @@ private:
 
 public:
   using raw_t = raw_type;
+  
+  constexpr static inline self_t init(raw_t val) {
+    return self_t { .m_val = val };
+  }
 
-  constexpr explicit zx_int_signed_(raw_t val) : m_val(val) {}
+  constexpr inline raw_t raw() const {
+    return this->m_val;
+  }
 
   // Statically cast to target type. This will only compile if the target
   // type is able to hold any value of `this` type.
@@ -674,7 +686,7 @@ public:
 
   __attribute__((always_inline)) constexpr inline self_t
   operator^(self_t other) const {
-    return self_t(this->m_val ^ other.m_val);
+    return self_t::init(this->m_val ^ other.m_val);
   }
 
   __attribute__((always_inline)) constexpr inline bool
@@ -758,7 +770,14 @@ private:
 
 public:
   using raw_t = raw_type;
-  constexpr explicit zx_int_big_(raw_t val) : m_val(val) {}
+
+  constexpr static inline self_t init(raw_t val) {
+    return self_t { .m_val = val };
+  }
+
+  constexpr inline raw_t raw() const {
+    return this->m_val;
+  }
 };
 
 using zx_u128 = zx_int_big_<zx_u128_raw>;

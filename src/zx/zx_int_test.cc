@@ -1,4 +1,5 @@
 #include <zx/zx_int.h>
+#include <zx/zx_err.h>
 
 zx_u64 anan(zx_u64 b, zx_u8 c) {
   bool failure = false;

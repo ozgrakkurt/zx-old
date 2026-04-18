@@ -279,6 +279,8 @@ struct ZXHashtable {
     }
   }
 
+#define ZX_HASHTABLE_GET(T, htable, hash, eqctx) {}
+
   // returns a pointer to the entry if it is found in the table.
   // returns nullptr if a matching entry isn't found.
   inline T const *get(zx_u64 const hash, T const *entry, EqCtx eqctx) const {

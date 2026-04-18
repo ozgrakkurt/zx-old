@@ -235,7 +235,6 @@ def make_ldflags(build_path: str, config: Config) -> List[str]:
         "-static",
         # disable libc
         "-nostdlib",
-        "-nostdinc",
         # nolibc target
         "--target=x86_64-linux-none",
         # disable some c++ features

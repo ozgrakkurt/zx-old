@@ -1,8 +1,7 @@
 #ifndef ZX_ERR_H
 #define ZX_ERR_H
 
-#include <zx/zx_def.h>
-#include <zx/zx_fuzz_instr.h>
+#include <zx/zx_int.h>
 
 // just push the location into the error stack, don't check or return any
 // statuses. Intended to be used in fuctions that are fallible but have to do
@@ -79,7 +78,7 @@
     ZX_FUZZ_MARKER;                                                            \
   } while (false)
 
-constexpr zx_u16 ZX_ERR_STACK_CAP_ = 64;
+constexpr zx_u16 ZX_ERR_STACK_CAP_ = zx_u16(64);
 
 struct ZXErrStackEntry_ {
   char const *file_name;
@@ -102,12 +101,12 @@ struct ZXErrStack {
   }
 
   inline void append_(ZXErrStackEntry_ entry) {
-    constexpr zx_u16 MAX_WRITE_IDX = ZX_ERR_STACK_CAP_ - 1;
+    constexpr zx_u16 MAX_WRITE_IDX = ZX_ERR_STACK_CAP_.sub_unsafe(1);
 
     zx_u16 const depth_ = this->depth;
     zx_u16 const write_idx = (depth_ < MAX_WRITE_IDX) ? depth_ : MAX_WRITE_IDX;
     this->entries[write_idx] = entry;
-    this->depth = write_idx + 1;
+    this->depth = write_idx.add_unsafe(1);
   }
 
   // Formats the error stack to stderr and aborts the program
