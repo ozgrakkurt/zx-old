@@ -46,4 +46,181 @@ typedef _BitInt(64) zx_i64;
 typedef _BitInt(128) zx_i128;
 typedef _BitInt(256) zx_i256;
 
+template <typename T>
+constexpr static T zx_wrapping_add_(T a, T b) {
+  return a + b;
+}
+
+template <typename T>
+constexpr static T zx_saturating_add_(T a, T b) {
+  return __builtin_elementwise_add_sat(a, b);
+}
+
+template <typename T>
+constexpr static T zx_add_(T a, T b, bool* failure) {
+  T res;
+  if (__builtin_add_overflow(a, b, &res)) {
+    if (failure != nullptr) {
+      *failure = true;
+    } else {
+#ifdef ZX_DEBUG
+      __builtin_trap();
+#endif
+    }
+  }
+  return res;
+}
+
+template <typename T>
+constexpr static T zx_add_unsafe_(T a, T b) {
+#ifdef ZX_DEBUG
+  T res;
+  if (__builtin_add_overflow(a, b, &res)) {
+    __builtin_trap();
+  }
+  return res;
+#else
+  return a + b;
+#endif
+}
+
+template <typename T>
+constexpr static T zx_wrapping_sub_(T a, T b) {
+  return a - b;
+}
+
+template <typename T>
+constexpr static T zx_saturating_sub_(T a, T b) {
+  return __builtin_elementwise_sub_sat(a, b);
+}
+
+template <typename T>
+constexpr static T zx_sub_(T a, T b, bool* failure) {
+  T res;
+  if (__builtin_sub_overflow(a, b, &res)) {
+    if (failure != nullptr) {
+      *failure = true;
+    } else {
+#ifdef ZX_DEBUG
+      __builtin_trap();
+#endif
+    }
+  }
+  return res;
+}
+
+template <typename T>
+constexpr static T zx_sub_unsafe_(T a, T b) {
+#ifdef ZX_DEBUG
+  T res;
+  if (__builtin_sub_overflow(a, b, &res)) {
+    __builtin_trap();
+  }
+  return res;
+#else
+  return a + b;
+#endif
+}
+
+template <typename T>
+constexpr static T zx_wrapping_mul_(T a, T b) {
+  return a * b;
+}
+
+template <typename T>
+constexpr static T zx_saturating_mul_(T a, T b) {
+  return __builtin_elementwise_mul_sat(a, b);
+}
+
+template <typename T>
+constexpr static T zx_mul_(T a, T b, bool* failure) {
+  T res;
+  if (__builtin_mul_overflow(a, b, &res)) {
+    if (failure != nullptr) {
+      *failure = true;
+    } else {
+#ifdef ZX_DEBUG
+      __builtin_trap();
+#endif
+    }
+  }
+  return res;
+}
+
+template <typename T>
+constexpr static T zx_mul_unsafe_(T a, T b) {
+#ifdef ZX_DEBUG
+  T res;
+  if (__builtin_mul_overflow(a, b, &res)) {
+    __builtin_trap();
+  }
+  return res;
+#else
+  return a + b;
+#endif
+}
+
+template <typename T>
+constexpr static T zx_div_(T a, T b, bool* failure) {
+  T res;
+  if (b == 0) {
+    if (failure != nullptr) {
+      *failure = true;
+    } else {
+#ifdef ZX_DEBUG
+      __builtin_trap();
+#endif
+    }
+    return 0;
+  }
+  return a / b;
+}
+
+template <typename T>
+constexpr static T zx_div_unsafe_(T a, T b) {
+  if (b == 0) {
+#ifdef ZX_DEBUG
+    __builtin_trap();
+#else
+    return 0;
+#endif
+  }
+  return a / b;
+}
+
+template <typename T>
+constexpr static T zx_mod_(T a, T b, bool* failure) {
+  T res;
+  if (b == 0) {
+    if (failure != nullptr) {
+      *failure = true;
+    } else {
+#ifdef ZX_DEBUG
+      __builtin_trap();
+#endif
+    }
+    return 0;
+  }
+  return a % b;
+}
+
+template <typename T>
+constexpr static T zx_mod_unsafe_(T a, T b) {
+  if (b == 0) {
+#ifdef ZX_DEBUG
+    __builtin_trap();
+#else
+    return 0;
+#endif
+  }
+  return a % b;
+}
+
+template <typename T>
+constexpr static T zx_next_multiple_of_(T a, T b, bool* failure) {
+  T const c = zx_add_<T>(a, 1, failure);
+  T const d = zx_div_<T>(c, b, failure);
+  return zx_mul_<T>(d, b, failure);
+}
+
 #endif
