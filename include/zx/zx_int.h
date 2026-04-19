@@ -842,4 +842,28 @@ constexpr static zx_u64 zx_inverse_u64(zx_u64 a) {
   return zx_inverse_<zx_u64>(a);
 }
 
+template <typename Tgt, typename Src>
+constexpr static Tgt zx_int_cast_(Src a, bool* failure) {
+  Tgt res;
+  if (__builtin_add_overflow(a, Src{0}, &res)) [[unlikely]] {
+    if (failure != nullptr) [[likely]] {
+      *failure = true;
+    } else {
+#ifdef ZX_DEBUG
+      __builtin_trap();
+#endif
+    }
+  }
+  return res;
+}
+
+template <typename Tgt, typename Src>
+constexpr static Tgt zx_int_cast_unsafe_(Src a) {
+  Tgt res;
+  if (__builtin_add_overflow(a, Src{0}, &res)) [[unlikely]] {
+    __builtin_trap();
+  }
+  return res;
+}
+
 #endif
