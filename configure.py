@@ -191,11 +191,11 @@ def make_cflags(profile: Profile, config: Config) -> List[str]:
         # Make sure to keep frame pointer because it is useful for debugger on optimized builds.
         # Didn't specifically test this but seems to be the general consensus on the internet.
         cflags.append("-fno-omit-frame-pointer")
-        cflags.append("-momit-leaf-frame-pointer")
+        cflags.append("-mno-omit-leaf-frame-pointer")
     else:
         # Disable frame pointer usage by compiler. it is useless when we are not in debug mode.
         cflags.append("-fomit-frame-pointer")
-        cflags.append("-mno-omit-leaf-frame-pointer")
+        cflags.append("-momit-leaf-frame-pointer")
 
     if profile.fuzz:
         cflags.append("-DZX_FUZZ=1")
