@@ -856,6 +856,38 @@ constexpr static Tgt zx_int_cast_(Src a, bool* failure) {
   }
   return res;
 }
+template <typename T>
+constexpr static zx_u8 zx_cast_to_u8(T a, bool* failure) {
+  return zx_int_cast_<zx_u8, T>(a, failure);
+}
+template <typename T>
+constexpr static zx_u16 zx_cast_to_u16(T a, bool* failure) {
+  return zx_int_cast_<zx_u16, T>(a, failure);
+}
+template <typename T>
+constexpr static zx_u32 zx_cast_to_u32(T a, bool* failure) {
+  return zx_int_cast_<zx_u32, T>(a, failure);
+}
+template <typename T>
+constexpr static zx_u64 zx_cast_to_u64(T a, bool* failure) {
+  return zx_int_cast_<zx_u64, T>(a, failure);
+}
+template <typename T>
+constexpr static zx_i8 zx_cast_to_i8(T a, bool* failure) {
+  return zx_int_cast_<zx_i8, T>(a, failure);
+}
+template <typename T>
+constexpr static zx_i16 zx_cast_to_i16(T a, bool* failure) {
+  return zx_int_cast_<zx_i16, T>(a, failure);
+}
+template <typename T>
+constexpr static zx_i32 zx_cast_to_i32(T a, bool* failure) {
+  return zx_int_cast_<zx_i32, T>(a, failure);
+}
+template <typename T>
+constexpr static zx_i64 zx_cast_to_i64(T a, bool* failure) {
+  return zx_int_cast_<zx_i64, T>(a, failure);
+}
 
 template <typename Tgt, typename Src>
 constexpr static Tgt zx_int_cast_unsafe_(Src a) {
@@ -864,6 +896,38 @@ constexpr static Tgt zx_int_cast_unsafe_(Src a) {
     __builtin_trap();
   }
   return res;
+}
+template <typename T>
+constexpr static zx_u8 zx_cast_unsafe_to_u8(T a, bool* failure) {
+  return zx_int_cast_unsafe_<zx_u8, T>(a, failure);
+}
+template <typename T>
+constexpr static zx_u16 zx_cast_unsafe_to_u16(T a, bool* failure) {
+  return zx_int_cast_unsafe_<zx_u16, T>(a, failure);
+}
+template <typename T>
+constexpr static zx_u32 zx_cast_unsafe_to_u32(T a, bool* failure) {
+  return zx_int_cast_unsafe_<zx_u32, T>(a, failure);
+}
+template <typename T>
+constexpr static zx_u64 zx_cast_unsafe_to_u64(T a, bool* failure) {
+  return zx_int_cast_unsafe_<zx_u64, T>(a, failure);
+}
+template <typename T>
+constexpr static zx_i8 zx_cast_unsafe_to_i8(T a, bool* failure) {
+  return zx_int_cast_unsafe_<zx_i8, T>(a, failure);
+}
+template <typename T>
+constexpr static zx_i16 zx_cast_unsafe_to_i16(T a, bool* failure) {
+  return zx_int_cast_unsafe_<zx_i16, T>(a, failure);
+}
+template <typename T>
+constexpr static zx_i32 zx_cast_unsafe_to_i32(T a, bool* failure) {
+  return zx_int_cast_unsafe_<zx_i32, T>(a, failure);
+}
+template <typename T>
+constexpr static zx_i64 zx_cast_unsafe_to_i64(T a, bool* failure) {
+  return zx_int_cast_unsafe_<zx_i64, T>(a, failure);
 }
 
 #endif
