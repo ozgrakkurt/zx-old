@@ -33,7 +33,7 @@ extern "C" {
 
 __attribute__((no_builtin)) void* memcpy(void* __restrict dest,
                                          void const* __restrict src,
-                                         zx_u64 count) {
+                                         zx_u64_c count) {
   zx_u8 const* input = (zx_u8 const*)src;
   zx_u8* output = (zx_u8*)dest;
 
@@ -66,7 +66,9 @@ __attribute__((no_builtin)) void* memcpy(void* __restrict dest,
   return dest;
 }
 
-__attribute__((no_builtin)) void* memset(void* dest, zx_i32 ch, zx_u64 count) {
+__attribute__((no_builtin)) void* memset(void* dest,
+                                         zx_i32_c ch,
+                                         zx_u64_c count) {
   zx_u8* output = (zx_u8*)dest;
   zx_u64_c const byte = (zx_u8)ch;
 
