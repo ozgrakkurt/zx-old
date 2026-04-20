@@ -39,16 +39,14 @@ __attribute__((no_builtin)) void* memcpy(void* __restrict dest,
 
   zx_u64 offset = 0;
 
-  for (; offset + 64 < count; offset += 64) {
+  for (; zx_add_unsafe_u64(offset, 64) < count;
+       offset = zx_add_unsafe_u64(offset, 64)) {
     __asm__(
         "vmovdqu8 %[input], %%zmm31\n\t"
         "vmovdqu8 %%zmm31, %[output]\n\t"
-        : [output] "=m"(*(zx_u8(*)[64])output)
-        : [input] "m"(*(zx_u8 const(*)[64])input)
+        : [output] "=m"(*(zx_u8(*)[64]) & output[offset])
+        : [input] "m"(*(zx_u8 const(*)[64]) & input[offset])
         : "zmm31");
-
-    output += 64;
-    input += 64;
   }
 
   zx_u64 const remainder = count - offset;
@@ -58,8 +56,9 @@ __attribute__((no_builtin)) void* memcpy(void* __restrict dest,
     __asm__(
         "vmovdqu8 %[input], %%zmm31 %{%[storemask]%}\n\t"
         "vmovdqu8 %%zmm31, %[output] %{%[storemask]%}\n\t"
-        : [output] "=m"(*(zx_u8(*)[64])output)
-        : [input] "m"(*(zx_u8 const(*)[64])input), [storemask] "k"(storemask)
+        : [output] "=m"(*(zx_u8(*)[64]) & output[offset])
+        : [input] "m"(*(zx_u8 const(*)[64]) & input[offset]), [storemask] "k"(
+                                                                  storemask)
         : "zmm31");
   }
 
@@ -82,12 +81,11 @@ __attribute__((no_builtin)) void* memset(void* dest,
 
   zx_u64 offset = 0;
 
-  for (; offset + 64 < count; offset += 64) {
+  for (; zx_add_unsafe_u64(offset, 64) < count;
+       offset = zx_add_unsafe_u64(offset, 64)) {
     __asm__("vmovdqu8 %[vbytes], %[output]\n\t"
-            : [output] "=m"(*(zx_u8(*)[64])output)
+            : [output] "=m"(*(zx_u8(*)[64]) & output[offset])
             : [vbytes] "v"(vbytes));
-
-    output += 64;
   }
 
   zx_u64 const remainder = count - offset;
@@ -95,7 +93,7 @@ __attribute__((no_builtin)) void* memset(void* dest,
     register zx_u64_c const storemask __asm__("k2") =
         __builtin_ia32_bzhi_di(~(zx_u64){0}, remainder);
     __asm__("vmovdqu8 %[vbytes], %[output] %{%[storemask]%}\n\t"
-            : [output] "=m"(*(zx_u8(*)[64])output)
+            : [output] "=m"(*(zx_u8(*)[64]) & output[offset])
             : [vbytes] "v"(vbytes), [storemask] "k"(storemask));
   }
 
