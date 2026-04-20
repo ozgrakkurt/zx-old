@@ -11,7 +11,7 @@
 
 #include <zx/zx_int.h>
 
-static zx_u64_c zx_syscall0(zx_u64_c num) {
+static inline zx_u64_c zx_syscall0(zx_u64_c num) {
   zx_u64_c ret;
 
   __asm__ volatile("syscall" : "=a"(ret) : "a"(num) : "rcx", "r11", "memory");
@@ -19,7 +19,7 @@ static zx_u64_c zx_syscall0(zx_u64_c num) {
   return ret;
 }
 
-static zx_u64_c zx_syscall1(zx_u64_c num, zx_u64_c arg1) {
+static inline zx_u64_c zx_syscall1(zx_u64_c num, zx_u64_c arg1) {
   zx_u64_c ret;
 
   __asm__ volatile("syscall"
@@ -30,7 +30,7 @@ static zx_u64_c zx_syscall1(zx_u64_c num, zx_u64_c arg1) {
   return ret;
 }
 
-static zx_u64_c zx_syscall2(zx_u64_c num, zx_u64_c arg1, zx_u64_c arg2) {
+static inline zx_u64_c zx_syscall2(zx_u64_c num, zx_u64_c arg1, zx_u64_c arg2) {
   zx_u64_c ret;
 
   __asm__ volatile("syscall"
@@ -41,10 +41,10 @@ static zx_u64_c zx_syscall2(zx_u64_c num, zx_u64_c arg1, zx_u64_c arg2) {
   return ret;
 }
 
-static zx_u64_c zx_syscall3(zx_u64_c num,
-                            zx_u64_c arg1,
-                            zx_u64_c arg2,
-                            zx_u64_c arg3) {
+static inline zx_u64_c zx_syscall3(zx_u64_c num,
+                                   zx_u64_c arg1,
+                                   zx_u64_c arg2,
+                                   zx_u64_c arg3) {
   zx_u64_c ret;
 
   __asm__ volatile("syscall"
@@ -55,11 +55,11 @@ static zx_u64_c zx_syscall3(zx_u64_c num,
   return ret;
 }
 
-static zx_u64_c zx_syscall4(zx_u64_c num,
-                            zx_u64_c arg1,
-                            zx_u64_c arg2,
-                            zx_u64_c arg3,
-                            zx_u64_c arg4) {
+static inline zx_u64_c zx_syscall4(zx_u64_c num,
+                                   zx_u64_c arg1,
+                                   zx_u64_c arg2,
+                                   zx_u64_c arg3,
+                                   zx_u64_c arg4) {
   zx_u64_c ret;
   register zx_u64_c r10 __asm__("r10") = arg4;
 
@@ -71,12 +71,12 @@ static zx_u64_c zx_syscall4(zx_u64_c num,
   return ret;
 }
 
-static zx_u64_c zx_syscall5(zx_u64_c num,
-                            zx_u64_c arg1,
-                            zx_u64_c arg2,
-                            zx_u64_c arg3,
-                            zx_u64_c arg4,
-                            zx_u64_c arg5) {
+static inline zx_u64_c zx_syscall5(zx_u64_c num,
+                                   zx_u64_c arg1,
+                                   zx_u64_c arg2,
+                                   zx_u64_c arg3,
+                                   zx_u64_c arg4,
+                                   zx_u64_c arg5) {
   zx_u64_c ret;
   register zx_u64_c r10 __asm__("r10") = arg4;
   register zx_u64_c r8 __asm__("r8") = arg5;
@@ -90,13 +90,13 @@ static zx_u64_c zx_syscall5(zx_u64_c num,
   return ret;
 }
 
-static zx_u64_c zx_syscall6(zx_u64_c num,
-                            zx_u64_c arg1,
-                            zx_u64_c arg2,
-                            zx_u64_c arg3,
-                            zx_u64_c arg4,
-                            zx_u64_c arg5,
-                            zx_u64_c arg6) {
+static inline zx_u64_c zx_syscall6(zx_u64_c num,
+                                   zx_u64_c arg1,
+                                   zx_u64_c arg2,
+                                   zx_u64_c arg3,
+                                   zx_u64_c arg4,
+                                   zx_u64_c arg5,
+                                   zx_u64_c arg6) {
   zx_u64_c ret;
   register zx_u64_c r10 __asm__("r10") = arg4;
   register zx_u64_c r8 __asm__("r8") = arg5;

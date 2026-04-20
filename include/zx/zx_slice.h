@@ -83,6 +83,8 @@ struct ZXSlice {
 
   inline zx_u64 len() const { return this->m_len; }
 
+  inline T const* ptr() const { return this->m_ptr; }
+
   template <typename U>
   inline ZXSliceStatus cast(ZXSlice<U>* out) const {
     static_assert(sizeof(U) > 0);
@@ -394,6 +396,8 @@ struct ZXSliceMut {
 
   inline zx_u64 len() const { return this->m_len; }
 
+  inline T* ptr() const { return this->m_ptr; }
+
   template <typename U>
   inline ZXSliceStatus cast(ZXSliceMut<U>* out) const {
     static_assert(sizeof(U) > 0);
@@ -671,6 +675,36 @@ struct ZXSliceMut {
     zx_u64 const n_bytes = zx_mul_unsafe_u64(this->m_len, sizeof(T));
 
     __builtin_memmove(this->m_ptr, other.m_ptr, n_bytes);
+  }
+};
+
+struct ZXCString {
+  ZXSlice<zx_u8> m_slice;
+
+  static ZXSliceStatus init(char const* cstring, ZXCString* out) {
+    if (cstring == nullptr || out == nullptr) {
+      return ZXSliceStatus::Nullptr;
+    }
+
+    zx_u64 const len = __builtin_strlen(cstring);
+    ZXSlice<zx_u8> slice;
+    ZXSliceStatus const init_status =
+        ZXSlice<zx_u8>::init((zx_u8 const*)cstring, len, &slice);
+    if (init_status != ZXSliceStatus::Ok) {
+      return init_status;
+    }
+
+    *out = ZXCString{
+        .m_slice = slice,
+    };
+
+    return ZXSliceStatus::Ok;
+  }
+
+  inline ZXSlice<zx_u8> slice() const { return this->m_slice; }
+
+  inline char const* as_cstr() const {
+    return (char const*)this->m_slice.ptr();
   }
 };
 

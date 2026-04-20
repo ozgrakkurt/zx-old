@@ -135,6 +135,9 @@ def make_cflags(profile: Profile, config: Config) -> List[str]:
         # We only use C style structs so this is not an issue. This can cause bugs
         # if we ever use types with constructors?
         "-Wno-reorder-init-list",
+        # This causes annoying warnings with templated code.
+        # Could try to enable it and then check if there are any interesting catches later.
+        "-Wno-tautological-compare",
         # warn on variable length array usage
         "-Wvla",
         # these don't seem to catch much but enable anyways
