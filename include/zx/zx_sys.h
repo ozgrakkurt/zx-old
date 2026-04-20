@@ -21,7 +21,7 @@ enum class [[nodiscard]] ZXSysStatus : unsigned char {
 
 constexpr zx_u64 ZX_SYS_STATUS_SUCCESS = 0;
 
-static inline zx_u64 zx_sys_errno(zx_u64 ret) {
+static inline zx_u64 zx_sys_errno_(zx_u64 ret) {
   zx_i64 const sgnd = (zx_i64)ret;
   if (sgnd > -4096 && sgnd < 0) {
     return (zx_u64)-sgnd;
@@ -30,8 +30,8 @@ static inline zx_u64 zx_sys_errno(zx_u64 ret) {
   }
 }
 
-static inline ZXSysStatus zx_sys_status(zx_u64 ret) {
-  switch (zx_sys_errno(ret)) {
+static inline ZXSysStatus zx_sys_status_(zx_u64 ret) {
+  switch (zx_sys_errno_(ret)) {
     case ZX_SYS_STATUS_SUCCESS: {
       return ZXSysStatus::Ok;
     }
@@ -69,7 +69,7 @@ static inline ZXSysStatus zx_sys_read(zx_i32 fd,
   zx_u64 const ret =
       zx_syscall3(ZX_SYSCALL_READ, (zx_u64)fd, (zx_u64)buf.ptr(), read_size);
 
-  ZXSysStatus const status = zx_sys_status(ret);
+  ZXSysStatus const status = zx_sys_status_(ret);
   if (status != ZXSysStatus::Ok) {
     *n_read = 0;
     return status;
@@ -90,7 +90,7 @@ static inline ZXSysStatus zx_sys_write(zx_i32 fd,
   zx_u64 const ret =
       zx_syscall3(ZX_SYSCALL_WRITE, (zx_u64)fd, (zx_u64)buf.ptr(), write_size);
 
-  ZXSysStatus const status = zx_sys_status(ret);
+  ZXSysStatus const status = zx_sys_status_(ret);
   if (status != ZXSysStatus::Ok) {
     *n_written = 0;
     return status;
@@ -110,7 +110,7 @@ static inline ZXSysStatus zx_sys_open(ZXCString pathname,
   zx_u64 const ret = zx_syscall3(ZX_SYSCALL_OPEN, (zx_u64)pathname.as_cstr(),
                                  (zx_u64)flags, mode);
 
-  ZXSysStatus const status = zx_sys_status(ret);
+  ZXSysStatus const status = zx_sys_status_(ret);
   if (status != ZXSysStatus::Ok) {
     *fd = -1;
     return status;
@@ -126,7 +126,7 @@ static inline ZXSysStatus zx_sys_open(ZXCString pathname,
 
 static inline ZXSysStatus zx_sys_close(zx_i32 fd) {
   zx_u64 const ret = zx_syscall1(ZX_SYSCALL_CLOSE, (zx_u64)fd);
-  return zx_sys_status(ret);
+  return zx_sys_status_(ret);
 }
 
 [[noreturn]]
@@ -151,7 +151,7 @@ static inline ZXSysStatus zx_sys_mmap(zx_u8* address,
       zx_syscall6(ZX_SYSCALL_MMAP, (zx_u64)address, length, (zx_u64)prot,
                   (zx_u64)flags, (zx_u64)fd, (zx_u64)offset);
 
-  ZXSysStatus const status = zx_sys_status(ret);
+  ZXSysStatus const status = zx_sys_status_(ret);
   if (status != ZXSysStatus::Ok) {
     *mem = nullptr;
     return status;
@@ -163,7 +163,7 @@ static inline ZXSysStatus zx_sys_mmap(zx_u8* address,
 
 static inline ZXSysStatus zx_sys_munmap(zx_u8* mem, zx_u64 length) {
   zx_u64 const ret = zx_syscall2(ZX_SYSCALL_MUNMAP, (zx_u64)mem, length);
-  return zx_sys_status(ret);
+  return zx_sys_status_(ret);
 }
 
 static inline ZXSysStatus zx_sys_madvise(zx_u8* mem,
@@ -171,7 +171,7 @@ static inline ZXSysStatus zx_sys_madvise(zx_u8* mem,
                                          zx_i32 advice) {
   zx_u64 const ret =
       zx_syscall3(ZX_SYSCALL_MADVISE, (zx_u64)mem, length, (zx_u64)advice);
-  return zx_sys_status(ret);
+  return zx_sys_status_(ret);
 }
 
 static inline ZXSysStatus zx_sys_mprotect(zx_u8* mem,
@@ -179,7 +179,7 @@ static inline ZXSysStatus zx_sys_mprotect(zx_u8* mem,
                                           zx_i32 prot) {
   zx_u64 const ret =
       zx_syscall3(ZX_SYSCALL_MPROTECT, (zx_u64)mem, length, (zx_u64)prot);
-  return zx_sys_status(ret);
+  return zx_sys_status_(ret);
 }
 
 // echo '#include <sys/mman.h>' | gcc -E - -dM | grep "#define MAP_"
