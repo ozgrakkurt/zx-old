@@ -81,11 +81,11 @@ struct ZXAlloc {
 
     this->m_offset = new_offset;
 
-    return ZXStatus::Ok;
+    return ZXAllocStatus::Ok;
   }
 
   template <typename T>
-  inline ZXStatus alloc(zx_u64 len, ZXSliceMut<T>* out) {
+  inline ZXAllocStatus alloc(zx_u64 len, ZXSliceMut<T>* out) {
     return this->aligned_alloc<T, alignof(T)>(len, out);
   }
 };

@@ -608,6 +608,11 @@ struct ZXSliceMut {
     }
   }
 
+  inline void memset(zx_u8 byte) const {
+    zx_u64 const n_bytes = zx_mul_unsafe_u64(this->m_len, sizeof(T));
+    __builtin_memset(this->m_ptr, byte, n_bytes);
+  }
+
   inline ZXSlice<T> as_const() const {
     return ZXSlice<T>{
         .m_ptr = this->m_ptr,
