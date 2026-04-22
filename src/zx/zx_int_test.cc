@@ -339,5 +339,8 @@ int main(void) {
   zx_shl_u64(0, 1, &fail);
   assert(!fail);
 
+  // ctz
+  assert(3 == zx_ctz_u8(0b01111000));
+
   return 0;
 }

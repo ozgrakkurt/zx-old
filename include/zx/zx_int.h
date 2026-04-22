@@ -613,76 +613,61 @@ constexpr static inline zx_i64 zx_max_i64(zx_i64 a, zx_i64 b) {
   return zx_max_<zx_i64>(a, b);
 }
 
-template <typename T>
-constexpr static inline zx_u8 zx_ctz_(T a) {
-  static_assert(sizeof(T) <= 8);
-  return (zx_u8)__builtin_ctzg(a);
-}
 constexpr static inline zx_u8 zx_ctz_u8(zx_u8 a) {
-  return zx_ctz_<zx_u8>(a);
+  return (zx_u8)__builtin_ctzg(a, 8);
 }
-constexpr static inline zx_u8 zx_ctz_u8(zx_u16 a) {
-  return zx_ctz_<zx_u16>(a);
+constexpr static inline zx_u8 zx_ctz_u16(zx_u16 a) {
+  return (zx_u8)__builtin_ctzg(a, 16);
 }
-constexpr static inline zx_u8 zx_ctz_u8(zx_u32 a) {
-  return zx_ctz_<zx_u32>(a);
+constexpr static inline zx_u8 zx_ctz_u32(zx_u32 a) {
+  return (zx_u8)__builtin_ctzg(a, 32);
 }
-constexpr static inline zx_u8 zx_ctz_u8(zx_u64 a) {
-  return zx_ctz_<zx_u64>(a);
+constexpr static inline zx_u8 zx_ctz_u64(zx_u64 a) {
+  return (zx_u8)__builtin_ctzg(a, 64);
 }
 
-template <typename T>
-constexpr static inline zx_u8 zx_clz_(T a) {
-  static_assert(sizeof(T) <= 8);
-  return (zx_u8)__builtin_clzg(a);
-}
 constexpr static inline zx_u8 zx_clz_u8(zx_u8 a) {
-  return zx_clz_<zx_u8>(a);
+  return (zx_u8)__builtin_clzg(a, 8);
 }
-constexpr static inline zx_u8 zx_clz_u8(zx_u16 a) {
-  return zx_clz_<zx_u16>(a);
+constexpr static inline zx_u8 zx_clz_u16(zx_u16 a) {
+  return (zx_u8)__builtin_clzg(a, 16);
 }
-constexpr static inline zx_u8 zx_clz_u8(zx_u32 a) {
-  return zx_clz_<zx_u32>(a);
+constexpr static inline zx_u8 zx_clz_u32(zx_u32 a) {
+  return (zx_u8)__builtin_clzg(a, 32);
 }
-constexpr static inline zx_u8 zx_clz_u8(zx_u64 a) {
-  return zx_clz_<zx_u64>(a);
+constexpr static inline zx_u8 zx_clz_u64(zx_u64 a) {
+  return (zx_u8)__builtin_clzg(a, 64);
 }
 
-template <typename T>
-constexpr static inline zx_u8 zx_popcnt_(T a) {
-  static_assert(sizeof(T) <= 8);
+constexpr static inline zx_u8 zx_popcnt_u8(zx_u8 a) {
   return (zx_u8)__builtin_popcountg(a);
 }
-constexpr static inline zx_u8 zx_popcnt_u8(zx_u8 a) {
-  return zx_popcnt_<zx_u8>(a);
+constexpr static inline zx_u8 zx_popcnt_u16(zx_u16 a) {
+  return (zx_u8)__builtin_popcountg(a);
 }
-constexpr static inline zx_u8 zx_popcnt_u8(zx_u16 a) {
-  return zx_popcnt_<zx_u16>(a);
+constexpr static inline zx_u8 zx_popcnt_u32(zx_u32 a) {
+  return (zx_u8)__builtin_popcountg(a);
 }
-constexpr static inline zx_u8 zx_popcnt_u8(zx_u32 a) {
-  return zx_popcnt_<zx_u32>(a);
-}
-constexpr static inline zx_u8 zx_popcnt_u8(zx_u64 a) {
-  return zx_popcnt_<zx_u64>(a);
+constexpr static inline zx_u8 zx_popcnt_u64(zx_u64 a) {
+  return (zx_u8)__builtin_popcountg(a);
 }
 
 template <typename T>
 constexpr static inline zx_u8 zx_bit_width_(T a) {
   static_assert(sizeof(T) <= 8);
   constexpr zx_u8 N_BITS = sizeof(T) * 8;
-  return N_BITS - zx_clz_<T>(a);
+  return N_BITS - (zx_u8)__builtin_clzg(a, int{N_BITS});
 }
 constexpr static inline zx_u8 zx_bit_width_u8(zx_u8 a) {
   return zx_bit_width_<zx_u8>(a);
 }
-constexpr static inline zx_u8 zx_bit_width_u8(zx_u16 a) {
+constexpr static inline zx_u8 zx_bit_width_u16(zx_u16 a) {
   return zx_bit_width_<zx_u16>(a);
 }
-constexpr static inline zx_u8 zx_bit_width_u8(zx_u32 a) {
+constexpr static inline zx_u8 zx_bit_width_u32(zx_u32 a) {
   return zx_bit_width_<zx_u32>(a);
 }
-constexpr static inline zx_u8 zx_bit_width_u8(zx_u64 a) {
+constexpr static inline zx_u8 zx_bit_width_u64(zx_u64 a) {
   return zx_bit_width_<zx_u64>(a);
 }
 
@@ -846,21 +831,17 @@ constexpr static inline zx_u64 zx_next_pow_two_unsafe_u64(zx_u64 a) {
   return zx_next_pow_two_unsafe_<zx_u64>(a);
 }
 
-template <typename T>
-constexpr static inline bool zx_is_pow_two_(T a) {
-  return zx_popcnt_<T>(a) == 1;
-}
 constexpr static inline bool zx_is_pow_two_u8(zx_u8 a) {
-  return zx_is_pow_two_<zx_u8>(a);
+  return __builtin_popcountg(a) == 1;
 }
 constexpr static inline bool zx_is_pow_two_u16(zx_u16 a) {
-  return zx_is_pow_two_<zx_u16>(a);
+  return __builtin_popcountg(a) == 1;
 }
 constexpr static inline bool zx_is_pow_two_u32(zx_u32 a) {
-  return zx_is_pow_two_<zx_u32>(a);
+  return __builtin_popcountg(a) == 1;
 }
 constexpr static inline bool zx_is_pow_two_u64(zx_u64 a) {
-  return zx_is_pow_two_<zx_u64>(a);
+  return __builtin_popcountg(a) == 1;
 }
 
 template <typename T>
