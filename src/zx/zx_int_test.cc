@@ -341,6 +341,23 @@ int main(void) {
 
   // ctz
   assert(3 == zx_ctz_u8(0b01111000));
+  assert(3 == zx_ctz_u16(0b01111000));
+  assert(3 == zx_ctz_u32(0b01111000));
+  assert(3 == zx_ctz_u64(0b01111000));
+  assert(8 == zx_ctz_u8(0));
+  assert(16 == zx_ctz_u16(0));
+  assert(32 == zx_ctz_u32(0));
+  assert(64 == zx_ctz_u64(0));
+
+  // clz
+  assert(1 == zx_clz_u8(0b01111000));
+  assert(9 == zx_clz_u16(0b01111000));
+  assert(25 == zx_clz_u32(0b01111000));
+  assert(57 == zx_clz_u64(0b01111000));
+  assert(8 == zx_clz_u8(0));
+  assert(16 == zx_clz_u16(0));
+  assert(32 == zx_clz_u32(0));
+  assert(64 == zx_clz_u64(0));
 
   return 0;
 }
