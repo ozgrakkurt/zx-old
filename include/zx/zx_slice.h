@@ -173,9 +173,8 @@ struct ZXSlice {
   }
 
   inline ZXSlice<T> slice_unsafe(zx_u64 offset, zx_u64 len) const {
-    zx_u64 const needed_len = zx_add_unsafe_u64(offset, len);
-
 #ifdef ZX_DEBUG
+    zx_u64 const needed_len = zx_add_unsafe_u64(offset, len);
     if (this->m_len < needed_len) {
       __builtin_trap();
     }
@@ -292,10 +291,9 @@ struct ZXSlice {
 
   template <typename U>
   inline U read_unaligned_unsafe(zx_u64 index) const {
+#ifdef ZX_DEBUG
     zx_u64 const item_cap = zx_sub_unsafe_u64(this->m_len, index);
     zx_u64 const byte_cap = zx_mul_unsafe_u64(item_cap, sizeof(T));
-
-#ifdef ZX_DEBUG
     if (byte_cap < sizeof(U)) {
       __builtin_trap();
     }
@@ -497,9 +495,8 @@ struct ZXSliceMut {
   }
 
   inline ZXSliceMut<T> slice_unsafe(zx_u64 offset, zx_u64 len) const {
-    zx_u64 const needed_len = zx_add_unsafe_u64(offset, len);
-
 #ifdef ZX_DEBUG
+    zx_u64 const needed_len = zx_add_unsafe_u64(offset, len);
     if (this->m_len < needed_len) {
       __builtin_trap();
     }
@@ -606,10 +603,9 @@ struct ZXSliceMut {
 
   template <typename U>
   inline void write_unaligned_unsafe(zx_u64 index, U val) const {
+#ifdef ZX_DEBUG
     zx_u64 const item_cap = zx_sub_unsafe_u64(this->m_len, index);
     zx_u64 const byte_cap = zx_mul_unsafe_u64(item_cap, sizeof(T));
-
-#ifdef ZX_DEBUG
     if (byte_cap < sizeof(U)) {
       __builtin_trap();
     }
