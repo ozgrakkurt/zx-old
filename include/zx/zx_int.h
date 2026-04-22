@@ -46,6 +46,26 @@ typedef _BitInt(64) zx_i64;
 typedef _BitInt(128) zx_i128;
 typedef _BitInt(256) zx_i256;
 
+constexpr zx_u8 ZX_U8_MAX = ~(zx_u8){0};
+constexpr zx_u16 ZX_U16_MAX = ~(zx_u16){0};
+constexpr zx_u32 ZX_U32_MAX = ~(zx_u32){0};
+constexpr zx_u64 ZX_U64_MAX = ~(zx_u64){0};
+constexpr zx_u128 ZX_U128_MAX = ~(zx_u128){0};
+constexpr zx_u256 ZX_U256_MAX = ~(zx_u256){0};
+
+constexpr zx_i8 ZX_I8_MAX = (zx_i8)(ZX_U8_MAX >> 1);
+constexpr zx_i16 ZX_I16_MAX = (zx_i16)(ZX_U16_MAX >> 1);
+constexpr zx_i32 ZX_I32_MAX = (zx_i32)(ZX_U32_MAX >> 1);
+constexpr zx_i64 ZX_I64_MAX = (zx_i64)(ZX_U64_MAX >> 1);
+constexpr zx_i128 ZX_I128_MAX = (zx_i128)(ZX_U128_MAX >> 1);
+constexpr zx_i256 ZX_I256_MAX = (zx_i256)(ZX_U256_MAX >> 1);
+constexpr zx_i8 ZX_I8_MIN = ~ZX_I8_MAX;
+constexpr zx_i16 ZX_I16_MIN = ~ZX_I16_MAX;
+constexpr zx_i32 ZX_I32_MIN = ~ZX_I32_MAX;
+constexpr zx_i64 ZX_I64_MIN = ~ZX_I64_MAX;
+constexpr zx_i128 ZX_I128_MIN = ~ZX_I128_MAX;
+constexpr zx_i256 ZX_I256_MIN = ~ZX_I256_MAX;
+
 template <typename T>
 constexpr static inline T zx_wrapping_add_(T a, T b) {
   return a + b;
