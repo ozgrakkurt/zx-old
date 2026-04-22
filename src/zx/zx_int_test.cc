@@ -211,5 +211,133 @@ int main(void) {
   assert(3 == zx_next_multiple_of_u64(1, 3, &overflow));
   assert(!overflow);
 
+  // min
+  assert(31 == zx_min_u8(31, 69));
+  assert(31 == zx_min_u8(69, 31));
+
+  assert(31 == zx_min_u16(31, 69));
+  assert(31 == zx_min_u16(69, 31));
+
+  assert(31 == zx_min_u32(31, 69));
+  assert(31 == zx_min_u32(69, 31));
+
+  assert(31 == zx_min_u64(31, 69));
+  assert(31 == zx_min_u64(69, 31));
+
+  // max
+  assert(69 == zx_max_u8(31, 69));
+  assert(69 == zx_max_u8(69, 31));
+
+  assert(69 == zx_max_u16(31, 69));
+  assert(69 == zx_max_u16(69, 31));
+
+  assert(69 == zx_max_u32(31, 69));
+  assert(69 == zx_max_u32(69, 31));
+
+  assert(69 == zx_max_u64(31, 69));
+  assert(69 == zx_max_u64(69, 31));
+
+  // shr UB
+  bool fail = false;
+  zx_shr_u8(1, 8, &fail);
+  assert(fail);
+
+  fail = false;
+  zx_shr_u16(0, 16, &fail);
+  assert(fail);
+
+  fail = false;
+  zx_shr_u32(1, 32, &fail);
+  assert(fail);
+
+  fail = false;
+  zx_shr_u64(0, 64, &fail);
+  assert(fail);
+
+  // shr UB more
+  fail = false;
+  zx_shr_u8(1, 20, &fail);
+  assert(fail);
+
+  fail = false;
+  zx_shr_u16(1, 30, &fail);
+  assert(fail);
+
+  fail = false;
+  zx_shr_u32(1, 60, &fail);
+  assert(fail);
+
+  fail = false;
+  zx_shr_u64(1, ZX_U8_MAX, &fail);
+  assert(fail);
+
+  // shr no UB
+  fail = false;
+  zx_shr_u8(0, 1, &fail);
+  assert(!fail);
+
+  fail = false;
+  zx_shr_u16(0, 1, &fail);
+  assert(!fail);
+
+  fail = false;
+  zx_shr_u32(0, 1, &fail);
+  assert(!fail);
+
+  fail = false;
+  zx_shr_u64(0, 1, &fail);
+  assert(!fail);
+
+  // shl UB
+  fail = false;
+  zx_shl_u8(1, 8, &fail);
+  assert(fail);
+
+  fail = false;
+  zx_shl_u16(0, 16, &fail);
+  assert(fail);
+
+  fail = false;
+  zx_shl_u32(1, 32, &fail);
+  assert(fail);
+
+  fail = false;
+  zx_shl_u64(0, 64, &fail);
+  assert(fail);
+
+  // shl UB more
+  fail = false;
+  zx_shl_u8(1, 20, &fail);
+  assert(fail);
+
+  fail = false;
+  zx_shl_u16(1, 30, &fail);
+  assert(fail);
+
+  fail = false;
+  zx_shl_u32(1, 60, &fail);
+  assert(fail);
+
+  fail = false;
+  zx_shl_u64(1, ZX_U8_MAX, &fail);
+  assert(fail);
+
+  // shl no UB
+  fail = false;
+  zx_shl_u8(0, 1, &fail);
+  assert(!fail);
+
+  fail = false;
+  zx_shl_u16(0, 1, &fail);
+  assert(!fail);
+
+  fail = false;
+  zx_shl_u32(0, 1, &fail);
+  assert(!fail);
+
+  fail = false;
+  zx_shl_u64(0, 1, &fail);
+  assert(!fail);
+
   return 0;
 }

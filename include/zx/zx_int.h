@@ -714,7 +714,7 @@ constexpr static inline zx_u32 zx_shl_u32(zx_u32 a,
                                           bool* failure) {
   return zx_shl_<zx_u32>(a, amount, failure);
 }
-constexpr static inline zx_u64 zx_shl_u16(zx_u64 a,
+constexpr static inline zx_u64 zx_shl_u64(zx_u64 a,
                                           zx_u8 amount,
                                           bool* failure) {
   return zx_shl_<zx_u64>(a, amount, failure);
