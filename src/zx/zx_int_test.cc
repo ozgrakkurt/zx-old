@@ -177,5 +177,39 @@ int main(void) {
   zx_mod_u64(69, 1131, &overflow);
   assert(!overflow);
 
+  // next_mult overflow
+  overflow = false;
+  zx_next_multiple_of_u8(ZX_U8_MAX, 3, &overflow);
+  assert(overflow);
+
+  overflow = false;
+  zx_next_multiple_of_u16(ZX_U16_MAX, 3, &overflow);
+  assert(overflow);
+
+  overflow = false;
+  zx_next_multiple_of_u32(ZX_U32_MAX, 3, &overflow);
+  assert(overflow);
+
+  overflow = false;
+  zx_next_multiple_of_u64(ZX_U64_MAX, 3, &overflow);
+  assert(overflow);
+
+  // next_mult no overflow
+  overflow = false;
+  assert(3 == zx_next_multiple_of_u8(1, 3, &overflow));
+  assert(!overflow);
+
+  overflow = false;
+  assert(3 == zx_next_multiple_of_u16(1, 3, &overflow));
+  assert(!overflow);
+
+  overflow = false;
+  assert(3 == zx_next_multiple_of_u32(1, 3, &overflow));
+  assert(!overflow);
+
+  overflow = false;
+  assert(3 == zx_next_multiple_of_u64(1, 3, &overflow));
+  assert(!overflow);
+
   return 0;
 }

@@ -507,9 +507,10 @@ constexpr static inline zx_u64 zx_mod_unsafe_u64(zx_u64 a, zx_u64 b) {
 
 template <typename T>
 constexpr static inline T zx_next_multiple_of_(T a, T b, bool* failure) {
-  T const c = zx_add_<T>(a, 1, failure);
-  T const d = zx_div_<T>(c, b, failure);
-  return zx_mul_<T>(d, b, failure);
+  T const c = zx_add_<T>(a, b, failure);
+  T const d = zx_sub_<T>(c, 1, failure);
+  T const e = zx_div_<T>(d, b, failure);
+  return zx_mul_<T>(e, b, failure);
 }
 constexpr static inline zx_u8 zx_next_multiple_of_u8(zx_u8 a,
                                                      zx_u8 b,
