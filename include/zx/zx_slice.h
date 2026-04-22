@@ -71,13 +71,22 @@ struct ZXSlice {
 
     zx_u64 res;
     if (__builtin_mul_overflow(len, zx_u64{sizeof(T)}, &res)) {
-      return ZXSliceStatus::IntegerOverflow;
+      __builtin_trap();
     }
 #endif
 
     return ZXSlice<T>{
         .m_ptr = ptr,
         .m_len = len,
+    };
+  }
+
+  static ZXSlice<T> init_dangling() {
+    static_assert(sizeof(T) > 0);
+    static_assert(alignof(T) > 0);
+    return ZXSlice<T>{
+        .m_ptr = (T const*)zx_u64{alignof(T)},
+        .m_len = 0,
     };
   }
 
@@ -384,13 +393,22 @@ struct ZXSliceMut {
 
     zx_u64 res;
     if (__builtin_mul_overflow(len, zx_u64{sizeof(T)}, &res)) {
-      return ZXSliceStatus::IntegerOverflow;
+      __builtin_trap();
     }
 #endif
 
     return ZXSliceMut<T>{
         .m_ptr = ptr,
         .m_len = len,
+    };
+  }
+
+  static ZXSliceMut<T> init_dangling() {
+    static_assert(sizeof(T) > 0);
+    static_assert(alignof(T) > 0);
+    return ZXSliceMut<T>{
+        .m_ptr = (T*)zx_u64{alignof(T)},
+        .m_len = 0,
     };
   }
 
@@ -620,7 +638,7 @@ struct ZXSliceMut {
     };
   }
 
-  inline ZXSliceStatus copy_from_non_overlapping(ZXSlice<T> other) const {
+  inline ZXSliceStatus memcpy_from(ZXSlice<T> other) const {
     if (this->m_len != other.m_len) {
       return ZXSliceStatus::SizeMismatch;
     }
@@ -637,13 +655,13 @@ struct ZXSliceMut {
     return ZXSliceStatus::Ok;
   }
 
-  inline void copy_from_non_overlapping_unsafe(ZXSlice<T> other) const {
+  inline void memcpy_from_unsafe(ZXSlice<T> other) const {
 #ifdef ZX_DEBUG
     if (this->m_len != other.m_len) {
       __builtin_trap();
     }
 
-    if (this->as_const().is_overlapping(other.as_const())) {
+    if (this->as_const().is_overlapping(other)) {
       __builtin_trap();
     }
 #endif
@@ -655,7 +673,7 @@ struct ZXSliceMut {
     __builtin_memcpy(this->m_ptr, other.m_ptr, n_bytes);
   }
 
-  inline ZXSliceStatus overlapping_copy_from(ZXSlice<T> other) const {
+  inline ZXSliceStatus memmove_from(ZXSlice<T> other) const {
     if (this->m_len != other.m_len) {
       return ZXSliceStatus::SizeMismatch;
     }
@@ -668,7 +686,7 @@ struct ZXSliceMut {
     return ZXSliceStatus::Ok;
   }
 
-  inline void overlapping_copy_from_unsafe(ZXSlice<T> other) const {
+  inline void memmove_from_unsafe(ZXSlice<T> other) const {
 #ifdef ZX_DEBUG
     if (this->m_len != other.m_len) {
       __builtin_trap();
@@ -704,6 +722,23 @@ struct ZXCString {
     };
 
     return ZXSliceStatus::Ok;
+  }
+
+  static ZXCString init_unsafe(char const* cstring) {
+    if (cstring == nullptr) {
+#ifdef ZX_DEBUG
+      __builtin_trap();
+#else
+      return ZXCString{
+          .m_slice = ZXSlice<zx_u8>::init_dangling(),
+      };
+#endif
+    }
+
+    zx_u64 const len = __builtin_strlen(cstring);
+    return ZXCString{
+        .m_slice = ZXSlice<zx_u8>::init_unsafe((zx_u8 const*)cstring, len),
+    };
   }
 
   inline ZXSlice<zx_u8> slice() const { return this->m_slice; }

@@ -2,6 +2,7 @@
 #define ZX_ERR_TRACE_H
 
 #include <zx/zx_alloc.h>
+#include <zx/zx_fmt.h>
 #include <zx/zx_int.h>
 #include <zx/zx_slice.h>
 
@@ -71,7 +72,7 @@ struct ZXErrTrace {
   }
 
   // Returns if push succeeded or if the trace is full.
-  [[nodiscard]] inline bool push(ZXSourceLocation_ location) {
+  inline bool push(ZXSourceLocation_ location) {
     zx_u64 const offset = this->m_offset;
     ZXSliceMut<ZXSourceLocation_> const locations = this->m_locations;
     if (offset < locations.len()) {
@@ -80,6 +81,18 @@ struct ZXErrTrace {
       return true;
     } else {
       return false;
+    }
+  }
+
+  inline void format(ZXFmt* fmt, bool* overflow) {
+    for (zx_u64 i = 0; i < this->m_offset; i++) {
+      ZXSourceLocation_ const loc = this->m_locations.as_const().read_unsafe(i);
+      ZXSlice<zx_u8> const file_name = ZXSlice<zx_u8>::init_unsafe(
+          (zx_u8 const*)loc.file_name_, loc.file_name_len_);
+      fmt->push_str(file_name, overflow);
+      fmt->push_cstring(ZXCString::init_unsafe("[line="), overflow);
+      fmt->push_u64(loc.line_no_, overflow);
+      fmt->push_cstring(ZXCString::init_unsafe("]\n"), overflow);
     }
   }
 };
