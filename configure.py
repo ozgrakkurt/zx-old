@@ -188,9 +188,8 @@ def make_cflags(profile: Profile, config: Config) -> List[str]:
         "-fno-threadsafe-statics",
     ]
 
-    if profile.debug:
+    if profile.debug_info:
         cflags.append("-g")
-        cflags.append("-DZX_DEBUG")
         # Make sure to keep frame pointer because it is useful for debugger on optimized builds.
         # Didn't specifically test this but seems to be the general consensus on the internet.
         cflags.append("-fno-omit-frame-pointer")
@@ -199,6 +198,9 @@ def make_cflags(profile: Profile, config: Config) -> List[str]:
         # Disable frame pointer usage by compiler. it is useless when we are not in debug mode.
         cflags.append("-fomit-frame-pointer")
         cflags.append("-momit-leaf-frame-pointer")
+
+    if profile.dev:
+        cflags.append("-DZX_DEV")
 
     if profile.fuzz:
         cflags.append("-DZX_FUZZ=1")
@@ -234,7 +236,7 @@ def make_ldflags(build_path: str, config: Config) -> List[str]:
         f"-O{profile.opt_level}",
     ]
 
-    if not profile.debug:
+    if not profile.debug_info:
         # tell linker to strip debug info
         ldflags.append("-Wl,-s")
 

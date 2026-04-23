@@ -65,7 +65,7 @@ struct ZXErrTrace {
   }
 
   inline void reset_unsafe() {
-#ifdef ZX_DEBUG
+#ifdef ZX_DEV
     this->m_locations.memset(zx_u8{0});
 #endif
     this->m_offset = 0;

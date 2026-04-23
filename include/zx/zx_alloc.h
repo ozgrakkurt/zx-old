@@ -31,7 +31,7 @@ struct ZXAlloc {
   }
 
   inline void reset_unsafe() {
-#ifdef ZX_DEBUG
+#ifdef ZX_DEV
     this->m_mem.fill(zx_u8{0xaa});
 #endif
     this->m_offset = 0;

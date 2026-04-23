@@ -40,13 +40,13 @@ int main(void) {
   overflow = false;
   zx_add_u32(69, 31, &overflow);
   assert(!overflow);
-  
+
   assert(100 == zx_add_unsafe_u32(69, 31));
 
   overflow = false;
   zx_add_u64(69, 31, &overflow);
   assert(!overflow);
-  
+
   assert(100 == zx_add_unsafe_u64(69, 31));
 
   // sub one over
@@ -71,17 +71,25 @@ int main(void) {
   zx_sub_u8(ZX_U8_MAX, 69, &overflow);
   assert(!overflow);
 
+  assert(zx_u8{0} - zx_u8{70} == zx_sub_unsafe_u8(ZX_U8_MAX, 69));
+
   overflow = false;
   zx_sub_u16(ZX_U16_MAX, 69, &overflow);
   assert(!overflow);
+
+  assert(zx_u16{0} - zx_u16{70} == zx_sub_unsafe_u16(ZX_U16_MAX, 69));
 
   overflow = false;
   zx_sub_u32(ZX_U32_MAX, 69, &overflow);
   assert(!overflow);
 
+  assert(zx_u32{0} - zx_u32{70} == zx_sub_unsafe_u32(ZX_U32_MAX, 69));
+
   overflow = false;
   zx_sub_u64(ZX_U64_MAX, 69, &overflow);
   assert(!overflow);
+
+  assert(zx_u64{0} - zx_u64{70} == zx_sub_unsafe_u64(ZX_U64_MAX, 69));
 
   // mul overflow
   overflow = false;
@@ -105,17 +113,25 @@ int main(void) {
   zx_mul_u8(ZX_U8_MAX / 2, 2, &overflow);
   assert(!overflow);
 
+  assert(ZX_U8_MAX - 1__wbu == zx_mul_unsafe_u8(ZX_U8_MAX / 2, 2));
+
   overflow = false;
   zx_mul_u16(ZX_U16_MAX / 2, 2, &overflow);
   assert(!overflow);
+
+  assert(ZX_U16_MAX - 1__wbu == zx_mul_unsafe_u16(ZX_U16_MAX / 2, 2));
 
   overflow = false;
   zx_mul_u32(ZX_U32_MAX / 2, 2, &overflow);
   assert(!overflow);
 
+  assert(ZX_U32_MAX - 1__wbu == zx_mul_unsafe_u32(ZX_U32_MAX / 2, 2));
+
   overflow = false;
   zx_mul_u64(ZX_U64_MAX / 2, 2, &overflow);
   assert(!overflow);
+
+  assert(ZX_U64_MAX - 1__wbu == zx_mul_unsafe_u64(ZX_U64_MAX / 2, 2));
 
   // div zero
   overflow = false;
@@ -139,17 +155,25 @@ int main(void) {
   assert(0 == zx_div_u8(69, 113, &overflow));
   assert(!overflow);
 
+  assert(0 == zx_div_unsafe_u8(69, 113));
+
   overflow = false;
   assert(0 == zx_div_u16(69, 1131, &overflow));
   assert(!overflow);
+
+  assert(0 == zx_div_unsafe_u16(69, 1131));
 
   overflow = false;
   assert(0 == zx_div_u32(69, 1131, &overflow));
   assert(!overflow);
 
+  assert(0 == zx_div_unsafe_u32(69, 1131));
+
   overflow = false;
   assert(0 == zx_div_u64(69, 1131, &overflow));
   assert(!overflow);
+
+  assert(0 == zx_div_unsafe_u64(69, 1131));
 
   // mod zero
   overflow = false;
@@ -173,17 +197,25 @@ int main(void) {
   zx_mod_u8(69, 113, &overflow);
   assert(!overflow);
 
+  assert(69__wbu == zx_mod_unsafe_u8(69, 113));
+
   overflow = false;
   zx_mod_u16(69, 1131, &overflow);
   assert(!overflow);
+
+  assert(69__wbu == zx_mod_unsafe_u16(69, 113));
 
   overflow = false;
   zx_mod_u32(69, 1131, &overflow);
   assert(!overflow);
 
+  assert(69__wbu == zx_mod_unsafe_u32(69, 113));
+
   overflow = false;
   zx_mod_u64(69, 1131, &overflow);
   assert(!overflow);
+
+  assert(69__wbu == zx_mod_unsafe_u64(69, 113));
 
   // next_mult overflow
   overflow = false;
@@ -207,17 +239,25 @@ int main(void) {
   assert(3 == zx_next_multiple_of_u8(1, 3, &overflow));
   assert(!overflow);
 
+  assert(3 == zx_next_multiple_of_unsafe_u8(1, 3));
+
   overflow = false;
   assert(3 == zx_next_multiple_of_u16(1, 3, &overflow));
   assert(!overflow);
+
+  assert(3 == zx_next_multiple_of_unsafe_u16(1, 3));
 
   overflow = false;
   assert(3 == zx_next_multiple_of_u32(1, 3, &overflow));
   assert(!overflow);
 
+  assert(3 == zx_next_multiple_of_unsafe_u32(1, 3));
+
   overflow = false;
   assert(3 == zx_next_multiple_of_u64(1, 3, &overflow));
   assert(!overflow);
+
+  assert(3 == zx_next_multiple_of_unsafe_u64(1, 3));
 
   // min
   assert(31 == zx_min_u8(31, 69));
@@ -284,17 +324,29 @@ int main(void) {
   zx_shr_u8(0, 1, &fail);
   assert(!fail);
 
+  assert(0 == zx_shr_unsafe_u8(0, 1));
+  assert(1 == zx_shr_unsafe_u8(4, 2));
+
   fail = false;
   zx_shr_u16(0, 1, &fail);
   assert(!fail);
+
+  assert(0 == zx_shr_unsafe_u16(0, 1));
+  assert(1 == zx_shr_unsafe_u16(4, 2));
 
   fail = false;
   zx_shr_u32(0, 1, &fail);
   assert(!fail);
 
+  assert(0 == zx_shr_unsafe_u32(0, 1));
+  assert(1 == zx_shr_unsafe_u32(4, 2));
+
   fail = false;
   zx_shr_u64(0, 1, &fail);
   assert(!fail);
+
+  assert(0 == zx_shr_unsafe_u64(0, 1));
+  assert(1 == zx_shr_unsafe_u64(4, 2));
 
   // shl UB
   fail = false;
@@ -335,17 +387,29 @@ int main(void) {
   zx_shl_u8(0, 1, &fail);
   assert(!fail);
 
+  assert(0 == zx_shl_unsafe_u8(0, 1));
+  assert(4 == zx_shl_unsafe_u8(1, 2));
+
   fail = false;
   zx_shl_u16(0, 1, &fail);
   assert(!fail);
+
+  assert(0 == zx_shl_unsafe_u16(0, 1));
+  assert(4 == zx_shl_unsafe_u16(1, 2));
 
   fail = false;
   zx_shl_u32(0, 1, &fail);
   assert(!fail);
 
+  assert(0 == zx_shl_unsafe_u32(0, 1));
+  assert(4 == zx_shl_unsafe_u32(1, 2));
+
   fail = false;
   zx_shl_u64(0, 1, &fail);
   assert(!fail);
+
+  assert(0 == zx_shl_unsafe_u64(0, 1));
+  assert(4 == zx_shl_unsafe_u64(1, 2));
 
   // ctz
   assert(3 == zx_ctz_u8(0b01111000));
@@ -466,166 +530,299 @@ int main(void) {
   overflow = false;
   assert(69 == zx_cast_to_u8<zx_u8>(zx_u8{69}, &overflow));
   assert(!overflow);
+  assert(69 == zx_cast_unsafe_to_u8<zx_u8>(zx_u8{69}));
+
   assert(69 == zx_cast_to_u8<zx_u16>(zx_u16{69}, &overflow));
   assert(!overflow);
+  assert(69 == zx_cast_unsafe_to_u8<zx_u16>(zx_u16{69}));
+
   assert(69 == zx_cast_to_u8<zx_u32>(zx_u32{69}, &overflow));
   assert(!overflow);
+  assert(69 == zx_cast_unsafe_to_u8<zx_u32>(zx_u32{69}));
+
   assert(69 == zx_cast_to_u8<zx_u64>(zx_u64{69}, &overflow));
   assert(!overflow);
+  assert(69 == zx_cast_unsafe_to_u8<zx_u64>(zx_u64{69}));
+
   assert(69 == zx_cast_to_u8<zx_i8>(zx_i8{69}, &overflow));
   assert(!overflow);
+  assert(69 == zx_cast_unsafe_to_u8<zx_i8>(zx_i8{69}));
+
   assert(69 == zx_cast_to_u8<zx_i16>(zx_i16{69}, &overflow));
   assert(!overflow);
+  assert(69 == zx_cast_unsafe_to_u8<zx_i16>(zx_i16{69}));
+
   assert(69 == zx_cast_to_u8<zx_i32>(zx_i32{69}, &overflow));
   assert(!overflow);
+  assert(69 == zx_cast_unsafe_to_u8<zx_i32>(zx_i32{69}));
+
   assert(69 == zx_cast_to_u8<zx_i64>(zx_i64{69}, &overflow));
   assert(!overflow);
+  assert(69 == zx_cast_unsafe_to_u8<zx_i64>(zx_i64{69}));
 
   // cast to u16
   overflow = false;
   assert(69 == zx_cast_to_u16<zx_u8>(zx_u8{69}, &overflow));
   assert(!overflow);
+  assert(69 == zx_cast_unsafe_to_u16<zx_u8>(zx_u8{69}));
+
   assert(1100 == zx_cast_to_u16<zx_u16>(zx_u16{1100}, &overflow));
   assert(!overflow);
+  assert(1100 == zx_cast_unsafe_to_u16<zx_u16>(zx_u16{1100}));
+
   assert(1100 == zx_cast_to_u16<zx_u32>(zx_u32{1100}, &overflow));
   assert(!overflow);
+  assert(1100 == zx_cast_unsafe_to_u16<zx_u32>(zx_u32{1100}));
+
   assert(1100 == zx_cast_to_u16<zx_u64>(zx_u64{1100}, &overflow));
   assert(!overflow);
+  assert(1100 == zx_cast_unsafe_to_u16<zx_u64>(zx_u64{1100}));
+
   assert(120 == zx_cast_to_u16<zx_i8>(zx_i8{120}, &overflow));
   assert(!overflow);
+  assert(120 == zx_cast_unsafe_to_u16<zx_i8>(zx_i8{120}));
+
   assert(1100 == zx_cast_to_u16<zx_i16>(zx_i16{1100}, &overflow));
   assert(!overflow);
+  assert(1100 == zx_cast_unsafe_to_u16<zx_i16>(zx_i16{1100}));
+
   assert(1100 == zx_cast_to_u16<zx_i32>(zx_i32{1100}, &overflow));
   assert(!overflow);
+  assert(1100 == zx_cast_unsafe_to_u16<zx_i32>(zx_i32{1100}));
+
   assert(1100 == zx_cast_to_u16<zx_i64>(zx_i64{1100}, &overflow));
   assert(!overflow);
+  assert(1100 == zx_cast_unsafe_to_u16<zx_i64>(zx_i64{1100}));
 
   // cast to u32
   overflow = false;
   assert(69 == zx_cast_to_u32<zx_u8>(zx_u8{69}, &overflow));
   assert(!overflow);
+  assert(69 == zx_cast_unsafe_to_u32<zx_u8>(zx_u8{69}));
+
   assert(1100 == zx_cast_to_u32<zx_u16>(zx_u16{1100}, &overflow));
   assert(!overflow);
-  assert(ZX_U16_MAX + 1 ==
-         zx_cast_to_u32<zx_u32>(zx_u32{ZX_U16_MAX + 1}, &overflow));
+  assert(1100 == zx_cast_unsafe_to_u32<zx_u16>(zx_u16{1100}));
+
+  assert(zx_u32{ZX_U16_MAX} + 1__wbu ==
+         zx_cast_to_u32<zx_u32>(zx_u32{ZX_U16_MAX} + 1__wbu, &overflow));
   assert(!overflow);
-  assert(ZX_U16_MAX + 1 ==
-         zx_cast_to_u32<zx_u64>(zx_u64{ZX_U16_MAX + 1}, &overflow));
+  assert(zx_u32{ZX_U16_MAX} + 1__wbu ==
+         zx_cast_unsafe_to_u32<zx_u32>(zx_u32{ZX_U16_MAX} + 1__wbu));
+
+  assert(zx_u64{ZX_U16_MAX} + 1__wbu ==
+         zx_cast_to_u32<zx_u64>(zx_u64{ZX_U16_MAX} + 1__wbu, &overflow));
   assert(!overflow);
+  assert(zx_u32{ZX_U16_MAX} + 1__wbu ==
+         zx_cast_unsafe_to_u32<zx_u64>(zx_u64{ZX_U16_MAX} + 1__wbu));
+
   assert(120 == zx_cast_to_u32<zx_i8>(zx_i8{120}, &overflow));
   assert(!overflow);
+  assert(120 == zx_cast_unsafe_to_u32<zx_i8>(zx_i8{120}));
+
   assert(1100 == zx_cast_to_u32<zx_i16>(zx_i16{1100}, &overflow));
   assert(!overflow);
-  assert(ZX_U16_MAX + 1 ==
-         zx_cast_to_u32<zx_i32>(zx_i32{ZX_U16_MAX + 1}, &overflow));
+  assert(1100 == zx_cast_unsafe_to_u32<zx_i16>(zx_i16{1100}));
+
+  assert(zx_i32{ZX_U16_MAX} + 1__wb ==
+         zx_cast_to_u32<zx_i32>(zx_i32{ZX_U16_MAX} + 1__wb, &overflow));
   assert(!overflow);
+  assert(zx_i32{ZX_U16_MAX} + 1__wb ==
+         zx_cast_unsafe_to_u32<zx_i32>(zx_i32{ZX_U16_MAX} + 1__wb));
+
   assert(ZX_U16_MAX + 1 ==
          zx_cast_to_u32<zx_i64>(zx_i64{ZX_U16_MAX + 1}, &overflow));
   assert(!overflow);
+  assert(zx_i64{ZX_U16_MAX} + 1__wb ==
+         zx_cast_unsafe_to_u32<zx_i64>(zx_i64{ZX_U16_MAX} + 1__wb));
 
   // cast to u64
   overflow = false;
   assert(69 == zx_cast_to_u64<zx_u8>(zx_u8{69}, &overflow));
   assert(!overflow);
+  assert(69 == zx_cast_unsafe_to_u64<zx_u8>(zx_u8{69}));
+
   assert(1100 == zx_cast_to_u64<zx_u16>(zx_u16{1100}, &overflow));
   assert(!overflow);
-  assert(ZX_U16_MAX + 1 ==
-         zx_cast_to_u64<zx_u32>(zx_u32{ZX_U16_MAX + 1}, &overflow));
+  assert(1100 == zx_cast_unsafe_to_u64<zx_u16>(zx_u16{1100}));
+
+  assert(zx_u32{ZX_U16_MAX} + 1__wbu ==
+         zx_cast_to_u64<zx_u32>(zx_u32{ZX_U16_MAX} + 1__wbu, &overflow));
   assert(!overflow);
+  assert(zx_u32{ZX_U16_MAX} + 1__wbu ==
+         zx_cast_unsafe_to_u64<zx_u32>(zx_u32{ZX_U16_MAX} + 1__wbu));
+
   assert(ZX_U32_MAX + zx_u64{1} ==
          zx_cast_to_u64<zx_u64>(zx_u64{ZX_U32_MAX + zx_u64{1}}, &overflow));
   assert(!overflow);
+  assert(zx_u64{ZX_U16_MAX} + 1__wbu ==
+         zx_cast_unsafe_to_u64<zx_u64>(zx_u64{ZX_U16_MAX} + 1__wbu));
+
   assert(120 == zx_cast_to_u64<zx_i8>(zx_i8{120}, &overflow));
   assert(!overflow);
+  assert(120 == zx_cast_unsafe_to_u64<zx_i8>(zx_i8{120}));
+
   assert(1100 == zx_cast_to_u64<zx_i16>(zx_i16{1100}, &overflow));
   assert(!overflow);
-  assert(ZX_U16_MAX + 1 ==
-         zx_cast_to_u64<zx_i32>(zx_i32{ZX_U16_MAX + 1}, &overflow));
+  assert(1100 == zx_cast_unsafe_to_u64<zx_i16>(zx_i16{1100}));
+
+  assert(zx_i32{ZX_U16_MAX} + 1__wb ==
+         zx_cast_to_u64<zx_i32>(zx_i32{ZX_U16_MAX} + 1__wb, &overflow));
   assert(!overflow);
+  assert(zx_i32{ZX_U16_MAX} + 1__wb ==
+         zx_cast_unsafe_to_u64<zx_i32>(zx_i32{ZX_U16_MAX} + 1__wb));
+
   assert(ZX_U32_MAX + zx_u64{1} ==
          zx_cast_to_u64<zx_i64>(zx_i64{ZX_U32_MAX + zx_u64{1}}, &overflow));
   assert(!overflow);
+  assert(zx_i64{ZX_U16_MAX} + 1__wb ==
+         zx_cast_unsafe_to_u64<zx_i64>(zx_i64{ZX_U16_MAX} + 1__wb));
 
   // cast to i8
   overflow = false;
   assert(69 == zx_cast_to_i8<zx_u8>(zx_u8{69}, &overflow));
   assert(!overflow);
+  assert(69 == zx_cast_unsafe_to_i8<zx_u8>(zx_u8{69}));
+
   assert(69 == zx_cast_to_i8<zx_u16>(zx_u16{69}, &overflow));
   assert(!overflow);
+  assert(69 == zx_cast_unsafe_to_i8<zx_u16>(zx_u16{69}));
+
   assert(69 == zx_cast_to_i8<zx_u32>(zx_u32{69}, &overflow));
   assert(!overflow);
+  assert(69 == zx_cast_unsafe_to_i8<zx_u32>(zx_u32{69}));
+
   assert(69 == zx_cast_to_i8<zx_u64>(zx_u64{69}, &overflow));
   assert(!overflow);
+  assert(69 == zx_cast_unsafe_to_i8<zx_u64>(zx_u64{69}));
+
   assert(-69 == zx_cast_to_i8<zx_i8>(zx_i8{-69}, &overflow));
   assert(!overflow);
+  assert(-69 == zx_cast_unsafe_to_i8<zx_i8>(zx_i8{-69}));
+
   assert(-69 == zx_cast_to_i8<zx_i16>(zx_i16{-69}, &overflow));
   assert(!overflow);
+  assert(-69 == zx_cast_unsafe_to_i8<zx_i16>(zx_i16{-69}));
+
   assert(-69 == zx_cast_to_i8<zx_i32>(zx_i32{-69}, &overflow));
   assert(!overflow);
+  assert(-69 == zx_cast_unsafe_to_i8<zx_i32>(zx_i32{-69}));
+
   assert(-69 == zx_cast_to_i8<zx_i64>(zx_i64{-69}, &overflow));
   assert(!overflow);
+  assert(-69 == zx_cast_unsafe_to_i8<zx_i64>(zx_i64{-69}));
 
   // cast to i16
   overflow = false;
   assert(69 == zx_cast_to_i16<zx_u8>(zx_u8{69}, &overflow));
   assert(!overflow);
+  assert(69 == zx_cast_unsafe_to_i16<zx_u8>(zx_u8{69}));
+
   assert(1100 == zx_cast_to_i16<zx_u16>(zx_u16{1100}, &overflow));
   assert(!overflow);
+  assert(1100 == zx_cast_unsafe_to_i16<zx_u16>(zx_u16{1100}));
+
   assert(1100 == zx_cast_to_i16<zx_u32>(zx_u32{1100}, &overflow));
   assert(!overflow);
+  assert(1100 == zx_cast_unsafe_to_i16<zx_u32>(zx_u32{1100}));
+
   assert(1100 == zx_cast_to_i16<zx_u64>(zx_u64{1100}, &overflow));
   assert(!overflow);
+  assert(1100 == zx_cast_unsafe_to_i16<zx_u64>(zx_u64{1100}));
+
   assert(-120 == zx_cast_to_i16<zx_i8>(zx_i8{-120}, &overflow));
   assert(!overflow);
+  assert(-120 == zx_cast_unsafe_to_i16<zx_i8>(zx_i8{-120}));
+
   assert(-1100 == zx_cast_to_i16<zx_i16>(zx_i16{-1100}, &overflow));
   assert(!overflow);
+  assert(-1100 == zx_cast_unsafe_to_i16<zx_i16>(zx_i16{-1100}));
+
   assert(-1100 == zx_cast_to_i16<zx_i32>(zx_i32{-1100}, &overflow));
   assert(!overflow);
+  assert(-1100 == zx_cast_unsafe_to_i16<zx_i32>(zx_i32{-1100}));
+
   assert(-1100 == zx_cast_to_i16<zx_i64>(zx_i64{-1100}, &overflow));
   assert(!overflow);
+  assert(-1100 == zx_cast_unsafe_to_i16<zx_i64>(zx_i64{-1100}));
 
   // cast to i32
   overflow = false;
   assert(69 == zx_cast_to_i32<zx_u8>(zx_u8{69}, &overflow));
   assert(!overflow);
+  assert(69 == zx_cast_unsafe_to_i32<zx_u8>(zx_u8{69}));
+
   assert(1100 == zx_cast_to_i32<zx_u16>(zx_u16{1100}, &overflow));
   assert(!overflow);
-  assert(ZX_U16_MAX + 1 ==
-         zx_cast_to_i32<zx_u32>(zx_u32{ZX_U16_MAX + 1}, &overflow));
+  assert(1100 == zx_cast_unsafe_to_i32<zx_u16>(zx_u16{1100}));
+
+  assert(zx_u32{ZX_U16_MAX} + 1__wbu ==
+         zx_cast_to_i32<zx_u32>(zx_u32{ZX_U16_MAX} + 1__wbu, &overflow));
   assert(!overflow);
-  assert(ZX_U16_MAX + 1 ==
-         zx_cast_to_i32<zx_u64>(zx_u64{ZX_U16_MAX + 1}, &overflow));
+  assert(zx_u32{ZX_U16_MAX} + 1__wbu ==
+         zx_cast_unsafe_to_i32<zx_u32>(zx_u32{ZX_U16_MAX} + 1__wbu));
+
+  assert(zx_u64{ZX_U16_MAX} + 1__wbu ==
+         zx_cast_to_i32<zx_u64>(zx_u64{ZX_U16_MAX} + 1__wbu, &overflow));
   assert(!overflow);
+  assert(zx_u64{ZX_U16_MAX} + 1__wbu ==
+         zx_cast_unsafe_to_i32<zx_u64>(zx_u64{ZX_U16_MAX} + 1__wbu));
+
   assert(-120 == zx_cast_to_i32<zx_i8>(zx_i8{-120}, &overflow));
   assert(!overflow);
+  assert(-120 == zx_cast_unsafe_to_i32<zx_i8>(zx_i8{-120}));
+
   assert(-1100 == zx_cast_to_i32<zx_i16>(zx_i16{-1100}, &overflow));
   assert(!overflow);
+  assert(-1100 == zx_cast_unsafe_to_i32<zx_i16>(zx_i16{-1100}));
+
   assert(-65537 == zx_cast_to_i32<zx_i32>(zx_i32{-65537}, &overflow));
   assert(!overflow);
+  assert(-65537 == zx_cast_unsafe_to_i32<zx_i32>(zx_i32{-65537}));
+
   assert(-65537 == zx_cast_to_i32<zx_i64>(zx_i64{-65537}, &overflow));
   assert(!overflow);
+  assert(-65537 == zx_cast_unsafe_to_i32<zx_i64>(zx_i64{-65537}));
 
   // cast to i64
   overflow = false;
   assert(69 == zx_cast_to_i64<zx_u8>(zx_u8{69}, &overflow));
   assert(!overflow);
+  assert(69 == zx_cast_unsafe_to_i64<zx_u8>(zx_u8{69}));
+
   assert(1100 == zx_cast_to_i64<zx_u16>(zx_u16{1100}, &overflow));
   assert(!overflow);
-  assert(ZX_U16_MAX + 1 ==
-         zx_cast_to_i64<zx_u32>(zx_u32{ZX_U16_MAX + 1}, &overflow));
+  assert(1100 == zx_cast_unsafe_to_i64<zx_u16>(zx_u16{1100}));
+
+  assert(zx_u32{ZX_U16_MAX} + 1__wbu ==
+         zx_cast_to_i64<zx_u32>(zx_u32{ZX_U16_MAX} + 1__wbu, &overflow));
   assert(!overflow);
-  assert(ZX_U32_MAX + zx_u64{1} ==
-         zx_cast_to_i64<zx_u64>(zx_u64{ZX_U32_MAX + zx_u64{1}}, &overflow));
+  assert(zx_u32{ZX_U16_MAX} + 1__wbu ==
+         zx_cast_unsafe_to_i64<zx_u32>(zx_u32{ZX_U16_MAX} + 1__wbu));
+
+  assert(zx_u64{ZX_U32_MAX} + 1__wbu ==
+         zx_cast_to_i64<zx_u64>(zx_u64{ZX_U32_MAX} + 1__wbu, &overflow));
   assert(!overflow);
+  assert(zx_u64{ZX_U32_MAX} + 1__wbu ==
+         zx_cast_unsafe_to_i64<zx_u64>(zx_u64{ZX_U32_MAX} + 1__wbu));
+
   assert(-120 == zx_cast_to_i64<zx_i8>(zx_i8{-120}, &overflow));
   assert(!overflow);
+  assert(-120 == zx_cast_unsafe_to_i64<zx_i8>(zx_i8{-120}));
+
   assert(-1100 == zx_cast_to_i64<zx_i16>(zx_i16{-1100}, &overflow));
   assert(!overflow);
+  assert(-1100 == zx_cast_unsafe_to_i64<zx_i16>(zx_i16{-1100}));
+
   assert(-65537 == zx_cast_to_i64<zx_i32>(zx_i32{-65537}, &overflow));
   assert(!overflow);
+  assert(-65537 == zx_cast_unsafe_to_i64<zx_i32>(zx_i32{-65537}));
+
   assert(-4294967297__wb ==
          zx_cast_to_i64<zx_i64>(zx_i64{-4294967297__wb}, &overflow));
   assert(!overflow);
+  assert(-4294967297__wb ==
+         zx_cast_unsafe_to_i64<zx_i64>(zx_i64{-4294967297__wb}));
 
   // cast to u8 overflow
   overflow = false;

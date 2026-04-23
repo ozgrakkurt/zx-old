@@ -119,7 +119,7 @@ constexpr static inline T zx_add_(T a, T b, bool* failure) {
     if (failure != nullptr) [[likely]] {
       *failure = true;
     } else {
-#ifdef ZX_DEBUG
+#ifdef ZX_DEV
       __builtin_trap();
 #endif
     }
@@ -153,7 +153,7 @@ constexpr static inline zx_i64 zx_add_i64(zx_i64 a, zx_i64 b, bool* failure) {
 
 template <typename T>
 constexpr static inline T zx_add_unsafe_(T a, T b) {
-#ifdef ZX_DEBUG
+#ifdef ZX_DEV
   T res;
   if (__builtin_add_overflow(a, b, &res)) [[unlikely]] {
     __builtin_trap();
@@ -241,7 +241,7 @@ constexpr static inline T zx_sub_(T a, T b, bool* failure) {
     if (failure != nullptr) [[likely]] {
       *failure = true;
     } else {
-#ifdef ZX_DEBUG
+#ifdef ZX_DEV
       __builtin_trap();
 #endif
     }
@@ -275,14 +275,14 @@ constexpr static inline zx_i64 zx_sub_i64(zx_i64 a, zx_i64 b, bool* failure) {
 
 template <typename T>
 constexpr static inline T zx_sub_unsafe_(T a, T b) {
-#ifdef ZX_DEBUG
+#ifdef ZX_DEV
   T res;
   if (__builtin_sub_overflow(a, b, &res)) [[unlikely]] {
     __builtin_trap();
   }
   return res;
 #else
-  return a + b;
+  return a - b;
 #endif
 }
 constexpr static inline zx_u8 zx_sub_unsafe_u8(zx_u8 a, zx_u8 b) {
@@ -334,7 +334,7 @@ constexpr static inline T zx_mul_(T a, T b, bool* failure) {
     if (failure != nullptr) [[likely]] {
       *failure = true;
     } else {
-#ifdef ZX_DEBUG
+#ifdef ZX_DEV
       __builtin_trap();
 #endif
     }
@@ -368,14 +368,14 @@ constexpr static inline zx_i64 zx_mul_i64(zx_i64 a, zx_i64 b, bool* failure) {
 
 template <typename T>
 constexpr static inline T zx_mul_unsafe_(T a, T b) {
-#ifdef ZX_DEBUG
+#ifdef ZX_DEV
   T res;
   if (__builtin_mul_overflow(a, b, &res)) [[unlikely]] {
     __builtin_trap();
   }
   return res;
 #else
-  return a + b;
+  return a * b;
 #endif
 }
 constexpr static inline zx_u8 zx_mul_unsafe_u8(zx_u8 a, zx_u8 b) {
@@ -409,7 +409,7 @@ constexpr static inline T zx_div_(T a, T b, bool* failure) {
     if (failure != nullptr) [[likely]] {
       *failure = true;
     } else {
-#ifdef ZX_DEBUG
+#ifdef ZX_DEV
       __builtin_trap();
 #endif
     }
@@ -433,7 +433,7 @@ constexpr static inline zx_u64 zx_div_u64(zx_u64 a, zx_u64 b, bool* failure) {
 template <typename T>
 constexpr static inline T zx_div_unsafe_(T a, T b) {
   if (b == 0) [[unlikely]] {
-#ifdef ZX_DEBUG
+#ifdef ZX_DEV
     __builtin_trap();
 #else
     return 0;
@@ -460,7 +460,7 @@ constexpr static inline T zx_mod_(T a, T b, bool* failure) {
     if (failure != nullptr) [[likely]] {
       *failure = true;
     } else {
-#ifdef ZX_DEBUG
+#ifdef ZX_DEV
       __builtin_trap();
 #endif
     }
@@ -484,7 +484,7 @@ constexpr static inline zx_u64 zx_mod_u64(zx_u64 a, zx_u64 b, bool* failure) {
 template <typename T>
 constexpr static inline T zx_mod_unsafe_(T a, T b) {
   if (b == 0) [[unlikely]] {
-#ifdef ZX_DEBUG
+#ifdef ZX_DEV
     __builtin_trap();
 #else
     return 0;
@@ -535,9 +535,10 @@ constexpr static inline zx_u64 zx_next_multiple_of_u64(zx_u64 a,
 
 template <typename T>
 constexpr static inline T zx_next_multiple_of_unsafe_(T a, T b) {
-  T const c = zx_add_unsafe_<T>(a, 1);
-  T const d = zx_div_unsafe_<T>(c, b);
-  return zx_mul_unsafe_<T>(d, b);
+  T const c = zx_add_unsafe_<T>(a, b);
+  T const d = zx_sub_unsafe_<T>(c, 1);
+  T const e = zx_div_unsafe_<T>(d, b);
+  return zx_mul_unsafe_<T>(e, b);
 }
 constexpr static inline zx_u8 zx_next_multiple_of_unsafe_u8(zx_u8 a, zx_u8 b) {
   return zx_next_multiple_of_unsafe_<zx_u8>(a, b);
@@ -678,7 +679,7 @@ constexpr static inline T zx_shl_(T a, zx_u8 amount, bool* failure) {
     if (failure != nullptr) [[likely]] {
       *failure = true;
     } else {
-#ifdef ZX_DEBUG
+#ifdef ZX_DEV
       __builtin_trap();
 #endif
     }
@@ -709,7 +710,7 @@ template <typename T>
 constexpr static inline T zx_shl_unsafe_(T a, zx_u8 amount) {
   constexpr zx_u8 N_BITS = sizeof(T) * 8;
   if (amount >= N_BITS) [[unlikely]] {
-#ifdef ZX_DEBUG
+#ifdef ZX_DEV
     __builtin_trap();
 #else
     return 0;
@@ -737,7 +738,7 @@ constexpr static inline T zx_shr_(T a, zx_u8 amount, bool* failure) {
     if (failure != nullptr) [[likely]] {
       *failure = true;
     } else {
-#ifdef ZX_DEBUG
+#ifdef ZX_DEV
       __builtin_trap();
 #endif
     }
@@ -768,7 +769,7 @@ template <typename T>
 constexpr static inline T zx_shr_unsafe_(T a, zx_u8 amount) {
   constexpr zx_u8 N_BITS = sizeof(T) * 8;
   if (amount >= N_BITS) [[unlikely]] {
-#ifdef ZX_DEBUG
+#ifdef ZX_DEV
     __builtin_trap();
 #else
     return 0;
@@ -868,7 +869,7 @@ constexpr static inline Tgt zx_int_cast_(Src a, bool* failure) {
     if (failure != nullptr) [[likely]] {
       *failure = true;
     } else {
-#ifdef ZX_DEBUG
+#ifdef ZX_DEV
       __builtin_trap();
 #endif
     }
@@ -917,36 +918,36 @@ constexpr static inline Tgt zx_int_cast_unsafe_(Src a) {
   return res;
 }
 template <typename T>
-constexpr static inline zx_u8 zx_cast_unsafe_to_u8(T a, bool* failure) {
-  return zx_int_cast_unsafe_<zx_u8, T>(a, failure);
+constexpr static inline zx_u8 zx_cast_unsafe_to_u8(T a) {
+  return zx_int_cast_unsafe_<zx_u8, T>(a);
 }
 template <typename T>
-constexpr static inline zx_u16 zx_cast_unsafe_to_u16(T a, bool* failure) {
-  return zx_int_cast_unsafe_<zx_u16, T>(a, failure);
+constexpr static inline zx_u16 zx_cast_unsafe_to_u16(T a) {
+  return zx_int_cast_unsafe_<zx_u16, T>(a);
 }
 template <typename T>
-constexpr static inline zx_u32 zx_cast_unsafe_to_u32(T a, bool* failure) {
-  return zx_int_cast_unsafe_<zx_u32, T>(a, failure);
+constexpr static inline zx_u32 zx_cast_unsafe_to_u32(T a) {
+  return zx_int_cast_unsafe_<zx_u32, T>(a);
 }
 template <typename T>
-constexpr static inline zx_u64 zx_cast_unsafe_to_u64(T a, bool* failure) {
-  return zx_int_cast_unsafe_<zx_u64, T>(a, failure);
+constexpr static inline zx_u64 zx_cast_unsafe_to_u64(T a) {
+  return zx_int_cast_unsafe_<zx_u64, T>(a);
 }
 template <typename T>
-constexpr static inline zx_i8 zx_cast_unsafe_to_i8(T a, bool* failure) {
-  return zx_int_cast_unsafe_<zx_i8, T>(a, failure);
+constexpr static inline zx_i8 zx_cast_unsafe_to_i8(T a) {
+  return zx_int_cast_unsafe_<zx_i8, T>(a);
 }
 template <typename T>
-constexpr static inline zx_i16 zx_cast_unsafe_to_i16(T a, bool* failure) {
-  return zx_int_cast_unsafe_<zx_i16, T>(a, failure);
+constexpr static inline zx_i16 zx_cast_unsafe_to_i16(T a) {
+  return zx_int_cast_unsafe_<zx_i16, T>(a);
 }
 template <typename T>
-constexpr static inline zx_i32 zx_cast_unsafe_to_i32(T a, bool* failure) {
-  return zx_int_cast_unsafe_<zx_i32, T>(a, failure);
+constexpr static inline zx_i32 zx_cast_unsafe_to_i32(T a) {
+  return zx_int_cast_unsafe_<zx_i32, T>(a);
 }
 template <typename T>
-constexpr static inline zx_i64 zx_cast_unsafe_to_i64(T a, bool* failure) {
-  return zx_int_cast_unsafe_<zx_i64, T>(a, failure);
+constexpr static inline zx_i64 zx_cast_unsafe_to_i64(T a) {
+  return zx_int_cast_unsafe_<zx_i64, T>(a);
 }
 
 #endif

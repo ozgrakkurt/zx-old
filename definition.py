@@ -31,5 +31,6 @@ class Project:
 @dataclass
 class Profile:
     opt_level: int
-    debug: bool
+    dev: bool
+    debug_info: bool
     fuzz: bool

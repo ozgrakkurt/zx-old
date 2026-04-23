@@ -4,15 +4,22 @@ from definition import Executable, Library, Project, Profile
 
 
 PROFILES: Dict[str, Profile] = {
-    "debug": Profile(opt_level=0, debug=True, fuzz=False),
-    "debug_opt": Profile(opt_level=2, debug=True, fuzz=False),
+    "debug": Profile(opt_level=0, dev=True, debug_info=True, fuzz=False),
+    "debug_opt": Profile(opt_level=2, dev=True, debug_info=True, fuzz=False),
     "release": Profile(
         opt_level=2,
-        debug=False,
+        debug_info=False,
+        dev=False,
         fuzz=False,
     ),
-    "fuzz": Profile(opt_level=2, debug=True, fuzz=True),
-    "fuzz_noopt": Profile(opt_level=0, debug=True, fuzz=True),
+    "release_dbg": Profile(
+        opt_level=2,
+        debug_info=True,
+        dev=False,
+        fuzz=False,
+    ),
+    "fuzz": Profile(opt_level=2, debug_info=True, dev=True, fuzz=True),
+    "fuzz_noopt": Profile(opt_level=0, debug_info=True, dev=True, fuzz=True),
 }
 
 ZX: Library = Library(

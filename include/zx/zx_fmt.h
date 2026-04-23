@@ -30,7 +30,7 @@ struct ZXFmt {
   }
 
   inline void reset_unsafe() {
-#ifdef ZX_DEBUG
+#ifdef ZX_DEV
     this->m_mem.fill(zx_u8{0});
 #endif
     this->m_offset = 0;
@@ -45,7 +45,7 @@ struct ZXFmt {
       if (overflow != nullptr) {
         *overflow = true;
       } else {
-#ifdef ZX_DEBUG
+#ifdef ZX_DEV
         __builtin_trap();
 #endif
       }
@@ -72,7 +72,7 @@ struct ZXFmt {
       if (overflow != nullptr) {
         *overflow = true;
       } else {
-#ifdef ZX_DEBUG
+#ifdef ZX_DEV
         __builtin_trap();
 #endif
       }
@@ -110,7 +110,7 @@ struct ZXFmt {
         if (overflow != nullptr) {
           *overflow = true;
         } else {
-#ifdef ZX_DEBUG
+#ifdef ZX_DEV
           __builtin_trap();
 #endif
         }
