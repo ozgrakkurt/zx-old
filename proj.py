@@ -39,6 +39,7 @@ ZX: Library = Library(
         [
             "zx_int_test",
             "zx_slice_test",
+            "zx_libc_test",
         ]
     ),
     # test_targets={
