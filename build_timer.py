@@ -41,9 +41,23 @@ subprocess.run(["ninja", "-C", "build/release", "test"], check=True)
 
 t4 = time.perf_counter()
 
+subprocess.run(["rm", "-rf", "build"])
+subprocess.run(["./configure.py"], check=True)
+subprocess.run(["ninja", "-C", "build/debug_opt"], check=True)
+
+t5 = time.perf_counter()
+
+subprocess.run(["rm", "-rf", "build"])
+subprocess.run(["./configure.py"], check=True)
+subprocess.run(["ninja", "-C", "build/debug_opt", "test"], check=True)
+
+t6 = time.perf_counter()
+
 print(f"Debug Build: {t1 - t0}")
 print(f"Release Build: {t2 - t1}")
 print(f"Debug Test: {t3 - t2}")
 print(f"Release Test: {t4 - t3}")
+print(f"DebugOpt Build: {t3 - t2}")
+print(f"DebugOpt Test: {t4 - t3}")
 
-print(f"Total Time: {t4 - t0}")
+print(f"Total Time: {t6 - t0}")
