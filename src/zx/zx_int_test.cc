@@ -29,17 +29,25 @@ int main(void) {
   zx_add_u8(69, 31, &overflow);
   assert(!overflow);
 
+  assert(100 == zx_add_unsafe_u8(69, 31));
+
   overflow = false;
   zx_add_u16(69, 31, &overflow);
   assert(!overflow);
 
+  assert(100 == zx_add_unsafe_u16(69, 31));
+
   overflow = false;
   zx_add_u32(69, 31, &overflow);
   assert(!overflow);
+  
+  assert(100 == zx_add_unsafe_u32(69, 31));
 
   overflow = false;
   zx_add_u64(69, 31, &overflow);
   assert(!overflow);
+  
+  assert(100 == zx_add_unsafe_u64(69, 31));
 
   // sub one over
   overflow = false;
