@@ -925,6 +925,10 @@ int main(void) {
 
   // cast to u64 overflow
   overflow = false;
+  zx_cast_to_u64<zx_u128>(zx_u128{ZX_U64_MAX} + 1__wbu, &overflow);
+  assert(overflow);
+
+  overflow = false;
   zx_cast_to_u64<zx_i8>(zx_i8{-1}, &overflow);
   assert(overflow);
 

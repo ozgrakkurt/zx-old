@@ -481,6 +481,16 @@ constexpr static inline zx_u64 zx_mod_u64(zx_u64 a, zx_u64 b, bool* failure) {
   return zx_mod_<zx_u64>(a, b, failure);
 }
 
+constexpr static inline zx_u32 zx_rand_mod_u32(zx_u32 a, zx_u32 b) {
+  zx_u64 const mul = zx_u64{a} * zx_u64{b};
+  return (zx_u32)(mul >> 32);
+}
+
+constexpr static inline zx_u64 zx_rand_mod_u64(zx_u64 a, zx_u64 b) {
+  zx_u128 const mul = zx_u128{a} * zx_u128{b};
+  return (zx_u64)(mul >> 64);
+}
+
 template <typename T>
 constexpr static inline T zx_mod_unsafe_(T a, T b) {
   if (b == 0) [[unlikely]] {
