@@ -597,7 +597,7 @@ struct ZXSliceMut {
       return ZXSliceStatus::OutOfBounds;
     }
 
-    __builtin_memcpy(&this->m_ptr[index], val, sizeof(U));
+    __builtin_memcpy(&this->m_ptr[index], &val, sizeof(U));
     return ZXSliceStatus::Ok;
   }
 
@@ -611,7 +611,7 @@ struct ZXSliceMut {
     }
 #endif
 
-    __builtin_memcpy(&this->m_ptr[index], val, sizeof(U));
+    __builtin_memcpy(&this->m_ptr[index], &val, sizeof(U));
   }
 
   inline void fill(T val) const {

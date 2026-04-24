@@ -40,6 +40,9 @@ ZX: Library = Library(
             "zx_int_test",
             "zx_slice_test",
             "zx_libc_test",
+            "zx_time_test",
+            "zx_xoshiro256_test",
+            "zx_rapidhash_v3_test",
         ]
     ),
     # test_targets={

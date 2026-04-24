@@ -9,7 +9,6 @@ enum class [[nodiscard]] ZXAllocStatus : zx_u8_c {
   Nullptr,
   OutOfMemory,
   IntegerOverflow,
-  InvalidAlignment,
   SliceError,
   SliceCastError,
 };
