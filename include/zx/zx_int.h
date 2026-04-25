@@ -99,18 +99,6 @@ constexpr static inline zx_u32 zx_saturating_add_u32(zx_u32 a, zx_u32 b) {
 constexpr static inline zx_u64 zx_saturating_add_u64(zx_u64 a, zx_u64 b) {
   return zx_saturating_add_<zx_u64>(a, b);
 }
-constexpr static inline zx_i8 zx_saturating_add_i8(zx_i8 a, zx_i8 b) {
-  return zx_saturating_add_<zx_i8>(a, b);
-}
-constexpr static inline zx_i16 zx_saturating_add_i16(zx_i16 a, zx_i16 b) {
-  return zx_saturating_add_<zx_i16>(a, b);
-}
-constexpr static inline zx_i32 zx_saturating_add_i32(zx_i32 a, zx_i32 b) {
-  return zx_saturating_add_<zx_i32>(a, b);
-}
-constexpr static inline zx_i64 zx_saturating_add_i64(zx_i64 a, zx_i64 b) {
-  return zx_saturating_add_<zx_i64>(a, b);
-}
 
 template <typename T>
 constexpr static inline T zx_add_(T a, T b, bool* failure) {
@@ -220,18 +208,6 @@ constexpr static inline zx_u32 zx_saturating_sub_u32(zx_u32 a, zx_u32 b) {
 }
 constexpr static inline zx_u64 zx_saturating_sub_u64(zx_u64 a, zx_u64 b) {
   return zx_saturating_sub_<zx_u64>(a, b);
-}
-constexpr static inline zx_i8 zx_saturating_sub_i8(zx_i8 a, zx_i8 b) {
-  return zx_saturating_sub_<zx_i8>(a, b);
-}
-constexpr static inline zx_i16 zx_saturating_sub_i16(zx_i16 a, zx_i16 b) {
-  return zx_saturating_sub_<zx_i16>(a, b);
-}
-constexpr static inline zx_i32 zx_saturating_sub_i32(zx_i32 a, zx_i32 b) {
-  return zx_saturating_sub_<zx_i32>(a, b);
-}
-constexpr static inline zx_i64 zx_saturating_sub_i64(zx_i64 a, zx_i64 b) {
-  return zx_saturating_sub_<zx_i64>(a, b);
 }
 
 template <typename T>

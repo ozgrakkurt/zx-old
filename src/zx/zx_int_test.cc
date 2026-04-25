@@ -7,6 +7,55 @@ static void assert(bool test) {
 }
 
 int main(void) {
+  // wrapping add
+  assert(1 == zx_wrapping_add_u8(ZX_U8_MAX, 2));
+  assert(1 == zx_wrapping_add_u16(ZX_U16_MAX, 2));
+  assert(1 == zx_wrapping_add_u32(ZX_U32_MAX, 2));
+  assert(1 == zx_wrapping_add_u64(ZX_U64_MAX, 2));
+
+  assert(69 == zx_wrapping_add_u8(65, 4));
+  assert(69 == zx_wrapping_add_u16(65, 4));
+  assert(69 == zx_wrapping_add_u32(65, 4));
+  assert(69 == zx_wrapping_add_u64(65, 4));
+
+  // wrapping sub
+  assert(1 == zx_wrapping_sub_u8(0, ZX_U8_MAX));
+  assert(1 == zx_wrapping_sub_u16(0, ZX_U16_MAX));
+  assert(1 == zx_wrapping_sub_u32(0, ZX_U32_MAX));
+  assert(1 == zx_wrapping_sub_u64(0, ZX_U64_MAX));
+
+  assert(61 == zx_wrapping_sub_u8(65, 4));
+  assert(61 == zx_wrapping_sub_u16(65, 4));
+  assert(61 == zx_wrapping_sub_u32(65, 4));
+  assert(61 == zx_wrapping_sub_u64(65, 4));
+
+  // wrapping mul
+  assert(ZX_U8_MAX - 2__wbu == zx_wrapping_mul_u8(ZX_U8_MAX, 3));
+  assert(ZX_U16_MAX - 2__wbu == zx_wrapping_mul_u16(ZX_U16_MAX, 3));
+  assert(ZX_U32_MAX - 2__wbu == zx_wrapping_mul_u32(ZX_U32_MAX, 3));
+  assert(ZX_U64_MAX - 2__wbu == zx_wrapping_mul_u64(ZX_U64_MAX, 3));
+
+  assert(3 == zx_wrapping_mul_u8(1, 3));
+  assert(3 == zx_wrapping_mul_u16(1, 3));
+  assert(3 == zx_wrapping_mul_u32(1, 3));
+  assert(3 == zx_wrapping_mul_u64(1, 3));
+
+  // saturating add
+  assert(ZX_U8_MAX == zx_saturating_add_u8(ZX_U8_MAX - 1, 250));
+  assert(ZX_U16_MAX == zx_saturating_add_u16(ZX_U16_MAX - 1, 250));
+  assert(ZX_U32_MAX == zx_saturating_add_u32(ZX_U32_MAX - 1, 250));
+  assert(ZX_U64_MAX == zx_saturating_add_u64(ZX_U64_MAX - 1, 250));
+  assert(2 == zx_saturating_add_u8(1, 1));
+  assert(2 == zx_saturating_add_u16(1, 1));
+  assert(2 == zx_saturating_add_u32(1, 1));
+  assert(2 == zx_saturating_add_u64(1, 1));
+
+  // saturating sub
+  assert(0 == zx_saturating_sub_u8(1, 2));
+  assert(0 == zx_saturating_sub_u16(1, 2));
+  assert(0 == zx_saturating_sub_u32(1, 2));
+  assert(0 == zx_saturating_sub_u64(1, 2));
+
   // add one over
   bool overflow = false;
   zx_add_u8(ZX_U8_MAX, 1, &overflow);
