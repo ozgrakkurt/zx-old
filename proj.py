@@ -4,22 +4,17 @@ from definition import Executable, Library, Project, Profile
 
 
 PROFILES: Dict[str, Profile] = {
-    "debug": Profile(opt_level=0, dev=True, debug_info=True, fuzz=False),
-    "debug_opt": Profile(opt_level=2, dev=True, debug_info=True, fuzz=False),
-    "release": Profile(
-        opt_level=2,
-        debug_info=False,
-        dev=False,
-        fuzz=False,
-    ),
-    "release_dbg": Profile(
-        opt_level=2,
-        debug_info=True,
-        dev=False,
-        fuzz=False,
-    ),
-    "fuzz": Profile(opt_level=2, debug_info=True, dev=True, fuzz=True),
-    "fuzz_noopt": Profile(opt_level=0, debug_info=True, dev=True, fuzz=True),
+    "test0": Profile(opt_level=0, dev=True, debug_info=True, fuzz=False),
+    "test1": Profile(opt_level=0, dev=False, debug_info=True, fuzz=False),
+    "test2": Profile(opt_level=2, dev=True, debug_info=True, fuzz=False),
+    "test3": Profile(opt_level=2, dev=False, debug_info=True, fuzz=False),
+    "test4": Profile(opt_level=3, dev=True, debug_info=True, fuzz=False),
+    "test5": Profile(opt_level=3, dev=False, debug_info=True, fuzz=False),
+    "bench0": Profile(opt_level=2, dev=False, debug_info=False, fuzz=False),
+    "bench1": Profile(opt_level=3, dev=False, debug_info=False, fuzz=False),
+    # "fuzz0": Profile(opt_level=2, debug_info=True, dev=True, fuzz=True),
+    # "fuzz1": Profile(opt_level=3, debug_info=True, dev=True, fuzz=True),
+    # "fuzz2": Profile(opt_level=0, debug_info=True, dev=True, fuzz=True),
 }
 
 ZX: Library = Library(
