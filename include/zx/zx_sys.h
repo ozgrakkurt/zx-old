@@ -161,24 +161,21 @@ static inline ZXSysStatus zx_sys_mmap(zx_u8* address,
   return ZXSysStatus::Ok;
 }
 
-static inline ZXSysStatus zx_sys_munmap(zx_u8* mem, zx_u64 length) {
-  zx_u64 const ret = zx_syscall2(ZX_SYSCALL_MUNMAP, (zx_u64)mem, length);
+static inline ZXSysStatus zx_sys_munmap(ZXSliceMut<zx_u8> mem) {
+  zx_u64 const ret =
+      zx_syscall2(ZX_SYSCALL_MUNMAP, (zx_u64)mem.ptr(), mem.len());
   return zx_sys_status_(ret);
 }
 
-static inline ZXSysStatus zx_sys_madvise(zx_u8* mem,
-                                         zx_u64 length,
-                                         zx_i32 advice) {
-  zx_u64 const ret =
-      zx_syscall3(ZX_SYSCALL_MADVISE, (zx_u64)mem, length, (zx_u64)advice);
+static inline ZXSysStatus zx_sys_madvise(ZXSliceMut<zx_u8> mem, zx_i32 advice) {
+  zx_u64 const ret = zx_syscall3(ZX_SYSCALL_MADVISE, (zx_u64)mem.ptr(),
+                                 mem.len(), (zx_u64)advice);
   return zx_sys_status_(ret);
 }
 
-static inline ZXSysStatus zx_sys_mprotect(zx_u8* mem,
-                                          zx_u64 length,
-                                          zx_i32 prot) {
-  zx_u64 const ret =
-      zx_syscall3(ZX_SYSCALL_MPROTECT, (zx_u64)mem, length, (zx_u64)prot);
+static inline ZXSysStatus zx_sys_mprotect(ZXSliceMut<zx_u8> mem, zx_i32 prot) {
+  zx_u64 const ret = zx_syscall3(ZX_SYSCALL_MPROTECT, (zx_u64)mem.ptr(),
+                                 mem.len(), (zx_u64)prot);
   return zx_sys_status_(ret);
 }
 

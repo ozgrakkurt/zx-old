@@ -88,8 +88,8 @@ static inline zx_u64 zx_rapidhash_v3_16_(ZXSlice<zx_u8> key, zx_u64 seed) {
       b = key.read_unaligned_unsafe<zx_u32>(zx_sub_unsafe_u64(key.len(), 4));
     }
   } else if (key.len() > 0) {
-    a = zx_shl_unsafe_u64((zx_u64)key.read_unsafe(0), 45) |
-        ((zx_u64)key.read_unsafe(zx_sub_unsafe_u64(key.len(), 1)));
+    a = zx_shl_unsafe_u64((zx_u64)zx_u8{key.read_unsafe(0)}, 45) |
+        ((zx_u64)zx_u8{key.read_unsafe(zx_sub_unsafe_u64(key.len(), 1))});
     b = (zx_u64)key.read_unsafe(zx_shr_unsafe_u64(key.len(), 1));
   } else {
     a = 0;
@@ -118,8 +118,7 @@ static inline zx_u64 zx_rapidhash_v3_long_(ZXSlice<zx_u8> key, zx_u64 seed) {
     zx_u64 s0 = s;
     zx_u64 s1 = s;
 
-    for (; zx_add_unsafe_u64(offset, 48) <= key.len();
-         offset = zx_add_unsafe_u64(offset, 48)) {
+    do {
       s = zx_rapidhash_v3_mix_(
           key.read_unaligned_unsafe<zx_u64>(offset) ^
               ZX_RAPIDHASH_V3_SECRET_[0],
@@ -136,17 +135,19 @@ static inline zx_u64 zx_rapidhash_v3_long_(ZXSlice<zx_u8> key, zx_u64 seed) {
               ZX_RAPIDHASH_V3_SECRET_[2],
           key.read_unaligned_unsafe<zx_u64>(zx_add_unsafe_u64(offset, 40)) ^
               s1);
-    }
+
+      offset = zx_add_unsafe_u64(offset, 48);
+    } while (zx_add_unsafe_u64(offset, 48) < key.len());
 
     s ^= s0;
     s ^= s1;
   }
 
-  if (zx_add_unsafe_u64(offset, 16) <= key.len()) {
+  if (zx_add_unsafe_u64(offset, 16) < key.len()) {
     s = zx_rapidhash_v3_mix_(
         key.read_unaligned_unsafe<zx_u64>(offset) ^ ZX_RAPIDHASH_V3_SECRET_[2],
         key.read_unaligned_unsafe<zx_u64>(zx_add_unsafe_u64(offset, 8)) ^ s);
-    if (zx_add_unsafe_u64(offset, 32) <= key.len()) {
+    if (zx_add_unsafe_u64(offset, 32) < key.len()) {
       s = zx_rapidhash_v3_mix_(
           key.read_unaligned_unsafe<zx_u64>(zx_add_unsafe_u64(offset, 16)) ^
               ZX_RAPIDHASH_V3_SECRET_[2],

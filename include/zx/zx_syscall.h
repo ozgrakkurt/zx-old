@@ -24,7 +24,7 @@ static inline zx_u64_c zx_syscall1(zx_u64_c num, zx_u64_c arg1) {
 
   __asm__ volatile("syscall"
                    : "=a"(ret)
-                   : "a"(num), "d"(arg1)
+                   : "a"(num), "D"(arg1)
                    : "rcx", "r11", "memory");
 
   return ret;
@@ -35,7 +35,7 @@ static inline zx_u64_c zx_syscall2(zx_u64_c num, zx_u64_c arg1, zx_u64_c arg2) {
 
   __asm__ volatile("syscall"
                    : "=a"(ret)
-                   : "a"(num), "d"(arg1), "s"(arg2)
+                   : "a"(num), "D"(arg1), "S"(arg2)
                    : "rcx", "r11", "memory");
 
   return ret;
@@ -49,7 +49,7 @@ static inline zx_u64_c zx_syscall3(zx_u64_c num,
 
   __asm__ volatile("syscall"
                    : "=a"(ret)
-                   : "a"(num), "d"(arg1), "s"(arg2), "d"(arg3)
+                   : "a"(num), "D"(arg1), "S"(arg2), "d"(arg3)
                    : "rcx", "r11", "memory");
 
   return ret;
@@ -65,7 +65,7 @@ static inline zx_u64_c zx_syscall4(zx_u64_c num,
 
   __asm__ volatile("syscall"
                    : "=a"(ret)
-                   : "a"(num), "d"(arg1), "s"(arg2), "d"(arg3), "r"(r10)
+                   : "a"(num), "D"(arg1), "S"(arg2), "d"(arg3), "r"(r10)
                    : "rcx", "r11", "memory");
 
   return ret;
@@ -83,7 +83,7 @@ static inline zx_u64_c zx_syscall5(zx_u64_c num,
 
   __asm__ volatile("syscall"
                    : "=a"(ret)
-                   : "a"(num), "d"(arg1), "s"(arg2), "d"(arg3), "r"(r10),
+                   : "a"(num), "D"(arg1), "S"(arg2), "d"(arg3), "r"(r10),
                      "r"(r8)
                    : "rcx", "r11", "memory");
 
@@ -104,7 +104,7 @@ static inline zx_u64_c zx_syscall6(zx_u64_c num,
 
   __asm__ volatile("syscall"
                    : "=a"(ret)
-                   : "a"(num), "d"(arg1), "s"(arg2), "d"(arg3), "r"(r10),
+                   : "a"(num), "D"(arg1), "S"(arg2), "d"(arg3), "r"(r10),
                      "r"(r8), "r"(r9)
                    : "rcx", "r11", "memory");
 

@@ -25,9 +25,9 @@ enum class [[nodiscard]] ZXPageAllocStatus : zx_u8_c {
   MadviseFail,
 };
 
-static ZXPageAllocStatus zx_page_mmap_(zx_u64 size,
-                                       zx_i32 huge_page_flags,
-                                       ZXSliceMut<zx_u8>* out) {
+static inline ZXPageAllocStatus zx_page_mmap_(zx_u64 size,
+                                              zx_i32 huge_page_flags,
+                                              ZXSliceMut<zx_u8>* out) {
   if (out == nullptr) {
     return ZXPageAllocStatus::Nullptr;
   }
@@ -51,7 +51,7 @@ static ZXPageAllocStatus zx_page_mmap_(zx_u64 size,
     return ZXPageAllocStatus::OsRetNullptr;
   }
 
-  ZXSliceStatus const slice_status = ZXSliceMut<zx_u8>::init(mem, size, &out);
+  ZXSliceStatus const slice_status = ZXSliceMut<zx_u8>::init(mem, size, out);
   if (slice_status != ZXSliceStatus::Ok) {
     return ZXPageAllocStatus::SliceInitErr;
   }
