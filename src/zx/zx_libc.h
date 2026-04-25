@@ -1,3 +1,13 @@
+// These functions are extracted to this header file for testing/benchmarking
+// purposes. We can call these as zx_* so we know the compiler won't replace it
+// with it's own inlined version of the function. If we use __builtin_* for
+// testing/benchmarking then we risk compiler putting arbitrary code in there
+// instead of calling these functions.
+//
+// These functions are then used in zx_libc.cc for actually implementing regular
+// memcpy/memcmp etc. functions so linker can find those and compiler is able to
+// conditionally replace __builtin_* calls with calls to these.
+
 #ifndef ZX_LIBC_H
 #define ZX_LIBC_H
 
@@ -23,9 +33,9 @@ zx_memcpy(void* __restrict dest, void const* __restrict src, zx_u64_c count) {
         : "zmm31");
   }
 
-  zx_u64 const remainder = count - offset;
+  zx_u64 const remainder = zx_sub_unsafe_u64(count, offset);
   if (remainder > 0) {
-    register zx_u64_c const storemask __asm__("k2") =
+    register zx_u64_c const storemask __asm__("k7") =
         __builtin_ia32_bzhi_di(~(zx_u64){0}, remainder);
     __asm__(
         "vmovdqu8 %[input], %%zmm31 %{%[storemask]%}\n\t"
@@ -62,7 +72,7 @@ __attribute__((no_builtin)) static inline void* zx_memset(void* dest,
             : [vbytes] "v"(vbytes));
   }
 
-  zx_u64 const remainder = count - offset;
+  zx_u64 const remainder = zx_sub_unsafe_u64(count, offset);
   if (remainder > 0) {
     register zx_u64_c const storemask __asm__("k2") =
         __builtin_ia32_bzhi_di(~(zx_u64){0}, remainder);
@@ -72,6 +82,83 @@ __attribute__((no_builtin)) static inline void* zx_memset(void* dest,
   }
 
   return dest;
+}
+
+__attribute__((no_builtin)) static inline zx_i32_c zx_memcmp(void const* lhs,
+                                                             void const* rhs,
+                                                             zx_u64_c count) {
+  zx_u8 const* left = (zx_u8 const*)lhs;
+  zx_u8 const* right = (zx_u8 const*)rhs;
+
+  zx_v512_u8 zeros;
+  // TODO: is this the best way to do this?
+  __asm__("vpxorq %[zeros], %[zeros], %[zeros]\n\t" : [zeros] "=v"(zeros));
+
+  zx_u64 offset = 0;
+
+  for (; zx_add_unsafe_u64(offset, 64) < count;
+       offset = zx_add_unsafe_u64(offset, 64)) {
+    zx_u64_c nonzero_mask;
+    zx_v512_u8 diffs;
+    __asm__(
+        "vmovdqu8 %[left], %%zmm31\n\t"
+        "vmovdqu8 %[right], %%zmm30\n\t"
+        "vpsubb %%zmm30, %%zmm31, %[diffs]\n\t"
+        // 4 means Not Equal OP
+        "vpcmpub $4, %[diffs], %[zeros], %[nonzero_mask]\n\t"
+        : [nonzero_mask] "=k"(nonzero_mask), [diffs] "=v"(diffs)
+        : [left] "m"(*(zx_u8 const(*)[64]) & left[offset]),
+          [right] "m"(*(zx_u8 const(*)[64]) & right[offset]), [zeros] "v"(zeros)
+        : "zmm30", "zmm31");
+    if (nonzero_mask != 0) {
+      // find first diff
+      zx_u8 const idx = zx_ctz_u64(nonzero_mask);
+#ifdef ZX_DEV
+      // idx can't be oob of the vector.
+      if (idx >= 64) {
+        __builtin_trap();
+      }
+#endif
+      return (zx_i8)diffs[idx];
+    }
+  }
+
+  zx_u64 const remainder = zx_sub_unsafe_u64(count, offset);
+  if (remainder > 0) {
+    register zx_u64_c const storemask __asm__("k7") =
+        __builtin_ia32_bzhi_di(~(zx_u64){0}, remainder);
+    zx_u64_c nonzero_mask;
+    zx_v512_u8 diffs;
+    __asm__(
+        "vmovdqu8 %[left], %%zmm31 %{%[storemask]%}\n\t"
+        "vmovdqu8 %[right], %%zmm30 %{%[storemask]%}\n\t"
+        "vpsubb %%zmm30, %%zmm31, %[diffs]\n\t"
+        // 4 means Not Equal OP
+        "kxorq %[nonzero_mask], %[nonzero_mask], %[nonzero_mask]\n\t"
+        "vpcmpub $4, %[diffs], %[zeros], %[nonzero_mask] %{%[storemask]%}\n\t"
+        : [nonzero_mask] "=k"(nonzero_mask), [diffs] "=v"(diffs)
+        : [left] "m"(*(zx_u8 const(*)[64]) & left[offset]),
+          [right] "m"(*(zx_u8 const(*)[64]) & right[offset]),
+          [zeros] "v"(zeros), [storemask] "k"(storemask)
+        : "zmm30", "zmm31");
+    if (nonzero_mask != 0) {
+      // find first diff
+      zx_u8 const idx = zx_ctz_u64(nonzero_mask);
+#ifdef ZX_DEV
+      // idx can't be oob of the vector.
+      if (idx >= 64) {
+        __builtin_trap();
+      }
+      // idx can't be oob of remainder.
+      if (idx >= remainder) {
+        __builtin_trap();
+      }
+#endif
+      return (zx_i8)diffs[idx];
+    }
+  }
+
+  return 0;
 }
 
 }  // extern "C"

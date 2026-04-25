@@ -121,8 +121,10 @@ struct ZXSlice {
       return ZXSliceStatus::IntegerOverflow;
     }
 
-    if (!__builtin_is_aligned(this->m_ptr, alignof(U))) {
-      return ZXSliceStatus::AlignmentMismatch;
+    if (alignof(U) > alignof(T)) {
+      if (!__builtin_is_aligned(this->m_ptr, alignof(U))) {
+        return ZXSliceStatus::AlignmentMismatch;
+      }
     }
 
     *out = ZXSlice<U>{.m_ptr = (U const*)this->m_ptr, .m_len = new_len};
@@ -186,6 +188,7 @@ struct ZXSlice {
     };
   }
 
+  // returns (offset, end]
   inline ZXSliceStatus slice_at(zx_u64 offset, ZXSlice<T>* out) const {
     if (out == nullptr) {
       return ZXSliceStatus::Nullptr;
@@ -208,6 +211,7 @@ struct ZXSlice {
     return ZXSliceStatus::Ok;
   }
 
+  // returns (offset, end]
   inline ZXSlice<T> slice_at_unsafe(zx_u64 offset) const {
 #ifdef ZX_DEV
     if (offset > this->m_len) {
@@ -324,8 +328,8 @@ struct ZXSlice {
     // method.
     zx_u64 const byte_count = zx_mul_unsafe_u64(len, sizeof(T));
     // We are assuming little endian here.
-    int res = __builtin_memcmp((zx_u8 const*)this->m_ptr,
-                               (zx_u8 const*)other.m_ptr, byte_count);
+    zx_i32 res = __builtin_memcmp((zx_u8 const*)this->m_ptr,
+                                  (zx_u8 const*)other.m_ptr, byte_count);
     if (res == 0) {
       if (this->m_len > other.m_len) {
         return ZXSliceCmp::Greater;
@@ -441,8 +445,10 @@ struct ZXSliceMut {
       return ZXSliceStatus::IntegerOverflow;
     }
 
-    if (!__builtin_is_aligned(this->m_ptr, alignof(U))) {
-      return ZXSliceStatus::AlignmentMismatch;
+    if (alignof(U) > alignof(T)) {
+      if (!__builtin_is_aligned(this->m_ptr, alignof(U))) {
+        return ZXSliceStatus::AlignmentMismatch;
+      }
     }
 
     *out = ZXSliceMut<U>{.m_ptr = (U*)this->m_ptr, .m_len = new_len};
@@ -508,6 +514,7 @@ struct ZXSliceMut {
     };
   }
 
+  // returns (offset, end]
   inline ZXSliceStatus slice_at(zx_u64 offset, ZXSliceMut<T>* out) const {
     if (out == nullptr) {
       return ZXSliceStatus::Nullptr;
@@ -530,6 +537,7 @@ struct ZXSliceMut {
     return ZXSliceStatus::Ok;
   }
 
+  // returns (offset, end]
   inline ZXSliceMut<T> slice_at_unsafe(zx_u64 offset) const {
 #ifdef ZX_DEV
     if (offset > this->m_len) {

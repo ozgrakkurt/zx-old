@@ -43,4 +43,10 @@ __attribute__((no_builtin)) void* memset(void* dest,
   return zx_memset(dest, ch, count);
 }
 
+__attribute__((no_builtin)) zx_i32_c memcmp(void const* lhs,
+                                            void const* rhs,
+                                            zx_u64_c count) {
+  return zx_memcmp(lhs, rhs, count);
+}
+
 }  // extern "C"
