@@ -106,7 +106,7 @@ __attribute__((no_builtin)) static inline zx_i32_c zx_memcmp(void const* lhs,
         "vpsubb %%zmm30, %%zmm31, %[diffs]\n\t"
         // 4 means Not Equal OP
         "vpcmpub $4, %[diffs], %[zeros], %[nonzero_mask]\n\t"
-        : [nonzero_mask] "=k"(nonzero_mask), [diffs] "=v"(diffs)
+        : [nonzero_mask] "=&k"(nonzero_mask), [diffs] "=&v"(diffs)
         : [left] "m"(*(zx_u8 const(*)[64]) & left[offset]),
           [right] "m"(*(zx_u8 const(*)[64]) & right[offset]), [zeros] "v"(zeros)
         : "zmm30", "zmm31");
@@ -116,6 +116,11 @@ __attribute__((no_builtin)) static inline zx_i32_c zx_memcmp(void const* lhs,
 #ifdef ZX_DEV
       // idx can't be oob of the vector.
       if (idx >= 64) {
+        __builtin_trap();
+      }
+
+      // it is supposed to be nonzero!!
+      if (diffs[idx] == 0) {
         __builtin_trap();
       }
 #endif
@@ -136,7 +141,7 @@ __attribute__((no_builtin)) static inline zx_i32_c zx_memcmp(void const* lhs,
         // 4 means Not Equal OP
         "kxorq %[nonzero_mask], %[nonzero_mask], %[nonzero_mask]\n\t"
         "vpcmpub $4, %[diffs], %[zeros], %[nonzero_mask] %{%[storemask]%}\n\t"
-        : [nonzero_mask] "=k"(nonzero_mask), [diffs] "=v"(diffs)
+        : [nonzero_mask] "=&k"(nonzero_mask), [diffs] "=&v"(diffs)
         : [left] "m"(*(zx_u8 const(*)[64]) & left[offset]),
           [right] "m"(*(zx_u8 const(*)[64]) & right[offset]),
           [zeros] "v"(zeros), [storemask] "k"(storemask)
@@ -149,8 +154,14 @@ __attribute__((no_builtin)) static inline zx_i32_c zx_memcmp(void const* lhs,
       if (idx >= 64) {
         __builtin_trap();
       }
+
       // idx can't be oob of remainder.
       if (idx >= remainder) {
+        __builtin_trap();
+      }
+
+      // it is supposed to be nonzero!!
+      if (diffs[idx] == 0) {
         __builtin_trap();
       }
 #endif

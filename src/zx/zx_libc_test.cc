@@ -48,8 +48,17 @@ __attribute__((no_builtin)) static inline void check_memcmp(zx_u8* left,
     left[i] = (zx_u8)i;
   }
 
-  zx_i32 const res = zx_memcmp(left, right, count);
-  assert(res == 0);
+  assert(0 == zx_memcmp(left, right, count));
+
+  // the rest of tests don't make sense for zero length;
+  if (count == 0) {
+    return;
+  }
+
+  // lt first
+  left[0] = 69;
+  right[0] = 79;
+  assert(0 > zx_memcmp(left, right, count));
 }
 
 int main(void) {
