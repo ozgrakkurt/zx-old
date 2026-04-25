@@ -55,10 +55,31 @@ __attribute__((no_builtin)) static inline void check_memcmp(zx_u8* left,
     return;
   }
 
-  // lt first
-  left[0] = 69;
-  right[0] = 79;
-  assert(0 > zx_memcmp(left, right, count));
+  zx_u64 const indices[] = {0, zx_sub_unsafe_u64(count, 1),
+                            zx_div_unsafe_u64(count, 2)};
+  zx_u64 const n_indices = sizeof(indices) / sizeof(indices[0]);
+
+  // lt
+  for (zx_u64 i = 0; i < n_indices; i++) {
+    zx_u64 const idx = indices[i];
+    zx_u8 orig = left[idx];
+    left[idx] = 69;
+    right[idx] = 79;
+    assert(0 > zx_memcmp(left, right, count));
+    left[idx] = orig;
+    right[idx] = orig;
+  }
+
+  // gt
+  for (zx_u64 i = 0; i < n_indices; i++) {
+    zx_u64 const idx = indices[i];
+    zx_u8 orig = left[idx];
+    left[idx] = 79;
+    right[idx] = 69;
+    assert(0 < zx_memcmp(left, right, count));
+    left[idx] = orig;
+    right[idx] = orig;
+  }
 }
 
 int main(void) {
