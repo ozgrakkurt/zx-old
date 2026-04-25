@@ -1,10 +1,3 @@
-#ifndef ZX_IO_URING_C_H
-#define ZX_IO_URING_C_H
-
-#include <zx/zx_int.h>
-
-extern "C" {
-
 // This code is copied over from 'liburing' project and slightly modified.
 // Types are changed from zx_u8 style to zx_u8 style.
 // https://github.com/axboe/liburing/blob/master/src/include/liburing/io_uring.h
@@ -42,6 +35,13 @@ extern "C" {
  * Copyright (C) 2019 Jens Axboe
  * Copyright (C) 2019 Christoph Hellwig
  */
+
+#ifndef ZX_IO_URING_C_H
+#define ZX_IO_URING_C_H
+
+#include <zx/zx_int.h>
+
+extern "C" {
 
 /*
  * IO submission data structure (Submission Queue Entry)
