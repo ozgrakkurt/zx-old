@@ -82,6 +82,25 @@ __attribute__((no_builtin)) static inline void check_memcmp(zx_u8* left,
   }
 }
 
+__attribute__((no_builtin)) static inline void check_strlen(zx_u8* str,
+                                                            zx_u64 count) {
+  // We can't put a zero byte if the length is zero.
+  if (count == 0) {
+    return;
+  }
+  for (zx_u64 i = 0; i < count; i++) {
+    str[i] = 69;
+  }
+  if (count >= 2) {
+    str[zx_sub_unsafe_u64(count, 2)] = 0;
+    assert(zx_sub_unsafe_u64(count, 2) == zx_strlen((char const*)str));
+    str[zx_sub_unsafe_u64(count, 2)] = 69;
+  }
+
+  str[zx_sub_unsafe_u64(count, 1)] = 0;
+  assert(zx_sub_unsafe_u64(count, 1) == zx_strlen((char const*)str));
+}
+
 int main(void) {
   constexpr zx_u64 capacity = 1024;
   zx_u8 src[capacity];
@@ -95,6 +114,7 @@ int main(void) {
     check_memcpy(dst, src, lengths[i]);
     check_memset(dst, lengths[i]);
     check_memcmp(src, dst, lengths[i]);
+    check_strlen(src, lengths[i]);
   }
 
   return 0;
