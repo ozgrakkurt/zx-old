@@ -82,7 +82,7 @@ static inline ZXSysStatus zx_sys_read(zx_i32 fd,
 }
 
 static inline ZXSysStatus zx_sys_write(zx_i32 fd,
-                                       ZXSliceMut<zx_u8> buf,
+                                       ZXSlice<zx_u8> buf,
                                        zx_u64* n_written) {
   if (n_written == nullptr) {
     return ZXSysStatus::Nullptr;

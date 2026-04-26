@@ -708,7 +708,7 @@ struct ZXSliceMut {
 struct ZXCString {
   ZXSlice<zx_u8> m_slice;
 
-  static ZXSliceStatus init(char const* cstring, ZXCString* out) {
+  static inline ZXSliceStatus init(char const* cstring, ZXCString* out) {
     if (cstring == nullptr || out == nullptr) {
       return ZXSliceStatus::Nullptr;
     }
@@ -728,7 +728,7 @@ struct ZXCString {
     return ZXSliceStatus::Ok;
   }
 
-  static ZXCString init_unsafe(char const* cstring) {
+  static inline ZXCString init_unsafe(char const* cstring) {
     if (cstring == nullptr) {
 #ifdef ZX_DEV
       __builtin_trap();

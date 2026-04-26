@@ -21,6 +21,35 @@ enum class [[nodiscard]] ZXTimeStatus : zx_u8_c {
   CloseErr,
 };
 
+static inline ZXCString zx_time_status_to_cstring(ZXTimeStatus status) {
+  switch (status) {
+    case ZXTimeStatus::Ok: {
+      return ZXCString::init_unsafe("ZXTimeStatus::Ok");
+    }
+    case ZXTimeStatus::PerfEventOpenErr: {
+      return ZXCString::init_unsafe("ZXTimeStatus::PerfEventOpenErr");
+    }
+    case ZXTimeStatus::MmapErr: {
+      return ZXCString::init_unsafe("ZXTimeStatus::MmapErr");
+    }
+    case ZXTimeStatus::NotSupported: {
+      return ZXCString::init_unsafe("ZXTimeStatus::NotSupported");
+    }
+    case ZXTimeStatus::InvalidNum: {
+      return ZXCString::init_unsafe("ZXTimeStatus::InvalidNum");
+    }
+    case ZXTimeStatus::MunmapErr: {
+      return ZXCString::init_unsafe("ZXTimeStatus::MunmapErr");
+    }
+    case ZXTimeStatus::CloseErr: {
+      return ZXCString::init_unsafe("ZXTimeStatus::CloseErr");
+    }
+    default: {
+      return ZXCString::init_unsafe("ZXTimeStatus::Unknown");
+    }
+  }
+}
+
 struct ZXTimeInfo {
   zx_u64 m_time_shift;
   zx_u64 m_time_mult;
