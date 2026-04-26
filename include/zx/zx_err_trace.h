@@ -14,6 +14,27 @@ enum class [[nodiscard]] ZXErrTraceStatus : zx_u8_c {
   AllocFail,
 };
 
+static inline ZXCString zx_err_trace_status_to_cstring(
+    ZXErrTraceStatus status) {
+  switch (status) {
+    case ZXErrTraceStatus::Ok: {
+      return ZXCString::init_unsafe("ZXErrTraceStatus::Ok");
+    }
+    case ZXErrTraceStatus::Nullptr: {
+      return ZXCString::init_unsafe("ZXErrTraceStatus::Nullptr");
+    }
+    case ZXErrTraceStatus::OutOfMemory: {
+      return ZXCString::init_unsafe("ZXErrTraceStatus::OutOfMemory");
+    }
+    case ZXErrTraceStatus::AllocFail: {
+      return ZXCString::init_unsafe("ZXErrTraceStatus::AllocFail");
+    }
+    default: {
+      return ZXCString::init_unsafe("ZXErrTraceStatus::Unknown");
+    }
+  }
+}
+
 struct ZXSourceLocation_ {
   char const* file_name_;
   zx_u16 file_name_len_;

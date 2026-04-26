@@ -13,6 +13,32 @@ enum class [[nodiscard]] ZXAllocStatus : zx_u8_c {
   SliceCastError,
 };
 
+static inline ZXCString zx_alloc_status_to_cstring(ZXAllocStatus status) {
+  switch (status) {
+    case ZXAllocStatus::Ok: {
+      return ZXCString::init_unsafe("ZXAllocStatus::Ok");
+    }
+    case ZXAllocStatus::Nullptr: {
+      return ZXCString::init_unsafe("ZXAllocStatus::Nullptr");
+    }
+    case ZXAllocStatus::OutOfMemory: {
+      return ZXCString::init_unsafe("ZXAllocStatus::OutOfMemory");
+    }
+    case ZXAllocStatus::IntegerOverflow: {
+      return ZXCString::init_unsafe("ZXAllocStatus::IntegerOverflow");
+    }
+    case ZXAllocStatus::SliceError: {
+      return ZXCString::init_unsafe("ZXAllocStatus::SliceError");
+    }
+    case ZXAllocStatus::SliceCastError: {
+      return ZXCString::init_unsafe("ZXAllocStatus::SliceCastError");
+    }
+    default: {
+      return ZXCString::init_unsafe("ZXAllocStatus::Unknown");
+    }
+  }
+}
+
 struct ZXAlloc {
   ZXSliceMut<zx_u8> m_mem;
   zx_u64 m_offset;

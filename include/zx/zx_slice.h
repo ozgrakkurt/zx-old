@@ -760,4 +760,36 @@ struct ZXCString {
   }
 };
 
+static inline ZXCString zx_slice_status_to_cstring(ZXSliceStatus status) {
+  switch (status) {
+    case ZXSliceStatus::Ok: {
+      return ZXCString::init_unsafe("ZXSliceStatus::Ok");
+    }
+    case ZXSliceStatus::OutOfBounds: {
+      return ZXCString::init_unsafe("ZXSliceStatus::OutOfBounds");
+    }
+    case ZXSliceStatus::IntegerOverflow: {
+      return ZXCString::init_unsafe("ZXSliceStatus::IntegerOverflow");
+    }
+    case ZXSliceStatus::Nullptr: {
+      return ZXCString::init_unsafe("ZXSliceStatus::Nullptr");
+    }
+    case ZXSliceStatus::UnalignedPtr: {
+      return ZXCString::init_unsafe("ZXSliceStatus::UnalignedPtr");
+    }
+    case ZXSliceStatus::SizeMismatch: {
+      return ZXCString::init_unsafe("ZXSliceStatus::SizeMismatch");
+    }
+    case ZXSliceStatus::AlignmentMismatch: {
+      return ZXCString::init_unsafe("ZXSliceStatus::AlignmentMismatch");
+    }
+    case ZXSliceStatus::Overlapping: {
+      return ZXCString::init_unsafe("ZXSliceStatus::Overlapping");
+    }
+    default: {
+      return ZXCString::init_unsafe("ZXSliceStatus::Unknown");
+    }
+  }
+}
+
 #endif

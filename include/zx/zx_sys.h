@@ -19,6 +19,23 @@ enum class [[nodiscard]] ZXSysStatus : unsigned char {
   Nullptr,
 };
 
+static inline ZXCString zx_sys_status_to_cstring(ZXSysStatus status) {
+  switch (status) {
+    case ZXSysStatus::Ok: {
+      return ZXCString::init_unsafe("ZXSysStatus::Ok");
+    }
+    case ZXSysStatus::UnexpectedError: {
+      return ZXCString::init_unsafe("ZXSysStatus::UnexpectedError");
+    }
+    case ZXSysStatus::Nullptr: {
+      return ZXCString::init_unsafe("ZXSysStatus::Nullptr");
+    }
+    default: {
+      return ZXCString::init_unsafe("ZXSysStatus::Unknown");
+    }
+  }
+}
+
 constexpr zx_u64 ZX_SYS_STATUS_SUCCESS = 0;
 
 static inline zx_u64 zx_sys_errno_(zx_u64 ret) {

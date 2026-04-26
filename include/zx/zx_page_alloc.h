@@ -16,7 +16,6 @@
 enum class [[nodiscard]] ZXPageAllocStatus : zx_u8_c {
   Ok = 0,
   Nullptr,
-  OutOfMemory,
   IntegerOverflow,
   InvalidSize,
   OsRetNullptr,
@@ -24,6 +23,39 @@ enum class [[nodiscard]] ZXPageAllocStatus : zx_u8_c {
   SliceInitErr,
   MadviseFail,
 };
+
+static inline ZXCString zx_page_alloc_status_to_cstring(
+    ZXPageAllocStatus status) {
+  switch (status) {
+    case ZXPageAllocStatus::Ok: {
+      return ZXCString::init_unsafe("ZXPageAllocStatus::Ok");
+    }
+    case ZXPageAllocStatus::Nullptr: {
+      return ZXCString::init_unsafe("ZXPageAllocStatus::Nullptr");
+    }
+    case ZXPageAllocStatus::IntegerOverflow: {
+      return ZXCString::init_unsafe("ZXPageAllocStatus::IntegerOverflow");
+    }
+    case ZXPageAllocStatus::InvalidSize: {
+      return ZXCString::init_unsafe("ZXPageAllocStatus::InvalidSize");
+    }
+    case ZXPageAllocStatus::OsRetNullptr: {
+      return ZXCString::init_unsafe("ZXPageAllocStatus::OsRetNullptr");
+    }
+    case ZXPageAllocStatus::SysErr: {
+      return ZXCString::init_unsafe("ZXPageAllocStatus::SysErr");
+    }
+    case ZXPageAllocStatus::SliceInitErr: {
+      return ZXCString::init_unsafe("ZXPageAllocStatus::SliceInitErr");
+    }
+    case ZXPageAllocStatus::MadviseFail: {
+      return ZXCString::init_unsafe("ZXPageAllocStatus::MadviseFail");
+    }
+    default: {
+      return ZXCString::init_unsafe("ZXPageAllocStatus::Unknown");
+    }
+  }
+}
 
 static inline ZXPageAllocStatus zx_page_mmap_(zx_u64 size,
                                               zx_i32 huge_page_flags,
