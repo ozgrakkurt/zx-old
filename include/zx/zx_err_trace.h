@@ -47,8 +47,16 @@ struct ZXSourceLocation_ {
     .line_no_ = __LINE__,                                                 \
   }
 
+struct ZXErrTraceEntry_ {
+  char const* file_name_;
+  char const* info_;
+  zx_u16 file_name_len_;
+  zx_u16 info_len_;
+  zx_u16 line_no_;
+};
+
 struct ZXErrTrace {
-  ZXSliceMut<ZXSourceLocation_> m_locations;
+  ZXSliceMut<ZXErrTraceEntry_> m_entries;
   zx_u64 m_offset;
 
   static ZXErrTraceStatus init(ZXAlloc* alloc,
@@ -58,9 +66,9 @@ struct ZXErrTrace {
       return ZXErrTraceStatus::Nullptr;
     }
 
-    ZXSliceMut<ZXSourceLocation_> locations;
+    ZXSliceMut<ZXErrTraceEntry_> entries;
     ZXAllocStatus const alloc_status =
-        alloc->alloc<ZXSourceLocation_>(capacity, &locations);
+        alloc->alloc<ZXErrTraceEntry_>(capacity, &entries);
     switch (alloc_status) {
       case ZXAllocStatus::OutOfMemory: {
         return ZXErrTraceStatus::OutOfMemory;
@@ -73,7 +81,7 @@ struct ZXErrTrace {
     }
 
     *out = ZXErrTrace{
-        .m_locations = locations,
+        .m_entries = entries,
         .m_offset = 0,
     };
 
@@ -81,23 +89,30 @@ struct ZXErrTrace {
   }
 
   inline void reset() {
-    this->m_locations.memset(zx_u8{0});
+    this->m_entries.memset(zx_u8{0});
     this->m_offset = 0;
   }
 
   inline void reset_unsafe() {
 #ifdef ZX_DEV
-    this->m_locations.memset(zx_u8{0});
+    this->m_entries.memset(zx_u8{0});
 #endif
     this->m_offset = 0;
   }
 
-  // Returns if push succeeded or if the trace is full.
-  inline bool push(ZXSourceLocation_ location) {
+  // Returns true if push succeeded. Returns false if the trace is full.
+  inline bool push(ZXSourceLocation_ location, ZXCString info) {
     zx_u64 const offset = this->m_offset;
-    ZXSliceMut<ZXSourceLocation_> const locations = this->m_locations;
-    if (offset < locations.len()) {
-      locations.write_unsafe(offset, location);
+    ZXSliceMut<ZXErrTraceEntry_> const entries = this->m_entries;
+    ZXErrTraceEntry_ const entry = ZXErrTraceEntry_{
+        .file_name_ = location.file_name_,
+        .file_name_len_ = location.file_name_len_,
+        .line_no_ = location.line_no_,
+        .info_ = (char const*)info.slice().ptr(),
+        .info_len_ = (zx_u16)info.slice().len(),
+    };
+    if (offset < entries.len()) {
+      entries.write_unsafe(offset, entry);
       this->m_offset = zx_add_unsafe_u64(offset, 1);
       return true;
     } else {
@@ -107,13 +122,17 @@ struct ZXErrTrace {
 
   inline void format(ZXFmt* fmt, bool* overflow) {
     for (zx_u64 i = 0; i < this->m_offset; i++) {
-      ZXSourceLocation_ const loc = this->m_locations.as_const().read_unsafe(i);
+      ZXErrTraceEntry_ const entry = this->m_entries.read_unsafe(i);
       ZXSlice<zx_u8> const file_name = ZXSlice<zx_u8>::init_unsafe(
-          (zx_u8 const*)loc.file_name_, loc.file_name_len_);
+          (zx_u8 const*)entry.file_name_, entry.file_name_len_);
+      ZXSlice<zx_u8> const info = ZXSlice<zx_u8>::init_unsafe(
+          (zx_u8 const*)entry.info_, entry.info_len_);
       fmt->push_str(file_name, overflow);
       fmt->push_cstring(ZXCString::init_unsafe("[line="), overflow);
       fmt->push_u64(loc.line_no_, overflow);
-      fmt->push_cstring(ZXCString::init_unsafe("]\n"), overflow);
+      fmt->push_cstring(ZXCString::init_unsafe("]. Info = "), overflow);
+      fmt->push_str(info, overflow);
+      fmt->push_char('\n', overflow);
     }
   }
 };
