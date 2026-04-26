@@ -49,4 +49,8 @@ __attribute__((no_builtin)) zx_i32_c memcmp(void const* lhs,
   return zx_memcmp(lhs, rhs, count);
 }
 
+__attribute__((no_builtin)) zx_u64_c strlen(char const* str) {
+  return zx_strlen(str);
+}
+
 }  // extern "C"
