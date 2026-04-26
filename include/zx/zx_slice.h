@@ -9,7 +9,7 @@
 
 static_assert(sizeof(void*) == 8);
 
-enum class [[nodiscard]] ZXSliceCmp : zx_u8_c {
+enum class ZXSliceCmp : zx_u8_c {
   Equal,
   Greater,
   Less,
@@ -322,7 +322,7 @@ struct ZXSlice {
     return !((self_end < other_start) || (other_end < self_start));
   }
 
-  inline ZXSliceCmp compare(ZXSlice<T> other) const {
+  [[nodiscard]] inline ZXSliceCmp compare(ZXSlice<T> other) const {
     zx_u64 const len = zx_min_u64(this->m_len, other.m_len);
     // This should be ok because overflow condition is checked in the init
     // method.
@@ -345,7 +345,7 @@ struct ZXSlice {
     }
   }
 
-  inline bool equals(ZXSlice<T> other) const {
+  [[nodiscard]] inline bool equals(ZXSlice<T> other) const {
     return this->compare(other) == ZXSliceCmp::Equal;
   }
 };

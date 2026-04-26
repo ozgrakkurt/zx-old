@@ -52,6 +52,9 @@ constexpr zx_u64 ZX_SYSCALL_MUNMAP = 11;
 constexpr zx_u64 ZX_SYSCALL_MADVISE = 28;
 constexpr zx_u64 ZX_SYSCALL_EXIT_GROUP = 231;
 
+// echo '#include <sys/syscall.h>' | gcc -E -dM -xc - | grep -i "perf_event"
+constexpr zx_u64 ZX_SYSCALL_PERF_EVENT_OPEN = 298;
+
 // echo '#include <sys/syscall.h>' | gcc -E -dM -xc - | grep -i "io_uring"
 constexpr zx_u64 ZX_SYSCALL_IO_URING_SETUP = 425;
 constexpr zx_u64 ZX_SYSCALL_IO_URING_ENTER = 426;
