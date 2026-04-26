@@ -575,6 +575,14 @@ struct ZXSliceMut {
     return &this->m_ptr[offset];
   }
 
+  inline ZXSliceStatus read(zx_u64 offset, T* out) const {
+    return this->as_const().read(offset, out);
+  }
+
+  inline T read_unsafe(zx_u64 offset) const {
+    return this->as_const().read_unsafe(offset);
+  }
+
   inline ZXSliceStatus write(zx_u64 offset, T val) const {
     T* ptr = nullptr;
     ZXSliceStatus const offset_status = this->offset(offset, &ptr);
