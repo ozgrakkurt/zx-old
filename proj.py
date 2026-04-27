@@ -39,6 +39,7 @@ ZX: Library = Library(
             "zx_xoshiro256_test",
             "zx_rapidhash_v3_test",
             "zx_page_alloc_test",
+            "zx_alloc_test",
         ]
     ),
     bench_targets=set(["zx_rapidhash_v3_bench"]),

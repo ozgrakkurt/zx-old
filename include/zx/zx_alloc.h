@@ -113,6 +113,22 @@ struct ZXAlloc {
   inline ZXAllocStatus alloc(zx_u64 len, ZXSliceMut<T>* out) {
     return this->aligned_alloc<T, alignof(T)>(len, out);
   }
+
+  template <typename T, zx_u16 ALIGN>
+  inline ZXAllocStatus aligned_create(T** out) {
+    ZXSliceMut<T> slice;
+    ZXAllocStatus const status = this->aligned_alloc<T, ALIGN>(1, &slice);
+    if (status != ZXAllocStatus::Ok) {
+      return status;
+    }
+    *out = slice.ptr();
+    return ZXAllocStatus::Ok;
+  }
+
+  template <typename T>
+  inline ZXAllocStatus create(T** out) {
+    return this->aligned_create<T, alignof(T)>(out);
+  }
 };
 
 #endif

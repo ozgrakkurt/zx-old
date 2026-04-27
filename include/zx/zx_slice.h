@@ -231,7 +231,7 @@ struct ZXSlice {
     if (out == nullptr) {
       return ZXSliceStatus::Nullptr;
     }
-    if (offset > this->m_len) {
+    if (offset >= this->m_len) {
       return ZXSliceStatus::OutOfBounds;
     }
 
@@ -242,7 +242,7 @@ struct ZXSlice {
 
   inline T const* offset_unsafe(zx_u64 offset) const {
 #ifdef ZX_DEV
-    if (offset > this->m_len) {
+    if (offset >= this->m_len) {
       __builtin_trap();
     }
 #endif
@@ -557,7 +557,7 @@ struct ZXSliceMut {
     if (out == nullptr) {
       return ZXSliceStatus::Nullptr;
     }
-    if (offset > this->m_len) {
+    if (offset >= this->m_len) {
       return ZXSliceStatus::OutOfBounds;
     }
 
@@ -568,7 +568,7 @@ struct ZXSliceMut {
 
   inline T* offset_unsafe(zx_u64 offset) const {
 #ifdef ZX_DEV
-    if (offset > this->m_len) {
+    if (offset >= this->m_len) {
       __builtin_trap();
     }
 #endif

@@ -23,6 +23,9 @@ static void test_immut() {
   assert((zx_u64)&data[10] == (zx_u64)sli.offset_unsafe(10));
 
   zx_u32 const* pp = nullptr;
+  status = sli.offset(20, &pp);
+  assert(status == ZXSliceStatus::OutOfBounds);
+
   status = sli.offset(3, &pp);
   assert(status == ZXSliceStatus::Ok);
   assert((zx_u64)&data[3] == (zx_u64)pp);
@@ -72,6 +75,9 @@ static void test_mut() {
   assert((zx_u64)&data[10] == (zx_u64)sli.offset_unsafe(10));
 
   zx_u32* pp = nullptr;
+  status = sli.offset(20, &pp);
+  assert(status == ZXSliceStatus::OutOfBounds);
+
   status = sli.offset(3, &pp);
   assert(status == ZXSliceStatus::Ok);
   assert((zx_u64)&data[3] == (zx_u64)pp);
