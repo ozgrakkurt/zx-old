@@ -40,6 +40,7 @@ ZX: Library = Library(
             "zx_rapidhash_v3_test",
             "zx_page_alloc_test",
             "zx_alloc_test",
+            "zx_fmt_test",
         ]
     ),
     bench_targets=set(["zx_rapidhash_v3_bench"]),

@@ -19,6 +19,10 @@ struct ZXFmt {
     };
   }
 
+  inline zx_u64 n_written() const { return this->m_offset; }
+
+  inline zx_u64 capacity() const { return this->m_mem.len(); }
+
   // Return a slice that points to the characters written so far.
   inline ZXSlice<zx_u8> written() const {
     return this->m_mem.slice_unsafe(0, this->m_offset).as_const();
@@ -90,7 +94,7 @@ struct ZXFmt {
       val /= 10;
     } while (val > 0);
     zx_u64 const len = zx_sub_unsafe_u64(MAX_NUM_DIGITS, pos);
-    ZXSlice<zx_u8> const str = ZXSlice<zx_u8>::init_unsafe(digits, len);
+    ZXSlice<zx_u8> const str = ZXSlice<zx_u8>::init_unsafe(&digits[pos], len);
     this->push_str(str, overflow);
   }
 
