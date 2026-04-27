@@ -123,6 +123,15 @@ struct ZXErrTrace {
     }
   }
 
+  inline bool pop() {
+    if (this->m_offset > 0) {
+      this->m_offset = zx_sub_unsafe_u64(this->m_offset, 1);
+      return true;
+    } else {
+      return false;
+    }
+  }
+
   inline void format(ZXFmt* fmt, bool* overflow) {
     for (zx_u64 i = 0; i < this->m_offset; i++) {
       ZXErrTraceEntry_ const entry = this->m_entries.read_unsafe(i);

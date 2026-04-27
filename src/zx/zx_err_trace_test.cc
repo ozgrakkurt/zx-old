@@ -81,6 +81,44 @@ static void do_test(ZXAlloc* alloc) {
   // }
 
   assert(fmt.written().equals(expected));
+
+  assert(trace.pop());
+
+  fmt.reset();
+  overflow = false;
+  trace.format(&fmt, &overflow);
+  assert(!overflow);
+
+  ZXSlice<zx_u8> const expected2 =
+      ZXCString::init_unsafe(
+          "zx_err_trace_test.cc[line=48]. Info = inf0\n"
+          "zx_err_trace_test.cc[line=50]. Info = inf1\n")
+          .slice();
+
+  assert(fmt.written().equals(expected2));
+
+  success = trace.push(ZX_SRC_LOC, ZXCString::init_unsafe("inf699"));
+  assert(success);
+
+  fmt.reset();
+  overflow = false;
+  trace.format(&fmt, &overflow);
+  assert(!overflow);
+
+  ZXSlice<zx_u8> const expected3 =
+      ZXCString::init_unsafe(
+          "zx_err_trace_test.cc[line=48]. Info = inf0\n"
+          "zx_err_trace_test.cc[line=50]. Info = inf1\n"
+          "zx_err_trace_test.cc[line=100]. Info = inf699\n")
+          .slice();
+
+  assert(fmt.written().equals(expected3));
+
+  assert(trace.pop());
+  assert(trace.pop());
+  assert(trace.pop());
+  assert(!trace.pop());
+  assert(!trace.pop());
 }
 // if (status != ZXErrTraceStatus::Ok) {
 //   bool fmt_overflow = false;
