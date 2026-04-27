@@ -29,13 +29,13 @@ struct ZXFmt {
   }
 
   inline void reset() {
-    this->m_mem.fill(zx_u8{0});
+    this->m_mem.fill(zx_u8{0xaa});
     this->m_offset = 0;
   }
 
   inline void reset_unsafe() {
 #ifdef ZX_DEV
-    this->m_mem.fill(zx_u8{0});
+    this->m_mem.fill(zx_u8{0xaa});
 #endif
     this->m_offset = 0;
   }

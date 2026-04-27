@@ -7,6 +7,11 @@ static void assert(bool v) {
   }
 }
 
+static void test_cstr() {
+  ZXCString const v = ZXCString::init_unsafe("anan");
+  assert(v.slice().len() == 4);
+}
+
 static void test_immut() {
   zx_u32 data[20];
   ZXSlice<zx_u32> sli;
@@ -112,6 +117,7 @@ static void test_mut() {
 int main(void) {
   test_mut();
   test_immut();
+  test_cstr();
 
   return 0;
 }

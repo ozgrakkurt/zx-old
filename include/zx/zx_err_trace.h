@@ -41,10 +41,10 @@ struct ZXSourceLocation_ {
   zx_u16 line_no_;
 };
 
-#define ZX_SRC_LOC                                                        \
-  ZXSourceLocation_ {                                                     \
-    .file_name_ = __FILE_NAME__, .file_name_len_ = sizeof(__FILE_NAME__), \
-    .line_no_ = __LINE__,                                                 \
+#define ZX_SRC_LOC                                                           \
+  ZXSourceLocation_ {                                                        \
+    .file_name_ = __FILE_NAME__,                                             \
+    .file_name_len_ = __builtin_strlen(__FILE_NAME__), .line_no_ = __LINE__, \
   }
 
 struct ZXErrTraceEntry_ {

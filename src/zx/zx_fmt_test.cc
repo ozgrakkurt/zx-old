@@ -17,21 +17,25 @@ int main(void) {
   bool overflow = false;
   fmt.push_i64(-1212, &overflow);
   assert(fmt.n_written() == 5);
+  assert(fmt.written().len() == 5);
   assert(!overflow);
   assert(ZXCString::init_unsafe("-1212").slice().equals(fmt.written()));
 
   fmt.push_char('x', &overflow);
   assert(fmt.n_written() == 6);
+  assert(fmt.written().len() == 6);
   assert(!overflow);
   assert(ZXCString::init_unsafe("-1212x").slice().equals(fmt.written()));
 
   fmt.push_i64(10, &overflow);
   assert(fmt.n_written() == 8);
+  assert(fmt.written().len() == 8);
   assert(!overflow);
   assert(ZXCString::init_unsafe("-1212x10").slice().equals(fmt.written()));
 
   fmt.push_u64(1010, &overflow);
   assert(fmt.n_written() == 12);
+  assert(fmt.written().len() == 12);
   assert(!overflow);
   assert(ZXCString::init_unsafe("-1212x101010").slice().equals(fmt.written()));
 
