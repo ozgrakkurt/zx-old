@@ -204,6 +204,7 @@ def make_cflags(profile: Profile, config: Config) -> List[str]:
 
     if profile.fuzz:
         cflags.append("-DZX_FUZZ=1")
+        cflags.append("-fsanitize-coverage=trace-pc-guard")
 
     if config.thin_lto:
         cflags.append("-flto=thin")
