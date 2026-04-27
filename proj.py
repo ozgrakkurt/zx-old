@@ -41,6 +41,7 @@ ZX: Library = Library(
             "zx_page_alloc_test",
             "zx_alloc_test",
             "zx_fmt_test",
+            "zx_err_trace_test",
         ]
     ),
     bench_targets=set(["zx_rapidhash_v3_bench"]),

@@ -67,10 +67,23 @@ void do_test(ZXAlloc* alloc) {
   assert(__builtin_is_aligned(zero2.ptr(), alignof(zx_u256)));
 }
 
+static void do_test_nocap() {
+  ZXAlloc alloc = ZXAlloc::init(ZXSliceMut<zx_u8>::init_dangling());
+
+  ZXSliceMut<zx_u256> slice;
+  ZXAllocStatus status = alloc.alloc<zx_u256>(0, &slice);
+  assert(status == ZXAllocStatus::Ok);
+  assert(slice.len() == 0);
+  assert(slice.ptr() != nullptr);
+  assert(__builtin_is_aligned(slice.ptr(), alignof(zx_u256)));
+}
+
 int main(void) {
   ZXSliceMut<zx_u8> mem;
   ZXPageAllocStatus page_status = zx_page_alloc_4kb(MEMORY_SIZE, &mem);
   assert(page_status == ZXPageAllocStatus::Ok);
+
+  do_test_nocap();
 
   ZXAlloc alloc = ZXAlloc::init(mem);
   do_test(&alloc);

@@ -70,6 +70,9 @@ struct ZXErrTrace {
     ZXAllocStatus const alloc_status =
         alloc->alloc<ZXErrTraceEntry_>(capacity, &entries);
     switch (alloc_status) {
+      case ZXAllocStatus::Ok: {
+        break;
+      }
       case ZXAllocStatus::OutOfMemory: {
         return ZXErrTraceStatus::OutOfMemory;
         break;
@@ -129,7 +132,7 @@ struct ZXErrTrace {
           (zx_u8 const*)entry.info_, entry.info_len_);
       fmt->push_str(file_name, overflow);
       fmt->push_cstring(ZXCString::init_unsafe("[line="), overflow);
-      fmt->push_u64(loc.line_no_, overflow);
+      fmt->push_u64(entry.line_no_, overflow);
       fmt->push_cstring(ZXCString::init_unsafe("]. Info = "), overflow);
       fmt->push_str(info, overflow);
       fmt->push_char('\n', overflow);

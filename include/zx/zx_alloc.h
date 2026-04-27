@@ -73,6 +73,11 @@ struct ZXAlloc {
       return ZXAllocStatus::Nullptr;
     }
 
+    if (len == 0) {
+      *out = ZXSliceMut<T>::init_dangling();
+      return ZXAllocStatus::Ok;
+    }
+
     ZXSliceMut<zx_u8> const mem = this->m_mem;
     zx_u64 const offset = this->m_offset;
 

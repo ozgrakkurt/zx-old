@@ -1,6 +1,7 @@
 #include <zx/zx_fmt.h>
 #include <zx/zx_int.h>
 #include <zx/zx_slice.h>
+#include <zx/zx_sys.h>
 #include <zx/zx_time.h>
 
 int main(void) {
