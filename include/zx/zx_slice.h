@@ -737,15 +737,11 @@ struct ZXCString {
   }
 
   static inline ZXCString init_unsafe(char const* cstring) {
-    if (cstring == nullptr) {
 #ifdef ZX_DEV
+    if (cstring == nullptr) {
       __builtin_trap();
-#else
-      return ZXCString{
-          .m_slice = ZXSlice<zx_u8>::init_dangling(),
-      };
-#endif
     }
+#endif
 
     zx_u64 const len = __builtin_strlen(cstring);
     return ZXCString{
