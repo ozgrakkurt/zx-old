@@ -46,6 +46,11 @@ ZX: Library = Library(
         ]
     ),
     bench_targets=set(["zx_rapidhash_v3_bench"]),
+    fuzz_targets=set(
+        [
+            "zx_strlen_fuzz",
+        ]
+    ),
     # test_targets={
     #     "zx_hashtable_test": set([]),
     #     "zx_alloc_test": set([]),
