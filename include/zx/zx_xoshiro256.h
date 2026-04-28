@@ -60,7 +60,7 @@ struct ZXXoshiro256 {
     return rand;
   }
 
-  __attribute__((always_inline)) inline zx_u64 next() {
+  inline zx_u64 next() {
     zx_u64 const r =
         __builtin_rotateleft64(this->s[0] + this->s[3], 23) + this->s[0];
     zx_u64 const t = this->s[1] << 17;

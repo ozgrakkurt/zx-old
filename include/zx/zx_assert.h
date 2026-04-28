@@ -3,7 +3,7 @@
 
 static inline void zx_assert_dev(bool cond) {
 #ifdef ZX_DEV
-  if (!cond) {
+  if (!cond) [[unlikely]] {
     __builtin_trap();
   }
 #else
