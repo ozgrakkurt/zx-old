@@ -22,22 +22,28 @@ static void fuzz_one(void* usr_ctx, ZXFuzzInput* fuzz_input) {
 
   bool const left_align = fuzz_input->next() & zx_u64{1};
   zx_u64 const len =
-      zx_add_unsafe_u64(zx_mod_unsafe_u64(fuzz_input->next(), mem.len()), 1);
-  zx_u64 const first_zero_idx = zx_mod_unsafe_u64(fuzz_input->next(), len);
-  zx_u64 const second_zero_idx = zx_add_unsafe_u64(
-      first_zero_idx,
-      zx_mod_unsafe_u64(fuzz_input->next(),
-                        zx_sub_unsafe_u64(len, first_zero_idx)));
+      zx_max_u64(1, zx_mod_unsafe_u64(fuzz_input->next(), mem.len()));
+  assert(len > 0);
+
+  zx_u64 const first = zx_mod_unsafe_u64(fuzz_input->next(), len);
+  zx_u64 const second = zx_mod_unsafe_u64(fuzz_input->next(), len);
+  zx_u64 const third = zx_mod_unsafe_u64(fuzz_input->next(), len);
 
   ZXSliceMut<zx_u8> const str =
       left_align ? mem.slice_unsafe(0, len)
                  : mem.slice_at_unsafe(zx_sub_unsafe_u64(mem.len(), len));
   assert(str.len() == len);
-  assert(first_zero_idx <= second_zero_idx);
-  str.write_unsafe(first_zero_idx, 0);
-  str.write_unsafe(second_zero_idx, 0);
+  assert(str.len() > 0);
+
+  str.fill(69);
+  str.write_unsafe(first, 0);
+  str.write_unsafe(second, 0);
+  str.write_unsafe(third, 0);
+
   zx_u64 const slen = zx_strlen((char const*)str.ptr());
-  assert(slen == first_zero_idx);
+
+  zx_u64 const expected = zx_min_u64(third, zx_min_u64(first, second));
+  assert(slen == expected);
 }
 
 static ZXSliceMut<zx_u8> make_alloc(zx_u64 capacity) {
@@ -52,7 +58,10 @@ static ZXSliceMut<zx_u8> make_alloc(zx_u64 capacity) {
       zx_sys_mprotect(alloc.slice_at_unsafe(capacity), ZX_SYS_PROT_NONE);
   assert(sys_status == ZXSysStatus::Ok);
 
-  return alloc.slice_unsafe(0, capacity);
+  ZXSliceMut<zx_u8> ret = alloc.slice_unsafe(0, capacity);
+  ret.memset(0);
+
+  return ret;
 }
 
 int main(void) {
