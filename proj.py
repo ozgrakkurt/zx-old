@@ -51,6 +51,7 @@ ZX: Library = Library(
             "zx_strlen_fuzz",
             "zx_memset_fuzz",
             "zx_memcmp_fuzz",
+            "zx_memcpy_fuzz",
         ]
     ),
     # test_targets={

@@ -1,7 +1,7 @@
 // This header isn't meant to be used except in testing contexts!!
 //
 // These functions are extracted to this header file for testing/benchmarking
-// purposes. We can call these as zx_* so we know the compiler won't replace it
+// purposes. We name these as zx_* so we know the compiler won't replace it
 // with it's own inlined version of the function. If we use __builtin_* for
 // testing/benchmarking then we risk compiler putting inlined code in there
 // instead of calling these functions.
