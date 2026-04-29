@@ -90,24 +90,18 @@ __attribute__((no_builtin)) static inline zx_i32_c zx_memcmp(void const* lhs,
   zx_u8 const* left = (zx_u8 const*)lhs;
   zx_u8 const* right = (zx_u8 const*)rhs;
 
-  zx_v512_u8 zeros;
-  __asm__("vpxorq %[zeros], %[zeros], %[zeros]\n\t" : [zeros] "=v"(zeros));
-
   zx_u64 offset = 0;
-
   for (; zx_add_unsafe_u64(offset, 64) < count;
        offset = zx_add_unsafe_u64(offset, 64)) {
     zx_u64_c nonzero_mask;
-    zx_v512_u8 diffs;
     __asm__(
         "vmovdqu8 %[left], %%zmm31\n\t"
         "vmovdqu8 %[right], %%zmm30\n\t"
-        "vpsubb %%zmm30, %%zmm31, %[diffs]\n\t"
         // 4 means Not Equal OP
-        "vpcmpub $4, %[diffs], %[zeros], %[nonzero_mask]\n\t"
-        : [nonzero_mask] "=&k"(nonzero_mask), [diffs] "=&v"(diffs)
+        "vpcmpub $4, %%zmm30, %%zmm31, %[nonzero_mask]\n\t"
+        : [nonzero_mask] "=&k"(nonzero_mask)
         : [left] "m"(*(zx_u8 const(*)[64]) & left[offset]),
-          [right] "m"(*(zx_u8 const(*)[64]) & right[offset]), [zeros] "v"(zeros)
+          [right] "m"(*(zx_u8 const(*)[64]) & right[offset])
         : "zmm30", "zmm31");
     if (nonzero_mask != 0) {
       // find first diff
@@ -117,13 +111,15 @@ __attribute__((no_builtin)) static inline zx_i32_c zx_memcmp(void const* lhs,
       if (idx >= 64) {
         __builtin_trap();
       }
-
-      // it is supposed to be nonzero!!
-      if (diffs[idx] == 0) {
+#endif
+      zx_u64 const pos = zx_add_unsafe_u64(offset, idx);
+      zx_i32 const ret = zx_sub_unsafe_i32(left[pos], right[pos]);
+#ifdef ZX_DEV
+      if (ret == 0) {
         __builtin_trap();
       }
 #endif
-      return (zx_i8)diffs[idx];
+      return ret;
     }
   }
 
@@ -132,18 +128,15 @@ __attribute__((no_builtin)) static inline zx_i32_c zx_memcmp(void const* lhs,
     register zx_u64_c const storemask __asm__("k7") =
         __builtin_ia32_bzhi_di(~(zx_u64){0}, remainder);
     zx_u64_c nonzero_mask;
-    zx_v512_u8 diffs;
     __asm__(
-        "vmovdqu8 %[left], %%zmm31 %{%[storemask]%}\n\t"
-        "vmovdqu8 %[right], %%zmm30 %{%[storemask]%}\n\t"
-        "vpsubb %%zmm30, %%zmm31, %[diffs]\n\t"
-        "kxorq %[nonzero_mask], %[nonzero_mask], %[nonzero_mask]\n\t"
+        "vmovdqu8 %[left], %%zmm31 %{%[storemask]%}%{z%}\n\t"
+        "vmovdqu8 %[right], %%zmm30 %{%[storemask]%}%{z%}\n\t"
         // 4 means Not Equal OP
-        "vpcmpub $4, %[diffs], %[zeros], %[nonzero_mask] %{%[storemask]%}\n\t"
-        : [nonzero_mask] "=&k"(nonzero_mask), [diffs] "=&v"(diffs)
+        "vpcmpub $4, %%zmm30, %%zmm31, %[nonzero_mask]\n\t"
+        : [nonzero_mask] "=&k"(nonzero_mask)
         : [left] "m"(*(zx_u8 const(*)[64]) & left[offset]),
           [right] "m"(*(zx_u8 const(*)[64]) & right[offset]),
-          [zeros] "v"(zeros), [storemask] "k"(storemask)
+          [storemask] "k"(storemask)
         : "zmm30", "zmm31");
     if (nonzero_mask != 0) {
       // find first diff
@@ -153,18 +146,19 @@ __attribute__((no_builtin)) static inline zx_i32_c zx_memcmp(void const* lhs,
       if (idx >= 64) {
         __builtin_trap();
       }
-
       // idx can't be oob of remainder.
       if (idx >= remainder) {
         __builtin_trap();
       }
-
-      // it is supposed to be nonzero!!
-      if (diffs[idx] == 0) {
+#endif
+      zx_u64 const pos = zx_add_unsafe_u64(offset, idx);
+      zx_i32 const ret = zx_sub_unsafe_i32(left[pos], right[pos]);
+#ifdef ZX_DEV
+      if (ret == 0) {
         __builtin_trap();
       }
 #endif
-      return (zx_i8)diffs[idx];
+      return ret;
     }
   }
 

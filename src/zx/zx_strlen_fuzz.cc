@@ -15,7 +15,8 @@ struct Ctx {
   ZXSliceMut<zx_u8> mem;
 };
 
-static void fuzz_one(void* usr_ctx, ZXFuzzInput* fuzz_input) {
+__attribute__((no_builtin)) static void fuzz_one(void* usr_ctx,
+                                                 ZXFuzzInput* fuzz_input) {
   assert(usr_ctx != nullptr);
   ZXSliceMut<zx_u8> mem = ((Ctx const*)usr_ctx)->mem;
   assert(mem.len() > 0);
