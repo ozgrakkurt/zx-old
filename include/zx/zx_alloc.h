@@ -104,13 +104,15 @@ struct ZXAlloc {
     if (ZXSliceStatus::Ok != mem.slice(alloc_offset, size, &out_mem)) {
       return ZXAllocStatus::SliceError;
     }
+#ifdef ZX_DEV
+    out_mem.memset(0xaa);
+#endif
 
     if (ZXSliceStatus::Ok != out_mem.cast<T>(out)) {
       return ZXAllocStatus::SliceCastError;
     }
 
     this->m_offset = new_offset;
-
     return ZXAllocStatus::Ok;
   }
 
