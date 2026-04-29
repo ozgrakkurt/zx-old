@@ -1,16 +1,19 @@
+// This header isn't meant to be used except in testing contexts!!
+//
 // These functions are extracted to this header file for testing/benchmarking
 // purposes. We can call these as zx_* so we know the compiler won't replace it
 // with it's own inlined version of the function. If we use __builtin_* for
-// testing/benchmarking then we risk compiler putting arbitrary code in there
+// testing/benchmarking then we risk compiler putting inlined code in there
 // instead of calling these functions.
 //
 // These functions are then used in zx_libc.cc for actually implementing regular
-// memcpy/memcmp etc. functions so linker can find those and compiler is able to
-// conditionally replace __builtin_* calls with calls to these.
+// memcpy/memcmp etc. functions so linker can find those if compiler inserts
+// calls to these.
 
 #ifndef ZX_LIBC_H
 #define ZX_LIBC_H
 
+#include <zx/zx_assert.h>
 #include <zx/zx_int.h>
 #include <zx/zx_vec.h>
 
@@ -106,19 +109,12 @@ __attribute__((no_builtin)) static inline zx_i32_c zx_memcmp(void const* lhs,
     if (nonzero_mask != 0) {
       // find first diff
       zx_u8 const idx = zx_ctz_u64(nonzero_mask);
-#ifdef ZX_DEV
       // idx can't be oob of the vector.
-      if (idx >= 64) {
-        __builtin_trap();
-      }
-#endif
+      zx_assert_dev(idx < 64);
       zx_u64 const pos = zx_add_unsafe_u64(offset, idx);
       zx_i32 const ret = zx_sub_unsafe_i32(left[pos], right[pos]);
-#ifdef ZX_DEV
-      if (ret == 0) {
-        __builtin_trap();
-      }
-#endif
+      // can't be equal
+      zx_assert_dev(ret != 0);
       return ret;
     }
   }
@@ -141,23 +137,14 @@ __attribute__((no_builtin)) static inline zx_i32_c zx_memcmp(void const* lhs,
     if (nonzero_mask != 0) {
       // find first diff
       zx_u8 const idx = zx_ctz_u64(nonzero_mask);
-#ifdef ZX_DEV
       // idx can't be oob of the vector.
-      if (idx >= 64) {
-        __builtin_trap();
-      }
+      zx_assert_dev(idx < 64);
       // idx can't be oob of remainder.
-      if (idx >= remainder) {
-        __builtin_trap();
-      }
-#endif
+      zx_assert_dev(idx < remainder);
       zx_u64 const pos = zx_add_unsafe_u64(offset, idx);
       zx_i32 const ret = zx_sub_unsafe_i32(left[pos], right[pos]);
-#ifdef ZX_DEV
-      if (ret == 0) {
-        __builtin_trap();
-      }
-#endif
+      // can't be equal
+      zx_assert_dev(ret != 0);
       return ret;
     }
   }
@@ -191,12 +178,8 @@ __attribute__((no_builtin)) static inline zx_u64_c zx_strlen(char const* str) {
     if (nonzero_mask != 0) {
       // find first diff
       zx_u8 const idx = zx_ctz_u64(nonzero_mask);
-#ifdef ZX_DEV
       // idx can't be oob of the vector.
-      if (idx >= 64) {
-        __builtin_trap();
-      }
-#endif
+      zx_assert_dev(idx < 64);
       return zx_sub_unsafe_u8(idx, diff);
     }
   }
@@ -217,12 +200,8 @@ __attribute__((no_builtin)) static inline zx_u64_c zx_strlen(char const* str) {
     if (nonzero_mask != 0) {
       // find first diff
       zx_u8 const idx = zx_ctz_u64(nonzero_mask);
-#ifdef ZX_DEV
       // idx can't be oob of the vector.
-      if (idx >= 64) {
-        __builtin_trap();
-      }
-#endif
+      zx_assert_dev(idx < 64);
       return zx_add_unsafe_u64(offset, idx);
     }
   }
