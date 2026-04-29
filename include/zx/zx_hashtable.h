@@ -8,12 +8,13 @@
 #include <zx/zx_alloc.h>
 #include <zx/zx_assert.h>
 #include <zx/zx_int.h>
+#include <zx/zx_vec.h>
 
-enum class [[nodiscard]] ZXHashtableStatus : zx_u8_c {
+enum class [[nodiscard]] ZXHashtableInitStatus : zx_u8_c {
   Ok = 0,
   Nullptr,
   OutOfMemory,
-  AllocErr,
+  AllocFail,
   IntegerOverflow,
   UnexpectedError,
 };
@@ -51,11 +52,11 @@ struct ZXHashtable {
   static constexpr zx_u8 EMPTY_TAG_ = 0b11111111;
   static constexpr zx_u32 LOAD_FACTOR_ = 80;
 
-  static inline ZXHashtableStatus init(ZXAlloc* alloc,
-                                       zx_u32 capacity,
-                                       ZXHashtable* table) {
+  static inline ZXHashtableInitStatus init(ZXAlloc* alloc,
+                                           zx_u32 capacity,
+                                           ZXHashtable* table) {
     if (alloc == nullptr || table == nullptr) {
-      return ZXHashtableStatus::Nullptr;
+      return ZXHashtableInitStatus::Nullptr;
     }
 
     bool overflow = false;
@@ -66,7 +67,7 @@ struct ZXHashtable {
     cap = zx_max_u32(GROUP_SIZE_, cap);
 
     if (cap <= capacity || cap == 0 || !zx_is_pow_two_u32(cap)) {
-      return ZXHashtableStatus::UnexpectedError;
+      return ZXHashtableInitStatus::UnexpectedError;
     }
 
     zx_u32 const cap_mask = zx_sub_u32(cap, 1, &overflow);
@@ -77,21 +78,20 @@ struct ZXHashtable {
     zx_u64 const metadata_size = zx_add_u64(cap, GROUP_SIZE_, &overflow);
 
     if (overflow) {
-      return ZXHashtableStatus::IntegerOverflow;
+      return ZXHashtableInitStatus::IntegerOverflow;
     }
 
     ZXSliceMut<zx_u8> metadata;
-    ZXAllocStatus alloc_status = ;
     switch (alloc->alloc<zx_u8>(metadata_size, &metadata)) {
       case ZXAllocStatus::Ok: {
         break;
       }
       case ZXAllocStatus::OutOfMemory: {
-        return ZXHashtableStatus::OutOfMemory;
+        return ZXHashtableInitStatus::OutOfMemory;
         break;
       }
       default: {
-        return ZXHashtableStatus::AllocFail;
+        return ZXHashtableInitStatus::AllocFail;
         break;
       }
     }
@@ -103,11 +103,11 @@ struct ZXHashtable {
         break;
       }
       case ZXAllocStatus::OutOfMemory: {
-        return ZXHashtableStatus::OutOfMemory;
+        return ZXHashtableInitStatus::OutOfMemory;
         break;
       }
       default: {
-        return ZXHashtableStatus::AllocFail;
+        return ZXHashtableInitStatus::AllocFail;
         break;
       }
     }
@@ -120,7 +120,7 @@ struct ZXHashtable {
         .m_capacity = capacity,
     };
 
-    return ZXStatus::Ok;
+    return ZXHashtableInitStatus::Ok;
   }
 
   inline zx_u32 capacity_left() const { return this->m_capacity_left; }
@@ -167,7 +167,7 @@ struct ZXHashtable {
         "vmovd %[tag], %[tag_vec]\n\t"
         "vpbroadcastb %[tag_vec], %[tag_vec]\n\t"
         : [tag_vec] "=&v"(tag_vec)
-        : [tag] "r"((regt)tag));
+        : [tag] "r"((zx_u32_c)tag));
     return tag_vec;
   }
 
@@ -216,14 +216,14 @@ struct ZXHashtable {
         if (cap_left == 0) {
           return ZXHashtableInsertStatus::OutOfCapacity;
         }
-        ZXSlice<zx_u8> metadata = this->m_metadata;
+        ZXSliceMut<zx_u8> metadata = this->m_metadata;
 
         metadata.write_unsafe(index, tag);
         metadata.write_unsafe(maybe_mirror_idx, tag);
         this->m_capacity_left = zx_sub_unsafe_u32(cap_left, 1);
         this->m_entries.write_unsafe(index, *entry);
 
-        return ZXHashtableStatus::ModifiedExistingEntry;
+        return ZXHashtableInsertStatus::ModifiedExistingEntry;
       }
 
       // Should have found an empty slot by now
@@ -308,7 +308,7 @@ struct ZXHashtable {
     }
 
     zx_u8 const tag = (zx_u8)(hash >> 57);
-    zx_u32 const cap_mask = this->cap_mask;
+    zx_u32 const cap_mask = this->m_cap_mask;
     zx_v128_u8 const tag_vec = broadcast_(tag);
     zx_u32 stride = 0;
 

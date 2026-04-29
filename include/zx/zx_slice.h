@@ -600,6 +600,16 @@ struct ZXSliceMut {
   }
 
   template <typename U>
+  inline ZXSliceStatus read_unaligned(zx_u64 index, U* out) const {
+    return this->as_const().read_unaligned(index, out);
+  }
+
+  template <typename U>
+  inline U read_unaligned_unsafe(zx_u64 index) const {
+    return this->as_const().read_unaligned_unsafe(index);
+  }
+
+  template <typename U>
   inline ZXSliceStatus write_unaligned(zx_u64 index, U val) const {
     bool overflow = false;
     zx_u64 const item_cap = zx_sub_u64(this->m_len, index, &overflow);
