@@ -19,11 +19,57 @@ enum class [[nodiscard]] ZXHashtableInitStatus : zx_u8_c {
   UnexpectedError,
 };
 
+static inline ZXCString zx_hashtable_init_status_to_cstring(
+    ZXHashtableInitStatus status) {
+  switch (status) {
+    case ZXHashtableInitStatus::Ok: {
+      return ZXCString::init_unsafe("ZXHashtableInitStatus::Ok");
+    }
+    case ZXHashtableInitStatus::Nullptr: {
+      return ZXCString::init_unsafe("ZXHashtableInitStatus::Nullptr");
+    }
+    case ZXHashtableInitStatus::OutOfMemory: {
+      return ZXCString::init_unsafe("ZXHashtableInitStatus::OutOfMemory");
+    }
+    case ZXHashtableInitStatus::AllocFail: {
+      return ZXCString::init_unsafe("ZXHashtableInitStatus::AllocFail");
+    }
+    case ZXHashtableInitStatus::IntegerOverflow: {
+      return ZXCString::init_unsafe("ZXHashtableInitStatus::IntegerOverFlow");
+    }
+    case ZXHashtableInitStatus::UnexpectedError: {
+      return ZXCString::init_unsafe("ZXHashtableInitStatus::UnexpectedError");
+    }
+    default: {
+      return ZXCString::init_unsafe("ZXHashtableInitStatus::Unknown");
+    }
+  }
+}
+
 enum class [[nodiscard]] ZXHashtableInsertStatus : zx_u8_c {
   CreatedNewEntry = 0,
   ModifiedExistingEntry,
   OutOfCapacity,
 };
+
+static inline ZXCString zx_hashtable_insert_status_to_cstring(
+    ZXHashtableInsertStatus status) {
+  switch (status) {
+    case ZXHashtableInsertStatus::CreatedNewEntry: {
+      return ZXCString::init_unsafe("ZXHashtableInsertStatus::CreatedNewEntry");
+    }
+    case ZXHashtableInsertStatus::ModifiedExistingEntry: {
+      return ZXCString::init_unsafe(
+          "ZXHashtableInsertStatus::ModifiedExistingEntry");
+    }
+    case ZXHashtableInsertStatus::OutOfCapacity: {
+      return ZXCString::init_unsafe("ZXHashtableInsertStatus::OutOfCapacity");
+    }
+    default: {
+      return ZXCString::init_unsafe("ZXHashtableInsertStatus::Unknown");
+    }
+  }
+}
 
 enum class [[nodiscard]] ZXHashtableGetOrInsertStatus : zx_u8_c {
   CreatedNewEntry = 0,
@@ -32,11 +78,53 @@ enum class [[nodiscard]] ZXHashtableGetOrInsertStatus : zx_u8_c {
   Nullptr,
 };
 
+static inline ZXCString zx_hashtable_get_or_insert_status_to_cstring(
+    ZXHashtableGetOrInsertStatus status) {
+  switch (status) {
+    case ZXHashtableGetOrInsertStatus::CreatedNewEntry: {
+      return ZXCString::init_unsafe(
+          "ZXHashtableGetOrInsertStatus::CreatedNewEntry");
+    }
+    case ZXHashtableGetOrInsertStatus::FoundExistingEntry: {
+      return ZXCString::init_unsafe(
+          "ZXHashtableGetOrInsertStatus::FoundExistingEntry");
+    }
+    case ZXHashtableGetOrInsertStatus::OutOfCapacity: {
+      return ZXCString::init_unsafe(
+          "ZXHashtableGetOrInsertStatus::OutOfCapacity");
+    }
+    case ZXHashtableGetOrInsertStatus::Nullptr: {
+      return ZXCString::init_unsafe("ZXHashtableGetOrInsertStatus::Nullptr");
+    }
+    default: {
+      return ZXCString::init_unsafe("ZXHashtableGetOrInsertStatus::Unknown");
+    }
+  }
+}
+
 enum class [[nodiscard]] ZXHashtableGetStatus : zx_u8_c {
   Found = 0,
   NotFound,
   Nullptr,
 };
+
+static inline ZXCString zx_hashtable_get_status_to_cstring(
+    ZXHashtableGetStatus status) {
+  switch (status) {
+    case ZXHashtableGetStatus::Found: {
+      return ZXCString::init_unsafe("ZXHashtableGetStatus::Found");
+    }
+    case ZXHashtableGetStatus::NotFound: {
+      return ZXCString::init_unsafe("ZXHashtableGetStatus::NotFound");
+    }
+    case ZXHashtableGetStatus::Nullptr: {
+      return ZXCString::init_unsafe("ZXHashtableGetStatus::Nullptr");
+    }
+    default: {
+      return ZXCString::init_unsafe("ZXHashtableGetStatus::Unknown");
+    }
+  }
+}
 
 template <typename T,
           typename EqCtx,
@@ -66,10 +154,6 @@ struct ZXHashtable {
                             &overflow);
     cap = zx_max_u32(GROUP_SIZE_, cap);
 
-    if (cap <= capacity || cap == 0 || !zx_is_pow_two_u32(cap)) {
-      return ZXHashtableInitStatus::UnexpectedError;
-    }
-
     zx_u32 const cap_mask = zx_sub_u32(cap, 1, &overflow);
 
     // allocate extra sizeof(simd) bytes so we can do simd loads on any byte
@@ -79,6 +163,9 @@ struct ZXHashtable {
 
     if (overflow) {
       return ZXHashtableInitStatus::IntegerOverflow;
+    }
+    if (cap <= capacity || cap == 0 || !zx_is_pow_two_u32(cap)) {
+      return ZXHashtableInitStatus::UnexpectedError;
     }
 
     ZXSliceMut<zx_u8> metadata;
@@ -98,7 +185,7 @@ struct ZXHashtable {
     metadata.fill(EMPTY_TAG_);
 
     ZXSliceMut<T> entries;
-    switch (alloc->alloc<T>(cap & entries)) {
+    switch (alloc->alloc<T>(cap, &entries)) {
       case ZXAllocStatus::Ok: {
         break;
       }
@@ -142,11 +229,11 @@ struct ZXHashtable {
     zx_u64_c tag_m;
 
     __asm__(
-        "vpcmpeqb %[tag_vec], %[group], %%xmm31\n\t"
-        "vpmovmskb %%xmm31, %[tag_m]\n\t"
+        "vpcmpeqb %[tag_vec], %[group], %%xmm15\n\t"
+        "vpmovmskb %%xmm15, %[tag_m]\n\t"
         : [tag_m] "=&r"(tag_m)
         : [group] "v"(group), [tag_vec] "v"(tag_vec)
-        : "xmm31");
+        : "xmm15");
 
     return (zx_u16)tag_m;
   }
@@ -199,7 +286,7 @@ struct ZXHashtable {
         T* entry_p = this->m_entries.offset_unsafe(index);
         if (EqFn(eqctx, entry_p, entry)) [[likely]] {
           *entry_p = *entry;
-          return ZXHashtableInsertStatus::CreatedNewEntry;
+          return ZXHashtableInsertStatus::ModifiedExistingEntry;
         } else {
           tag_match = remove_last_set_bit_(tag_match);
         }
@@ -223,7 +310,7 @@ struct ZXHashtable {
         this->m_capacity_left = zx_sub_unsafe_u32(cap_left, 1);
         this->m_entries.write_unsafe(index, *entry);
 
-        return ZXHashtableInsertStatus::ModifiedExistingEntry;
+        return ZXHashtableInsertStatus::CreatedNewEntry;
       }
 
       // Should have found an empty slot by now

@@ -7,6 +7,32 @@ static void assert(bool v) {
   }
 }
 
+static void test_from_ptr() {
+  zx_u256 data = 69;
+  zx_u256* ptr_mut = &data;
+  ZXSliceMut<zx_u16> slice_mut;
+  assert(ZXSliceStatus::Ok ==
+         ZXSliceMut<zx_u16>::init_from_ptr(ptr_mut, &slice_mut));
+  assert(slice_mut.len() == sizeof(zx_u256) / sizeof(zx_u16));
+
+  zx_u256 const* ptr = &data;
+  ZXSlice<zx_u32> slice;
+  assert(ZXSliceStatus::Ok == ZXSlice<zx_u32>::init_from_ptr(ptr, &slice));
+  assert(slice.len() == sizeof(zx_u256) / sizeof(zx_u32));
+}
+
+static void test_from_ptr_unsafe() {
+  zx_u256 data = 69;
+  zx_u256* ptr_mut = &data;
+  ZXSliceMut<zx_u16> const slice_mut =
+      ZXSliceMut<zx_u16>::init_from_ptr_unsafe(ptr_mut);
+  assert(slice_mut.len() == sizeof(zx_u256) / sizeof(zx_u16));
+
+  zx_u256 const* ptr = &data;
+  ZXSlice<zx_u32> const slice = ZXSlice<zx_u32>::init_from_ptr_unsafe(ptr);
+  assert(slice.len() == sizeof(zx_u256) / sizeof(zx_u32));
+}
+
 static void test_cstr() {
   ZXCString const v = ZXCString::init_unsafe("anan");
   assert(v.slice().len() == 4);
@@ -118,6 +144,8 @@ int main(void) {
   test_mut();
   test_immut();
   test_cstr();
+  test_from_ptr();
+  test_from_ptr_unsafe();
 
   return 0;
 }

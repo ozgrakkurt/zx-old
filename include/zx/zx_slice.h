@@ -81,6 +81,64 @@ struct ZXSlice {
     };
   }
 
+  template <typename U>
+  static inline ZXSliceStatus init_from_ptr(U const* ptr, ZXSlice<T>* out) {
+    static_assert(sizeof(T) > 0);
+    static_assert(alignof(T) > 0);
+    static_assert(sizeof(U) > 0);
+    static_assert(alignof(U) > 0);
+    static_assert(sizeof(U) % sizeof(T) == 0);
+
+    if (ptr == nullptr || out == nullptr) {
+      return ZXSliceStatus::Nullptr;
+    }
+
+    if (!__builtin_is_aligned(ptr, alignof(U))) {
+      return ZXSliceStatus::UnalignedPtr;
+    }
+    if (!__builtin_is_aligned(ptr, alignof(T))) {
+      return ZXSliceStatus::UnalignedPtr;
+    }
+
+    zx_u64 const len = sizeof(U) / sizeof(T);
+
+    *out = ZXSlice<T>{
+        .m_ptr = (T const*)ptr,
+        .m_len = len,
+    };
+
+    return ZXSliceStatus::Ok;
+  }
+
+  template <typename U>
+  static inline ZXSlice<T> init_from_ptr_unsafe(U const* ptr) {
+    static_assert(sizeof(T) > 0);
+    static_assert(alignof(T) > 0);
+    static_assert(sizeof(U) > 0);
+    static_assert(alignof(U) > 0);
+    static_assert(sizeof(U) % sizeof(T) == 0);
+
+#ifdef ZX_DEV
+    if (ptr == nullptr) {
+      __builtin_trap();
+    }
+
+    if (!__builtin_is_aligned(ptr, alignof(U))) {
+      __builtin_trap();
+    }
+    if (!__builtin_is_aligned(ptr, alignof(T))) {
+      __builtin_trap();
+    }
+#endif
+
+    zx_u64 const len = sizeof(U) / sizeof(T);
+
+    return ZXSlice<T>{
+        .m_ptr = (T const*)ptr,
+        .m_len = len,
+    };
+  }
+
   static ZXSlice<T> init_dangling() {
     static_assert(sizeof(T) > 0);
     static_assert(alignof(T) > 0);
@@ -405,6 +463,64 @@ struct ZXSliceMut {
     };
   }
 
+  template <typename U>
+  static inline ZXSliceStatus init_from_ptr(U* ptr, ZXSliceMut<T>* out) {
+    static_assert(sizeof(T) > 0);
+    static_assert(alignof(T) > 0);
+    static_assert(sizeof(U) > 0);
+    static_assert(alignof(U) > 0);
+    static_assert(sizeof(U) % sizeof(T) == 0);
+
+    if (ptr == nullptr || out == nullptr) {
+      return ZXSliceStatus::Nullptr;
+    }
+
+    if (!__builtin_is_aligned(ptr, alignof(U))) {
+      return ZXSliceStatus::UnalignedPtr;
+    }
+    if (!__builtin_is_aligned(ptr, alignof(T))) {
+      return ZXSliceStatus::UnalignedPtr;
+    }
+
+    zx_u64 const len = sizeof(U) / sizeof(T);
+
+    *out = ZXSliceMut<T>{
+        .m_ptr = (T*)ptr,
+        .m_len = len,
+    };
+
+    return ZXSliceStatus::Ok;
+  }
+
+  template <typename U>
+  static inline ZXSliceMut<T> init_from_ptr_unsafe(U* ptr) {
+    static_assert(sizeof(T) > 0);
+    static_assert(alignof(T) > 0);
+    static_assert(sizeof(U) > 0);
+    static_assert(alignof(U) > 0);
+    static_assert(sizeof(U) % sizeof(T) == 0);
+
+#ifdef ZX_DEV
+    if (ptr == nullptr) {
+      __builtin_trap();
+    }
+
+    if (!__builtin_is_aligned(ptr, alignof(U))) {
+      __builtin_trap();
+    }
+    if (!__builtin_is_aligned(ptr, alignof(T))) {
+      __builtin_trap();
+    }
+#endif
+
+    zx_u64 const len = sizeof(U) / sizeof(T);
+
+    return ZXSliceMut<T>{
+        .m_ptr = (T*)ptr,
+        .m_len = len,
+    };
+  }
+
   static ZXSliceMut<T> init_dangling() {
     static_assert(sizeof(T) > 0);
     static_assert(alignof(T) > 0);
@@ -601,12 +717,12 @@ struct ZXSliceMut {
 
   template <typename U>
   inline ZXSliceStatus read_unaligned(zx_u64 index, U* out) const {
-    return this->as_const().read_unaligned(index, out);
+    return this->as_const().template read_unaligned<U>(index, out);
   }
 
   template <typename U>
   inline U read_unaligned_unsafe(zx_u64 index) const {
-    return this->as_const().read_unaligned_unsafe(index);
+    return this->as_const().template read_unaligned_unsafe<U>(index);
   }
 
   template <typename U>
