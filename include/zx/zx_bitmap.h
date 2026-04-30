@@ -36,7 +36,7 @@ struct ZXBitmapIter {
       return ZXBitmapIterStatus::Nullptr;
     }
 
-    while (this->m_position < this->m_n_bits) {
+    while (true) {
       zx_u64 const word = this->m_word;
       if (word != 0) {
         zx_u8 const bit_pos = zx_ctz_u64(word);
@@ -46,13 +46,14 @@ struct ZXBitmapIter {
         return ZXBitmapIterStatus::Continue;
       } else {
         constexpr zx_u64 WORD_SIZE = 64;
-        this->m_position = zx_add_unsafe_u64(this->m_position, WORD_SIZE);
-        this->m_word =
-            this->m_storage.read_unsafe(this->m_position / WORD_SIZE);
+        zx_u64 const new_pos = zx_add_unsafe_u64(this->m_position, WORD_SIZE);
+        if (new_pos >= this->m_n_bits) {
+          return ZXBitmapIterStatus::Finished;
+        }
+        this->m_word = this->m_storage.read_unsafe(new_pos / WORD_SIZE);
+        this->m_position = new_pos;
       }
     }
-
-    return ZXBitmapIterStatus::Finished;
   }
 };
 
