@@ -44,6 +44,7 @@ ZX: Library = Library(
             "zx_fmt_test",
             "zx_err_trace_test",
             "zx_hashtable_test",
+            "zx_bitmap_test",
         ]
     ),
     bench_targets=set(["zx_rapidhash_v3_bench"]),
