@@ -13,17 +13,77 @@ enum class [[nodiscard]] ZXBitmapInitStatus : zx_u8_c {
   Nullptr,
 };
 
+static inline ZXCString zx_bitmap_init_status_to_cstring(
+    ZXBitmapInitStatus status) {
+  switch (status) {
+    case ZXBitmapInitStatus::Ok: {
+      return ZXCString::init_unsafe("ZXBitmapInitStatus::Ok");
+    }
+    case ZXBitmapInitStatus::OutOfMemory: {
+      return ZXCString::init_unsafe("ZXBitmapInitStatus::OutOfMemory");
+    }
+    case ZXBitmapInitStatus::AllocFail: {
+      return ZXCString::init_unsafe("ZXBitmapInitStatus::AllocFail");
+    }
+    case ZXBitmapInitStatus::IntegerOverflow: {
+      return ZXCString::init_unsafe("ZXBitmapInitStatus::IntegerOverFlow");
+    }
+    case ZXBitmapInitStatus::Nullptr: {
+      return ZXCString::init_unsafe("ZXBitmapInitStatus::Nullptr");
+    }
+    default: {
+      return ZXCString::init_unsafe("ZXBitmapInitStatus::Unknown");
+    }
+  }
+}
+
 enum class [[nodiscard]] ZXBitmapAccessStatus : zx_u8_c {
   Set = 0,
   Unset,
   OutOfBounds,
 };
 
+static inline ZXCString zx_bitmap_access_status_to_cstring(
+    ZXBitmapAccessStatus status) {
+  switch (status) {
+    case ZXBitmapAccessStatus::Set: {
+      return ZXCString::init_unsafe("ZXBitmapAccessStatus::Set");
+    }
+    case ZXBitmapAccessStatus::Unset: {
+      return ZXCString::init_unsafe("ZXBitmapAccessStatus::Unset");
+    }
+    case ZXBitmapAccessStatus::OutOfBounds: {
+      return ZXCString::init_unsafe("ZXBitmapAccessStatus::OutOfBounds");
+    }
+    default: {
+      return ZXCString::init_unsafe("ZXBitmapAccessStatus::Unknown");
+    }
+  }
+}
+
 enum class [[nodiscard]] ZXBitmapIterStatus : zx_u8_c {
   Continue = 0,
   Finished,
   Nullptr,
 };
+
+static inline ZXCString zx_bitmap_iter_status_to_cstring(
+    ZXBitmapIterStatus status) {
+  switch (status) {
+    case ZXBitmapIterStatus::Continue: {
+      return ZXCString::init_unsafe("ZXBitmapIterStatus::Continue");
+    }
+    case ZXBitmapIterStatus::Finished: {
+      return ZXCString::init_unsafe("ZXBitmapIterStatus::Finished");
+    }
+    case ZXBitmapIterStatus::Nullptr: {
+      return ZXCString::init_unsafe("ZXBitmapIterStatus::Nullptr");
+    }
+    default: {
+      return ZXCString::init_unsafe("ZXBitmapIterStatus::Unknown");
+    }
+  }
+}
 
 struct ZXBitmapIter {
   ZXSlice<zx_u64> m_storage;
