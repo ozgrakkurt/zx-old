@@ -79,6 +79,11 @@ static void zero_size_test() {
   ZXAlloc noalloc = ZXAlloc::init(ZXSliceMut<zx_u8>::init_dangling());
 
   ZXBitmap bitmap;
+  assert(ZXBitmapInitStatus::OutOfMemory ==
+         ZXBitmap::init(&noalloc, 69, &bitmap));
+  assert(ZXBitmapInitStatus::OutOfMemory ==
+         ZXBitmap::init(&noalloc, 1, &bitmap));
+
   assert(ZXBitmapInitStatus::Ok == ZXBitmap::init(&noalloc, 0, &bitmap));
   assert(bitmap.n_bits() == 0);
 

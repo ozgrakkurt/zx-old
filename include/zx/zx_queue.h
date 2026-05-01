@@ -127,6 +127,14 @@ struct ZXQueue {
     return ZXQueueInitStatus::Ok;
   }
 
+  inline void reset() {
+#ifdef ZX_DEV
+    this->m_entries.memset(0xaa);
+#endif
+    this->m_start = 0;
+    this->m_len = 0;
+  }
+
   inline zx_u32 capacity_left() const {
     return zx_sub_unsafe_u32(this->m_capacity, this->m_len);
   }
