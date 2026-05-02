@@ -210,6 +210,12 @@ struct ZXHashtable {
     return ZXHashtableInitStatus::Ok;
   }
 
+  inline zx_u32 n_occupied() const {
+    return zx_sub_unsafe_u32(this->m_capacity, this->m_capacity_left);
+  }
+
+  inline zx_u32 capacity() const { return this->m_capacity; }
+
   inline zx_u32 capacity_left() const { return this->m_capacity_left; }
 
   inline void reset() {

@@ -4,12 +4,14 @@
 #include <zx/zx_int.h>
 #include <zx/zx_rapidhash_v3.h>
 #include <zx/zx_slice.h>
+#include <zx/zx_time.h>
 #include <zx/zx_xoshiro256.h>
 
 // CONFIG
 constexpr zx_u64 ZX_FUZZ_INPUT_CAP = 1024;
 constexpr zx_u64 ZX_FUZZ_SIGNATURE_DEDUP_CAP = 4096;
-constexpr zx_u64 ZX_FUZZ_N_ITERS = zx_u64{1} << 18;
+constexpr zx_u64 ZX_FUZZ_MAX_SECONDS = 30;
+constexpr zx_u64 ZX_FUZZ_MAX_N_ITER = zx_u64{1} << 24;
 constexpr zx_u64 ZX_FUZZ_MAGIC[] = {0, ZX_U64_MAX};
 constexpr zx_u64 ZX_FUZZ_N_MAGIC =
     sizeof(ZX_FUZZ_MAGIC) / sizeof(ZX_FUZZ_MAGIC[0]);
@@ -250,8 +252,14 @@ void zx_fuzz(ZXAlloc* alloc, void* usr_ctx, zx_fuzz_one_fn fuzz_one) {
   ctx.total_coverage.fill(false);
 
   zx_u64 mut_idx = 0;
-  for (zx_u64 fuzz_iter_no = 0; fuzz_iter_no < ZX_FUZZ_N_ITERS;
-       fuzz_iter_no++) {
+
+  ZXTimeInfo time_info;
+  zx_fuzz_assert(ZXTimeStatus::Ok == ZXTimeInfo::init(&time_info));
+  ZXTimer timer = ZXTimer::init(time_info);
+  for (zx_u64 iter_no = 0;
+       iter_no < ZX_FUZZ_MAX_N_ITER &&
+       timer.elapsed() < zx_mul_unsafe_u64(ZX_FUZZ_MAX_SECONDS, 1'000'000'000);
+       iter_no++) {
     zx_fuzz_assert(mut_idx < ctx.fuzz_input.len());
 
     // do a baseline run

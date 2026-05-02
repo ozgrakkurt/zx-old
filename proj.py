@@ -56,6 +56,7 @@ ZX: Library = Library(
             "zx_memset_fuzz",
             "zx_memcmp_fuzz",
             "zx_memcpy_fuzz",
+            "zx_hashtable_fuzz",
         ]
     ),
     # test_targets={

@@ -98,6 +98,13 @@ struct ZXXoshiro256 {
       os.memcpy_from_unsafe(ws);
     }
   }
+
+  template <typename T>
+  inline T random() {
+    T v;
+    this->fill(ZXSliceMut<zx_u8>::init_from_ptr_unsafe(&v));
+    return v;
+  }
 };
 
 #endif
