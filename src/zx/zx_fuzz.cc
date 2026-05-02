@@ -8,10 +8,10 @@
 #include <zx/zx_xoshiro256.h>
 
 // CONFIG
-constexpr zx_u64 ZX_FUZZ_INPUT_CAP = 1024;
+constexpr zx_u64 ZX_FUZZ_INPUT_CAP = zx_u64{1} << 14;
 constexpr zx_u64 ZX_FUZZ_SIGNATURE_DEDUP_CAP = 4096;
-constexpr zx_u64 ZX_FUZZ_MAX_SECONDS = 30;
-constexpr zx_u64 ZX_FUZZ_MAX_N_ITER = zx_u64{1} << 24;
+constexpr zx_u64 ZX_FUZZ_MAX_SECONDS = 60;
+constexpr zx_u64 ZX_FUZZ_MAX_N_ITER = zx_u64{1} << 19;
 constexpr zx_u64 ZX_FUZZ_MAGIC[] = {0, ZX_U64_MAX};
 constexpr zx_u64 ZX_FUZZ_N_MAGIC =
     sizeof(ZX_FUZZ_MAGIC) / sizeof(ZX_FUZZ_MAGIC[0]);

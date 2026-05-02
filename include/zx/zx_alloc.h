@@ -44,6 +44,9 @@ struct ZXAlloc {
   zx_u64 m_offset;
 
   static inline ZXAlloc init(ZXSliceMut<zx_u8> mem) {
+#ifdef ZX_DEV
+    mem.memset(0xaa);
+#endif
     return ZXAlloc{
         .m_mem = mem,
         .m_offset = 0,
