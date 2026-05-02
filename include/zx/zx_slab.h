@@ -91,6 +91,7 @@ struct ZXSlab {
   struct Entry_ {
     T val_;
     zx_u32 next_free_;
+    bool is_occupied_;
   };
 
   ZXSliceMut<Entry_> m_entries;
@@ -126,6 +127,7 @@ struct ZXSlab {
       __builtin_memset(&ptr->val_, 0xaa, sizeof(T));
 #endif
       ptr->next_free_ = zx_add_unsafe_u32(i, 1);
+      ptr->is_occupied_ = false;
     }
 
     *slab = ZXSlab{
@@ -146,8 +148,13 @@ struct ZXSlab {
       __builtin_memset(&ptr->val_, 0xaa, sizeof(T));
 #endif
       ptr->next_free_ = zx_add_unsafe_u32(i, 1);
+      ptr->is_occupied_ = false;
     }
+    this->m_n_occupied = 0;
+    this->m_first_free_entry = 0;
   }
+
+  inline zx_u32 capacity() const { return this->m_capacity; }
 
   inline zx_u32 n_occupied() const { return this->m_n_occupied; }
 
@@ -170,6 +177,8 @@ struct ZXSlab {
     zx_assert_dev(key_idx < this->m_entries.len());
 
     Entry_* entry = this->m_entries.offset_unsafe(key_idx);
+    zx_assert_dev(!entry->is_occupied_);
+    entry->is_occupied_ = true;
     entry->val_ = *val;
     this->m_first_free_entry = entry->next_free_;
     entry->next_free_ = this->m_capacity;
@@ -197,10 +206,11 @@ struct ZXSlab {
     }
 
     Entry_* entry = this->m_entries.offset_unsafe(key_idx);
-    if (entry->next_free != this->m_capacity) {
+    if (!entry->is_occupied_) {
       return ZXSlabAccessStatus::NotFound;
     }
-    entry->next_free = this->m_first_free_entry;
+    entry->next_free_ = this->m_first_free_entry;
+    entry->is_occupied_ = false;
     this->m_first_free_entry = key_idx;
     *out = entry->val_;
 #ifdef ZX_DEV
@@ -211,7 +221,7 @@ struct ZXSlab {
     return ZXSlabAccessStatus::Found;
   }
 
-  inline ZXSlabAccessStatus get_mut(zx_u32 key, T** out) const {
+  inline ZXSlabAccessStatus get_mut(zx_u32 key, T** out) {
     if (out == nullptr) {
       return ZXSlabAccessStatus::Nullptr;
     }
@@ -224,7 +234,7 @@ struct ZXSlab {
     }
 
     Entry_* entry = this->m_entries.offset_unsafe(key_idx);
-    if (entry->next_free != this->m_capacity) {
+    if (!entry->is_occupied_) {
       *out = nullptr;
       return ZXSlabAccessStatus::NotFound;
     }
@@ -237,10 +247,22 @@ struct ZXSlab {
     if (out == nullptr) {
       return ZXSlabAccessStatus::Nullptr;
     }
-    T* ptr = nullptr;
-    ZXSlabAccessStatus const status = this->get_mut(key, &ptr);
-    *out = ptr;
-    return status;
+
+    zx_u32 const key_idx = key;
+
+    if (key_idx >= this->m_capacity) {
+      *out = nullptr;
+      return ZXSlabAccessStatus::OutOfBounds;
+    }
+
+    Entry_ const* entry = this->m_entries.offset_unsafe(key_idx);
+    if (!entry->is_occupied_) {
+      *out = nullptr;
+      return ZXSlabAccessStatus::NotFound;
+    }
+
+    *out = &entry->val_;
+    return ZXSlabAccessStatus::Found;
   }
 };
 
