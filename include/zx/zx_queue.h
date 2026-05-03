@@ -96,7 +96,8 @@ struct ZXQueue {
 
     bool overflow = false;
 
-    zx_u32 const cap = zx_next_pow_two_u32(capacity, &overflow);
+    zx_u32 const cap =
+        (capacity == 0) ? 0 : zx_next_pow_two_u32(capacity, &overflow);
 
     if (overflow) {
       return ZXQueueInitStatus::IntegerOverflow;
@@ -121,7 +122,7 @@ struct ZXQueue {
         .m_entries = entries,
         .m_start = 0,
         .m_len = 0,
-        .m_cap_mask = zx_sub_unsafe_u32(cap, 1),
+        .m_cap_mask = zx_saturating_sub_u32(cap, 1),
         .m_capacity = cap,
     };
 
@@ -135,6 +136,8 @@ struct ZXQueue {
     this->m_start = 0;
     this->m_len = 0;
   }
+
+  inline zx_u32 capacity() const { return this->m_capacity; }
 
   inline zx_u32 capacity_left() const {
     return zx_sub_unsafe_u32(this->m_capacity, this->m_len);

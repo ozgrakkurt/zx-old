@@ -21,10 +21,8 @@ static void fuzz_one(void* usr_ctx, ZXFuzzInput* fuzz_input) {
   alloc->reset();
 
   constexpr zx_u32 max_capacity = 128;
-  zx_u32 const capacity =
-      zx_max_u32(zx_cast_unsafe_to_u32<zx_u64>(
-                     zx_mod_unsafe_u64(fuzz_input->next(), max_capacity)),
-                 1);
+  zx_u32 const capacity = zx_cast_unsafe_to_u32<zx_u64>(
+      zx_mod_unsafe_u64(fuzz_input->next(), max_capacity));
 
   constexpr zx_u32 max_n_ops = zx_mul_unsafe_u32(max_capacity, 4);
   zx_u32 const n_ops = zx_cast_unsafe_to_u32<zx_u64>(
