@@ -2,6 +2,7 @@
 #define ZX_BITMAP_H
 
 #include <zx/zx_alloc.h>
+#include <zx/zx_assert.h>
 #include <zx/zx_int.h>
 #include <zx/zx_slice.h>
 
@@ -38,19 +39,19 @@ static inline ZXCString zx_bitmap_init_status_to_cstring(
 }
 
 enum class [[nodiscard]] ZXBitmapAccessStatus : zx_u8_c {
-  Set = 0,
-  Unset,
+  Ok = 0,
   OutOfBounds,
+  Nullptr,
 };
 
 static inline ZXCString zx_bitmap_access_status_to_cstring(
     ZXBitmapAccessStatus status) {
   switch (status) {
-    case ZXBitmapAccessStatus::Set: {
-      return ZXCString::init_unsafe("ZXBitmapAccessStatus::Set");
+    case ZXBitmapAccessStatus::Ok: {
+      return ZXCString::init_unsafe("ZXBitmapAccessStatus::Ok");
     }
-    case ZXBitmapAccessStatus::Unset: {
-      return ZXCString::init_unsafe("ZXBitmapAccessStatus::Unset");
+    case ZXBitmapAccessStatus::Nullptr: {
+      return ZXCString::init_unsafe("ZXBitmapAccessStatus::Nullptr");
     }
     case ZXBitmapAccessStatus::OutOfBounds: {
       return ZXCString::init_unsafe("ZXBitmapAccessStatus::OutOfBounds");
@@ -163,7 +164,11 @@ struct ZXBitmap {
 
   inline void reset() const { this->m_storage.memset(0); }
 
-  inline ZXBitmapAccessStatus get(zx_u64 idx) const {
+  inline ZXBitmapAccessStatus get(zx_u64 idx, bool* is_set) const {
+    if (is_set == nullptr) {
+      return ZXBitmapAccessStatus::Nullptr;
+    }
+
     if (idx >= this->m_n_bits) {
       return ZXBitmapAccessStatus::OutOfBounds;
     }
@@ -174,15 +179,27 @@ struct ZXBitmap {
     zx_u8 const mask = zx_shl_unsafe_u8(1, bit_shift);
     zx_u8 const byte =
         this->m_storage.cast_unsafe<zx_u8>().read_unsafe(byte_index);
-    if ((byte & mask) != 0) {
-      return ZXBitmapAccessStatus::Set;
-    } else {
-      return ZXBitmapAccessStatus::Unset;
-    }
+    *is_set = (byte & mask) != 0;
+    return ZXBitmapAccessStatus::Ok;
+  }
+
+  inline bool get_unsafe(zx_u64 idx) const {
+    zx_assert_dev(idx < this->m_n_bits);
+    zx_u64 const byte_index = zx_div_unsafe_u64(idx, 8);
+    zx_u8 const bit_shift =
+        zx_cast_unsafe_to_u8<zx_u64>(zx_mod_unsafe_u64(idx, 8));
+    zx_u8 const mask = zx_shl_unsafe_u8(1, bit_shift);
+    zx_u8 const byte =
+        this->m_storage.cast_unsafe<zx_u8>().read_unsafe(byte_index);
+    return (byte & mask) != 0;
   }
 
   // returns the old state of the bit
-  inline ZXBitmapAccessStatus set(zx_u64 idx) {
+  inline ZXBitmapAccessStatus set(zx_u64 idx, bool* is_set) {
+    if (is_set == nullptr) {
+      return ZXBitmapAccessStatus::Nullptr;
+    }
+
     if (idx >= this->m_n_bits) {
       return ZXBitmapAccessStatus::OutOfBounds;
     }
@@ -195,15 +212,29 @@ struct ZXBitmap {
         this->m_storage.cast_unsafe<zx_u8>().offset_unsafe(byte_index);
     zx_u8 const byte = *byte_p;
     *byte_p = byte | mask;
-    if ((byte & mask) != 0) {
-      return ZXBitmapAccessStatus::Set;
-    } else {
-      return ZXBitmapAccessStatus::Unset;
-    }
+    *is_set = (byte & mask) != 0;
+    return ZXBitmapAccessStatus::Ok;
+  }
+
+  inline bool set_unsafe(zx_u64 idx) {
+    zx_assert_dev(idx < this->m_n_bits);
+    zx_u64 const byte_index = zx_div_unsafe_u64(idx, 8);
+    zx_u8 const bit_shift =
+        zx_cast_unsafe_to_u8<zx_u64>(zx_mod_unsafe_u64(idx, 8));
+    zx_u8 const mask = zx_shl_unsafe_u8(1, bit_shift);
+    zx_u8* byte_p =
+        this->m_storage.cast_unsafe<zx_u8>().offset_unsafe(byte_index);
+    zx_u8 const byte = *byte_p;
+    *byte_p = byte | mask;
+    return (byte & mask) != 0;
   }
 
   // returns the old state of the bit
-  inline ZXBitmapAccessStatus unset(zx_u64 idx) {
+  inline ZXBitmapAccessStatus unset(zx_u64 idx, bool* is_set) {
+    if (is_set == nullptr) {
+      return ZXBitmapAccessStatus::Nullptr;
+    }
+
     if (idx >= this->m_n_bits) {
       return ZXBitmapAccessStatus::OutOfBounds;
     }
@@ -216,11 +247,21 @@ struct ZXBitmap {
         this->m_storage.cast_unsafe<zx_u8>().offset_unsafe(byte_index);
     zx_u8 const byte = *byte_p;
     *byte_p = byte & ~mask;
-    if ((byte & mask) != 0) {
-      return ZXBitmapAccessStatus::Set;
-    } else {
-      return ZXBitmapAccessStatus::Unset;
-    }
+    *is_set = (byte & mask) != 0;
+    return ZXBitmapAccessStatus::Ok;
+  }
+
+  inline bool unset_unsafe(zx_u64 idx) {
+    zx_assert_dev(idx < this->m_n_bits);
+    zx_u64 const byte_index = zx_div_unsafe_u64(idx, 8);
+    zx_u8 const bit_shift =
+        zx_cast_unsafe_to_u8<zx_u64>(zx_mod_unsafe_u64(idx, 8));
+    zx_u8 const mask = zx_shl_unsafe_u8(1, bit_shift);
+    zx_u8* byte_p =
+        this->m_storage.cast_unsafe<zx_u8>().offset_unsafe(byte_index);
+    zx_u8 const byte = *byte_p;
+    *byte_p = byte & ~mask;
+    return (byte & mask) != 0;
   }
 
   inline ZXBitmapIter iter() const {
