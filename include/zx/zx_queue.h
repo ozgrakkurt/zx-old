@@ -123,7 +123,7 @@ struct ZXQueue {
         .m_start = 0,
         .m_len = 0,
         .m_cap_mask = zx_saturating_sub_u32(cap, 1),
-        .m_capacity = cap,
+        .m_capacity = capacity,
     };
 
     return ZXQueueInitStatus::Ok;

@@ -4,6 +4,7 @@
 #include <zx/zx_page_alloc.h>
 #include <zx/zx_slab.h>
 #include <zx/zx_slice.h>
+#include <zx/zx_xoshiro256.h>
 
 static void assert(bool cond) {
   if (!cond) [[unlikely]] {
@@ -30,53 +31,143 @@ static void fuzz_one(void* usr_ctx, ZXFuzzInput* fuzz_input) {
   zx_u32 const n_ops = zx_cast_unsafe_to_u32<zx_u64>(
       zx_mod_unsafe_u64(fuzz_input->next(), max_n_ops));
 
-  ZXQueue<zx_u32> queue;
-  assert(ZXQueueInitStatus::Ok ==
-         ZXQueue<zx_u32>::init(alloc, capacity, &queue));
+  ZXSlab<zx_u64> slab;
+  assert(ZXSlabInitStatus ::Ok == ZXSlab<zx_u64>::init(alloc, capacity, &slab));
 
-  zx_u32 start = 0;
-  zx_u32 end = 0;
+  ZXSliceMut<zx_u32> slab_keys;
+  assert(ZXAllocStatus::Ok == alloc->alloc<zx_u32>(capacity, &slab_keys));
+  slab_keys.fill(ZX_U32_MAX);
+  zx_u32 n_slab_keys = 0;
 
   for (zx_u32 i = 0; i < n_ops; i++) {
+    assert(n_slab_keys <= capacity);
+
     zx_u8 const op =
-        zx_cast_unsafe_to_u8<zx_u64>(zx_mod_unsafe_u64(fuzz_input->next(), 2));
+        zx_cast_unsafe_to_u8<zx_u64>(zx_mod_unsafe_u64(fuzz_input->next(), 3));
+    bool const rand_key = n_slab_keys == 0 || (fuzz_input->next() & 1) == 1;
+    zx_u32 const key_idx =
+        zx_rand_mod_u32((zx_u32)fuzz_input->next(), n_slab_keys);
+    zx_u32 const key = (rand_key) ? (zx_u32)fuzz_input->next()
+                                  : slab_keys.read_unsafe(key_idx);
     switch (op) {
-      // push
+      // insert
       case 0: {
-        ZXQueuePushStatus const status = queue.push(&end);
-        if (status == ZXQueuePushStatus::Ok) {
-          end = zx_add_unsafe_u32(end, 1);
-        } else if (status != ZXQueuePushStatus::OutOfCapacity) {
-          __builtin_trap();
+        zx_u64 const to_insert = ZX_U64_MAX;
+        zx_u32 new_key = ZX_U32_MAX;
+        bool const should_succeed = slab.capacity_left() > 0;
+        ZXSlabInsertStatus const status = slab.insert(&to_insert, &new_key);
+        if (should_succeed) {
+          assert(ZXSlabInsertStatus::Ok == status);
+          zx_u64* pp = nullptr;
+          assert(ZXSlabAccessStatus::Found == slab.get_mut(new_key, &pp));
+          assert(pp != nullptr);
+          assert(*pp == ZX_U64_MAX);
+          *pp = new_key;
+          slab_keys.write_unsafe(n_slab_keys, new_key);
+          n_slab_keys = zx_add_unsafe_u32(n_slab_keys, 1);
+        } else {
+          assert(ZXSlabInsertStatus::OutOfCapacity == status);
         }
         break;
       }
-      // pop
+      // remove
       case 1: {
-        zx_u32 val = ZX_U32_MAX;
-        ZXQueuePopStatus const status = queue.pop(&val);
-        if (status == ZXQueuePopStatus::Ok) {
-          assert(val == start);
-          start = zx_add_unsafe_u32(start, 1);
-        } else if (status != ZXQueuePopStatus::Empty) {
-          __builtin_trap();
+        zx_u64 val = ZX_U64_MAX;
+        ZXSlabAccessStatus const status = slab.remove(key, &val);
+        if (!rand_key) {
+          assert(ZXSlabAccessStatus::Found == status);
+          assert(val == key);
+          n_slab_keys = zx_sub_unsafe_u32(n_slab_keys, 1);
+          slab_keys.write_unsafe(key_idx, slab_keys.read_unsafe(n_slab_keys));
+          slab_keys.write_unsafe(n_slab_keys, ZX_U32_MAX);
+        } else if (ZXSlabAccessStatus::Found == status) {
+          assert(val == key);
+          bool found = false;
+          for (zx_u32 j = 0; j < n_slab_keys; j++) {
+            if (slab_keys.read_unsafe(j) == key) {
+              n_slab_keys = zx_sub_unsafe_u32(n_slab_keys, 1);
+              slab_keys.write_unsafe(j, slab_keys.read_unsafe(n_slab_keys));
+              slab_keys.write_unsafe(n_slab_keys, ZX_U32_MAX);
+              found = true;
+              break;
+            }
+          }
+          assert(found);
         }
-
+        break;
+      }
+      // get
+      case 2: {
+        zx_u64 const* val_p = nullptr;
+        ZXSlabAccessStatus const status = slab.get(key, &val_p);
+        if (!rand_key) {
+          assert(ZXSlabAccessStatus::Found == status);
+          assert(val_p != nullptr);
+          assert(*val_p == key);
+        }
         break;
       }
       default: {
         __builtin_trap();
       }
     }
+    for (zx_u32 j = 0; j < n_slab_keys; j++) {
+      zx_u64 const* val_p = nullptr;
+      zx_u32 const keyk = slab_keys.read_unsafe(j);
+      switch (slab.get(keyk, &val_p)) {
+        case ZXSlabAccessStatus::Found: {
+          break;
+        }
+        case ZXSlabAccessStatus::NotFound: {
+          if (op == 0) {
+            __builtin_trap();
+          } else if (op == 1) {
+            __builtin_trap();
+
+          } else if (op == 2) {
+            __builtin_trap();
+          } else {
+            __builtin_trap();
+          }
+          break;
+        }
+        case ZXSlabAccessStatus::OutOfBounds: {
+          __builtin_trap();
+          break;
+        }
+        default: {
+          __builtin_trap();
+          break;
+        }
+      }
+      assert(*val_p == keyk);
+    }
   }
 
-  zx_u32 val = ZX_U32_MAX;
-  while (queue.pop(&val) == ZXQueuePopStatus::Ok) {
-    assert(val == start);
-    start = zx_add_unsafe_u32(start, 1);
+  for (zx_u32 i = 0; i < n_slab_keys; i++) {
+    zx_u64 val = ZX_U64_MAX;
+    zx_u32 const key = slab_keys.read_unsafe(i);
+    switch (slab.remove(key, &val)) {
+      case ZXSlabAccessStatus::Found: {
+        break;
+      }
+      case ZXSlabAccessStatus::NotFound: {
+        __builtin_trap();
+        break;
+      }
+      case ZXSlabAccessStatus::OutOfBounds: {
+        __builtin_trap();
+        break;
+      }
+      default: {
+        __builtin_trap();
+        break;
+      }
+    }
+    assert(val == key);
   }
 
-  assert(start == end);
+  assert(slab.n_occupied() == 0);
 }
 
 int main(void) {
