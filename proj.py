@@ -22,13 +22,6 @@ ZX: Library = Library(
         [
             "zx_libc",
             "zx_fuzz",
-            # "zx_assert.cc",
-            # "zx_err.cc",
-            # "zx_fuzz.cc",
-            # "zx_mem.cc",
-            # "zx_page_alloc.cc",
-            # "zx_start.cc",
-            # "zx_sys.cc",
         ]
     ),
     test_targets=set(
@@ -62,63 +55,15 @@ ZX: Library = Library(
             "zx_slab_fuzz",
         ]
     ),
-    # test_targets={
-    #     "zx_hashtable_test": set([]),
-    #     "zx_alloc_test": set([]),
-    #     "zx_err_test": set([]),
-    #     "zx_queue_test": set([]),
-    #     "zx_slab_test": set([]),
-    #     "zx_bitmap_test": set([]),
-    #     "zx_int_test": set([]),
-    # },
-    # bench_targets={
-    #     "zx_hashtable_bench": set([]),
-    #     "zx_err_bench": set([]),
-    # },
-    # fuzz_targets={
-    #     "zx_hashtable_fuzz": set([]),
-    #     "zx_slab_fuzz": set([]),
-    #     "zx_queue_fuzz": set([]),
-    # },
 )
 
-# NOZ: Library = Library(
-#     source_files=set(["noz.cc"]),
-#     test_targets={
-#         "noz_test": set([]),
-#     },
-#     bench_targets={
-#         "noz_bench": set([]),
-#     },
-#     fuzz_targets={
-#         "noz_roundtrip_fuzz": set([]),
-#         "noz_decompress_safe_fuzz": set([]),
-#     },
-# )
-#
-# FIBER: Library = Library(
-#     source_files=set(["fiber.cc"]),
-#     test_targets={
-#         "fiber_test": set([]),
-#     },
-#     bench_targets={
-#         "fiber_bench": set([]),
-#     },
-# )
-#
-# FIO: Library = Library(
-#     dependencies=set(["fiber"]),
-#     source_files=set(["fio_uring.cc"]),
-#     test_targets={
-#         "fio_uring_test": set([]),
-#     },
-# )
+NOZ: Library = Library(
+    source_files=set(["noz"]),
+)
 
 PROJECT: Project = Project(
     libraries={
         "zx": ZX,
-        # "noz": NOZ,
-        # "fiber": FIBER,
-        # "fio": FIO,
+        "noz": NOZ,
     },
 )

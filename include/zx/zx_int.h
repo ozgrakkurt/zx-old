@@ -492,6 +492,50 @@ constexpr static inline zx_u64 zx_mod_unsafe_u64(zx_u64 a, zx_u64 b) {
 }
 
 template <typename T>
+constexpr static inline T zx_div_ceil_(T a, T b, bool* failure) {
+  T const c = zx_add_<T>(a, b, failure);
+  T const d = zx_sub_<T>(c, 1, failure);
+  return zx_div_<T>(d, b, failure);
+}
+constexpr static inline zx_u8 zx_div_ceil_u8(zx_u8 a, zx_u8 b, bool* failure) {
+  return zx_div_ceil_<zx_u8>(a, b, failure);
+}
+constexpr static inline zx_u16 zx_div_ceil_u16(zx_u16 a,
+                                               zx_u16 b,
+                                               bool* failure) {
+  return zx_div_ceil_<zx_u16>(a, b, failure);
+}
+constexpr static inline zx_u32 zx_div_ceil_u32(zx_u32 a,
+                                               zx_u32 b,
+                                               bool* failure) {
+  return zx_div_ceil_<zx_u32>(a, b, failure);
+}
+constexpr static inline zx_u64 zx_div_ceil_u64(zx_u64 a,
+                                               zx_u64 b,
+                                               bool* failure) {
+  return zx_div_ceil_<zx_u64>(a, b, failure);
+}
+
+template <typename T>
+constexpr static inline T zx_div_ceil_unsafe_(T a, T b) {
+  T const c = zx_add_unsafe_<T>(a, b);
+  T const d = zx_sub_unsafe_<T>(c, 1);
+  return zx_div_unsafe_<T>(d, b);
+}
+constexpr static inline zx_u8 zx_div_ceil_unsafe_u8(zx_u8 a, zx_u8 b) {
+  return zx_div_ceil_unsafe_<zx_u8>(a, b);
+}
+constexpr static inline zx_u16 zx_div_ceil_unsafe_u16(zx_u16 a, zx_u16 b) {
+  return zx_div_ceil_unsafe_<zx_u16>(a, b);
+}
+constexpr static inline zx_u32 zx_div_ceil_unsafe_u32(zx_u32 a, zx_u32 b) {
+  return zx_div_ceil_unsafe_<zx_u32>(a, b);
+}
+constexpr static inline zx_u64 zx_div_ceil_unsafe_u64(zx_u64 a, zx_u64 b) {
+  return zx_div_ceil_unsafe_<zx_u64>(a, b);
+}
+
+template <typename T>
 constexpr static inline T zx_next_multiple_of_(T a, T b, bool* failure) {
   T const c = zx_add_<T>(a, b, failure);
   T const d = zx_sub_<T>(c, 1, failure);

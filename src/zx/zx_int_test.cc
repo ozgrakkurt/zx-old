@@ -266,6 +266,56 @@ int main(void) {
 
   assert(69__wbu == zx_mod_unsafe_u64(69, 113));
 
+  // div_ceil overflow
+  overflow = false;
+  zx_div_ceil_u8(ZX_U8_MAX, 3, &overflow);
+  assert(overflow);
+
+  overflow = false;
+  zx_div_ceil_u16(ZX_U16_MAX, 3, &overflow);
+  assert(overflow);
+
+  overflow = false;
+  zx_div_ceil_u32(ZX_U32_MAX, 3, &overflow);
+  assert(overflow);
+
+  overflow = false;
+  zx_div_ceil_u64(ZX_U64_MAX, 3, &overflow);
+  assert(overflow);
+
+  // div_ceil no overflow
+  overflow = false;
+  assert(1 == zx_div_ceil_u8(1, 3, &overflow));
+  assert(!overflow);
+
+  overflow = false;
+  assert(2 == zx_div_ceil_u8(4, 3, &overflow));
+  assert(!overflow);
+
+  overflow = false;
+  assert(1 == zx_div_ceil_u16(1, 3, &overflow));
+  assert(!overflow);
+
+  overflow = false;
+  assert(2 == zx_div_ceil_u16(4, 3, &overflow));
+  assert(!overflow);
+
+  overflow = false;
+  assert(1 == zx_div_ceil_u32(1, 3, &overflow));
+  assert(!overflow);
+
+  overflow = false;
+  assert(2 == zx_div_ceil_u32(4, 3, &overflow));
+  assert(!overflow);
+
+  overflow = false;
+  assert(1 == zx_div_ceil_u64(1, 3, &overflow));
+  assert(!overflow);
+
+  overflow = false;
+  assert(2 == zx_div_ceil_u64(4, 3, &overflow));
+  assert(!overflow);
+
   // next_mult overflow
   overflow = false;
   zx_next_multiple_of_u8(ZX_U8_MAX, 3, &overflow);
