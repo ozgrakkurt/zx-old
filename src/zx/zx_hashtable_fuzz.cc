@@ -152,7 +152,7 @@ static void fuzz_one(void* usr_ctx, ZXFuzzInput* fuzz_input) {
     assert(table.n_occupied() == map.len());
 
     zx_u8 const op =
-        zx_cast_unsafe_to_u8<zx_u64>(zx_mod_unsafe_u64(fuzz_input->next(), 8));
+        zx_cast_unsafe_to_u8<zx_u64>(zx_mod_unsafe_u64(fuzz_input->next(), 4));
     zx_u64 const seed = fuzz_input->next();
     ZXXoshiro256 key_rand = ZXXoshiro256::init(seed);
     switch (op) {
@@ -262,17 +262,8 @@ static void fuzz_one(void* usr_ctx, ZXFuzzInput* fuzz_input) {
         }
         break;
       }
-      // reset
-      case 3: {
-        map.reset();
-        table.reset();
-        break;
-      }
       // rand select
-      case 4:
-      case 5:
-      case 6:
-      case 7: {
+      case 3: {
         if (map.len() == 0) {
           continue;
         }

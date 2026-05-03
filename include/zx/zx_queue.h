@@ -40,6 +40,7 @@ static inline ZXCString zx_queue_init_status_to_cstring(
 enum class [[nodiscard]] ZXQueuePushStatus : zx_u8_c {
   Ok = 0,
   OutOfCapacity,
+  Nullptr,
 };
 
 static inline ZXCString zx_queue_push_status_to_cstring(
@@ -102,7 +103,7 @@ struct ZXQueue {
     }
 
     ZXSliceMut<T> entries;
-    switch (alloc->alloc<T>(capacity, &entries)) {
+    switch (alloc->alloc<T>(cap, &entries)) {
       case ZXAllocStatus::Ok: {
         break;
       }
@@ -121,7 +122,7 @@ struct ZXQueue {
         .m_start = 0,
         .m_len = 0,
         .m_cap_mask = zx_sub_unsafe_u32(cap, 1),
-        .m_capacity = capacity,
+        .m_capacity = cap,
     };
 
     return ZXQueueInitStatus::Ok;
@@ -142,6 +143,10 @@ struct ZXQueue {
   inline zx_u32 len() const { return this->m_len; }
 
   inline ZXQueuePushStatus push(T const* entry) {
+    if (entry == nullptr) {
+      return ZXQueuePushStatus::Nullptr;
+    }
+
     if (this->m_capacity == this->m_len) {
       return ZXQueuePushStatus::OutOfCapacity;
     }
