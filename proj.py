@@ -53,6 +53,7 @@ ZX: Library = Library(
             "zx_bitmap_fuzz",
             "zx_queue_fuzz",
             "zx_slab_fuzz",
+            "zx_alloc_fuzz",
         ]
     ),
 )

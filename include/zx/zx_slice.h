@@ -366,8 +366,7 @@ struct ZXSlice {
     return val;
   }
 
-  // Returns true iff the given slice is overlapping with `this`.
-  // Considers zero sized slices with same pointer to be overlapping.
+  // Returns true iff the given slice has a common element with `this`.
   inline bool is_overlapping(ZXSlice<T> other) const {
     zx_u64 const self_start = (zx_u64)this->m_ptr;
     zx_u64 const other_start = (zx_u64)other.m_ptr;
@@ -377,7 +376,8 @@ struct ZXSlice {
     zx_u64 const self_end = zx_add_unsafe_u64(self_start, this->m_len);
     zx_u64 const other_end = zx_add_unsafe_u64(other_start, other.m_len);
 
-    return !((self_end < other_start) || (other_end < self_start));
+    return this->m_len > 0 && other.m_len > 0 && self_start < other_end &&
+           other_start < self_end;
   }
 
   [[nodiscard]] inline ZXSliceCmp compare(ZXSlice<T> other) const {

@@ -7,6 +7,20 @@ static void assert(bool v) {
   }
 }
 
+static void test_is_overlapping() {
+  assert(!ZXSlice<zx_u8>::init_dangling().is_overlapping(
+      ZXSlice<zx_u8>::init_dangling()));
+  assert(!ZXSlice<zx_u256>::init_dangling().is_overlapping(
+      ZXSlice<zx_u256>::init_dangling()));
+
+  zx_u256 arr[16];
+
+  assert(!ZXSlice<zx_u256>::init_unsafe(arr, 16).is_overlapping(
+      ZXSlice<zx_u256>::init_unsafe(arr, 0)));
+  assert(ZXSlice<zx_u256>::init_unsafe(arr, 16).is_overlapping(
+      ZXSlice<zx_u256>::init_unsafe(arr, 1)));
+}
+
 static void test_from_ptr() {
   zx_u256 data = 69;
   zx_u256* ptr_mut = &data;
@@ -146,6 +160,7 @@ int main(void) {
   test_cstr();
   test_from_ptr();
   test_from_ptr_unsafe();
+  test_is_overlapping();
 
   return 0;
 }

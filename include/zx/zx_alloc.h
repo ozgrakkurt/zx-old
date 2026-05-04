@@ -53,9 +53,13 @@ struct ZXAlloc {
     };
   }
 
+  inline zx_u64 capacity_left() const {
+    return zx_sub_unsafe_u64(this->m_mem.len(), this->m_offset);
+  }
+
   inline void reset() {
 #ifdef ZX_DEV
-    this->m_mem.fill(zx_u8{0xaa});
+    this->m_mem.memset(zx_u8{0xaa});
 #endif
     this->m_offset = 0;
   }
@@ -82,7 +86,7 @@ struct ZXAlloc {
     static_assert(sizeof(void*) == sizeof(zx_u64));
     bool overflow = false;
     zx_u64 const addr = zx_add_u64((zx_u64)mem.ptr(), offset, &overflow);
-    zx_u64 const aligned_addr = zx_next_multiple_of_u64(addr, ALIGN, &overflow);
+    zx_u64 const aligned_addr = __builtin_align_up(addr, ALIGN);
     zx_u64 const padding = zx_sub_u64(aligned_addr, addr, &overflow);
 
     zx_u64 const size = zx_mul_u64(len, sizeof(T), &overflow);
