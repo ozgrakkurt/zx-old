@@ -95,7 +95,7 @@ struct ZXTimeInfo {
       };
 
       // This would cause ub when we are converting cycles to nanos later.
-      if (info.m_time_shift >= 128) {
+      if (info.m_time_shift >= 128 || info.m_time_mult == 0) {
         status = ZXTimeStatus::InvalidNum;
         goto cleanup;
       }
@@ -153,7 +153,7 @@ struct ZXTimer {
   // and resets the lap timer.
   inline zx_u64 lap() {
     zx_u64 const now = now_();
-    zx_u64 const diff = now - this->m_start;
+    zx_u64 const diff = zx_sub_unsafe_u64(now, this->m_start);
     this->m_start = now;
     return this->m_info.cycles_to_nanos(diff);
   }
@@ -161,7 +161,7 @@ struct ZXTimer {
   // Returns the number of nanoseconds elapsed since last lap.
   inline zx_u64 elapsed() const {
     zx_u64 const now = now_();
-    zx_u64 const diff = now - this->m_start;
+    zx_u64 const diff = zx_sub_unsafe_u64(now, this->m_start);
     return this->m_info.cycles_to_nanos(diff);
   }
 };

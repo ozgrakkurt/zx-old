@@ -119,7 +119,7 @@ static void fuzz_one(void* usr_ctx, ZXFuzzInput* fuzz_input) {
 }
 
 int main(void) {
-  constexpr zx_u64 mem_cap = zx_u64{1} << 30;
+  constexpr zx_u64 mem_cap = zx_u64{1} << 28;
   ZXSliceMut<zx_u8> mem;
   assert(ZXPageAllocStatus::Ok == zx_page_alloc_4kb(mem_cap, &mem));
 

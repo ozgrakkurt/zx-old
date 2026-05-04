@@ -41,7 +41,6 @@ __attribute__((no_builtin)) static void fuzz_one(void* usr_ctx,
   zx_u64 const len = zx_max_u64(
       1,
       zx_mod_unsafe_u64(fuzz_input->next(), zx_div_unsafe_u64(mem.len(), 2)));
-  assert(len > 0);
 
   ZXXoshiro256 rand = ZXXoshiro256::init(fuzz_input->next());
   rand.fill(mem);
