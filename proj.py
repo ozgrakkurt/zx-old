@@ -60,7 +60,7 @@ ZX: Library = Library(
 NOZ: Library = Library(
     source_files=set(["noz"]),
     test_targets=set(["noz_test"]),
-    fuzz_targets=set(["noz_fuzz"]),
+    fuzz_targets=set(["noz_fuzz", "noz_decompress_fuzz"]),
 )
 
 PROJECT: Project = Project(
