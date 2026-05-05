@@ -148,6 +148,22 @@ struct ZXSlice {
     };
   }
 
+  template <zx_u16 ALIGN>
+  static ZXSlice<T> init_aligned_dangling() {
+    static_assert(ALIGN >= alignof(T));
+    static_assert(zx_is_pow_two_u16(ALIGN));
+    static_assert(ALIGN <= 128__wbu);
+    static_assert(ALIGN > 0);
+
+    static_assert(sizeof(T) > 0);
+    static_assert(alignof(T) > 0);
+
+    return ZXSlice<T> {
+      .m_ptr = (T const*)zx_u64{ALIGN},
+      .m_len = 0,
+    };
+  }
+
   inline zx_u64 len() const { return this->m_len; }
 
   inline T const* ptr() const { return this->m_ptr; }
@@ -540,6 +556,22 @@ struct ZXSliceMut {
     return ZXSliceMut<T>{
         .m_ptr = (T*)zx_u64{alignof(T)},
         .m_len = 0,
+    };
+  }
+
+  template <zx_u16 ALIGN>
+  static ZXSliceMut<T> init_aligned_dangling() {
+    static_assert(ALIGN >= alignof(T));
+    static_assert(zx_is_pow_two_u16(ALIGN));
+    static_assert(ALIGN <= 128__wbu);
+    static_assert(ALIGN > 0);
+
+    static_assert(sizeof(T) > 0);
+    static_assert(alignof(T) > 0);
+
+    return ZXSliceMut<T> {
+      .m_ptr = (T*)zx_u64{ALIGN},
+      .m_len = 0,
     };
   }
 

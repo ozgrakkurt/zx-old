@@ -76,7 +76,7 @@ struct ZXAlloc {
     }
 
     if (len == 0) {
-      *out = ZXSliceMut<T>::init_dangling();
+      *out = ZXSliceMut<T>::template init_aligned_dangling<ALIGN>();
       return ZXAllocStatus::Ok;
     }
 
@@ -103,6 +103,7 @@ struct ZXAlloc {
     }
 
     ZXSliceMut<zx_u8> out_mem;
+    
     if (ZXSliceStatus::Ok != mem.slice(alloc_offset, size, &out_mem)) {
       return ZXAllocStatus::SliceError;
     }
