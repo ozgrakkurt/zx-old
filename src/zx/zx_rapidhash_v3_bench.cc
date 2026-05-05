@@ -3,19 +3,16 @@
 #include <zx/zx_xoshiro256.h>
 
 int main(void) {
-  constexpr zx_u64 len = 569;
-  zx_u64 data[len];
-
-  ZXSliceMut<zx_u64> const slice = ZXSliceMut<zx_u64>::init_unsafe(data, len);
-
   ZXXoshiro256 rand = ZXXoshiro256::init(0);
-  rand.fill(slice.cast_unsafe<zx_u8>());
+
+  constexpr zx_u64 len = 20;
+  zx_u8 data[len];
+  ZXSliceMut<zx_u8> slice = ZXSliceMut<zx_u8>::init_unsafe(data, len);
+  rand.fill(slice);
 
   zx_u64 thash = 0;
-  for (zx_u64 i = 0; i < slice.len(); i++) {
-    zx_u64 const v = slice.as_const().read_unsafe(i);
-    thash = zx_rapidhash_v3(
-        ZXSlice<zx_u8>::init_unsafe((zx_u8 const*)&v, sizeof(zx_u64)), thash);
+  for (zx_u64 i = 0; i < 10; i++) {
+    thash = zx_rapidhash_v3(slice.as_const(), thash);
   }
 
   if (thash == 69)

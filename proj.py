@@ -44,7 +44,9 @@ ZX: Library = Library(
             "zx_slab_test",
         ]
     ),
-    bench_targets=set(["zx_rapidhash_v3_bench", "zx_xoshiro256_bench"]),
+    bench_targets=set(
+        ["zx_rapidhash_v3_bench", "zx_xoshiro256_bench", "zx_libc_bench"]
+    ),
     fuzz_targets=set(
         [
             "zx_strlen_fuzz",
