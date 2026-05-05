@@ -413,6 +413,8 @@ def process_library(
             )
             nw.build(asm_out, "objdump", exe_path)
             artifacts.asm_outputs.append(asm_out)
+            nw.build(bench_tgt_name + "_asm", "phony", asm_out)
+
             nw.newline()
 
     if profile.fuzz:
@@ -506,7 +508,7 @@ def gen_ninja_build(
     )
     nw.rule(
         "objdump",
-        command="$objdump -d -S -M intel $in > $out",
+        command="$objdump --visualize-jumps --no-show-raw-insn -d -S -C -M intel $in > $out",
         description="OBJDUMP $in",
     )
 
@@ -666,7 +668,7 @@ if __name__ == "__main__":
     )
     parser.add_argument(
         "--objdump",
-        default="llvm-objdump",
+        default="objdump",
         help="objdump executable to use for creating assembly from executable by disassembling.",
         metavar="EXE",
     )

@@ -12,6 +12,8 @@ PROFILES: Dict[str, Profile] = {
     "test5": Profile(opt_level=3, dev=False, debug_info=True, fuzz=False),
     "bench0": Profile(opt_level=2, dev=False, debug_info=False, fuzz=False),
     "bench1": Profile(opt_level=3, dev=False, debug_info=False, fuzz=False),
+    "bench2": Profile(opt_level=2, dev=False, debug_info=True, fuzz=False),
+    "bench3": Profile(opt_level=3, dev=False, debug_info=True, fuzz=False),
     "fuzz0": Profile(opt_level=2, debug_info=True, dev=True, fuzz=True),
     "fuzz1": Profile(opt_level=3, debug_info=True, dev=True, fuzz=True),
     "fuzz2": Profile(opt_level=0, debug_info=True, dev=True, fuzz=True),
