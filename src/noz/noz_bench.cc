@@ -165,7 +165,7 @@ static void roundtrip(ZXAlloc* alloc, zx_u64 len) {
 
 int main(void) {
   constexpr zx_u64 MEMORY_SIZE = (zx_u64){1} << 32;
-  constexpr zx_u64 LEN = ((zx_u64){1} << 30) + 5;
+  constexpr zx_u64 LEN = zx_u64{1} << 30;
 
   ZXSliceMut<zx_u8> mem;
   assert(ZXPageAllocStatus::Ok == zx_page_alloc_thp_2mb(MEMORY_SIZE, &mem));
