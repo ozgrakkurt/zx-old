@@ -140,7 +140,7 @@ static void roundtrip(ZXAlloc* alloc, zx_u64 len) {
   do_memset(&fmt, time_info, zx_u8{111}, dst);
 
   src.memset(0xaa);
-  src.write_unsafe(zx_sub_unsafe_u64(src.len(), 1), zx_u8{69});
+  src.write_unsafe(zx_sub_unsafe_u64(src.len(), 1), zx_u8{0});
   do_strlen(&fmt, time_info, (char const*)src.ptr());
 
   zx_u64 n_written = 0;
@@ -153,7 +153,7 @@ int main(void) {
   constexpr zx_u64 LEN = zx_u64{1} << 30;
 
   ZXSliceMut<zx_u8> mem;
-  assert(ZXPageAllocStatus::Ok == zx_page_alloc_thp_2mb(MEMORY_SIZE, &mem));
+  assert(ZXPageAllocStatus::Ok == zx_page_alloc_4kb(MEMORY_SIZE, &mem));
 
   ZXAlloc alloc = ZXAlloc::init(mem);
 

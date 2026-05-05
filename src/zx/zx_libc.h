@@ -26,13 +26,31 @@ zx_memcpy(void* __restrict dest, void const* __restrict src, zx_u64_c count) {
 
   zx_u64 offset = 0;
 
-  for (; zx_add_unsafe_u64(offset, 64) < count;
+  for (; zx_add_unsafe_u64(offset, 256) <= count;
+       offset = zx_add_unsafe_u64(offset, 256)) {
+    __asm__(
+        "vmovups (%[input]), %%zmm31\n\t"
+        "vmovups 64(%[input]), %%zmm30\n\t"
+        "vmovups 128(%[input]), %%zmm29\n\t"
+        "vmovups 192(%[input]), %%zmm28\n\t"
+        "vmovups %%zmm31, (%[output])\n\t"
+        "vmovups %%zmm30, 64(%[output])\n\t"
+        "vmovups %%zmm29, 128(%[output])\n\t"
+        "vmovups %%zmm28, 192(%[output])\n\t"
+        : "=m"(*(zx_u8(*)[256]) & output[offset])
+        : "m"(*(zx_u8 const(*)[256]) & input[offset]),
+          [input] "r"(&input[offset]), [output] "r"(&output[offset])
+        : "zmm31", "zmm30", "zmm29", "zmm28");
+  }
+
+  for (; zx_add_unsafe_u64(offset, 64) <= count;
        offset = zx_add_unsafe_u64(offset, 64)) {
     __asm__(
-        "vmovdqu8 %[input], %%zmm31\n\t"
-        "vmovdqu8 %%zmm31, %[output]\n\t"
-        : [output] "=m"(*(zx_u8(*)[64]) & output[offset])
-        : [input] "m"(*(zx_u8 const(*)[64]) & input[offset])
+        "vmovups (%[input]), %%zmm31\n\t"
+        "vmovups %%zmm31, (%[output])\n\t"
+        : "=m"(*(zx_u8(*)[64]) & output[offset])
+        : "m"(*(zx_u8 const(*)[64]) & input[offset]),
+          [input] "r"(&input[offset]), [output] "r"(&output[offset])
         : "zmm31");
   }
 
@@ -68,7 +86,7 @@ __attribute__((no_builtin)) static inline void* zx_memset(void* dest,
 
   zx_u64 offset = 0;
 
-  for (; zx_add_unsafe_u64(offset, 64) < count;
+  for (; zx_add_unsafe_u64(offset, 64) <= count;
        offset = zx_add_unsafe_u64(offset, 64)) {
     __asm__("vmovdqu8 %[vbytes], %[output]\n\t"
             : [output] "=m"(*(zx_u8(*)[64]) & output[offset])
@@ -94,7 +112,7 @@ __attribute__((no_builtin)) static inline zx_i32_c zx_memcmp(void const* lhs,
   zx_u8 const* right = (zx_u8 const*)rhs;
 
   zx_u64 offset = 0;
-  for (; zx_add_unsafe_u64(offset, 64) < count;
+  for (; zx_add_unsafe_u64(offset, 64) <= count;
        offset = zx_add_unsafe_u64(offset, 64)) {
     zx_u64_c nonzero_mask;
     __asm__(
