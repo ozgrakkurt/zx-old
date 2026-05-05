@@ -62,6 +62,7 @@ NOZ: Library = Library(
     source_files=set(["noz"]),
     test_targets=set(["noz_test"]),
     fuzz_targets=set(["noz_fuzz", "noz_decompress_fuzz"]),
+    bench_targets=set(["noz_bench"]),
 )
 
 PROJECT: Project = Project(

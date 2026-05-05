@@ -211,6 +211,19 @@ struct ZXSlice {
     return ZXSlice<U>{.m_ptr = (U const*)this->m_ptr, .m_len = new_len};
   }
 
+  template <typename U>
+  inline ZXSlice<U> scast() const {
+    static_assert(sizeof(U) > 0);
+    static_assert(alignof(U) > 0);
+    static_assert(sizeof(U) <= sizeof(T));
+    static_assert(alignof(U) <= alignof(T));
+    static_assert(sizeof(T) % sizeof(U) == 0);
+
+    zx_u64 const new_len = this->m_len * sizeof(T) / sizeof(U);
+
+    return ZXSlice<U>{.m_ptr = (U const*)this->m_ptr, .m_len = new_len};
+  }
+
   inline ZXSliceStatus slice(zx_u64 offset, zx_u64 len, ZXSlice<T>* out) const {
     if (out == nullptr) {
       return ZXSliceStatus::Nullptr;
@@ -589,6 +602,19 @@ struct ZXSliceMut {
 #endif
 
     zx_u64 const new_len = zx_div_unsafe_u64(byte_cap, sizeof(U));
+
+    return ZXSliceMut<U>{.m_ptr = (U*)this->m_ptr, .m_len = new_len};
+  }
+
+  template <typename U>
+  inline ZXSliceMut<U> scast() const {
+    static_assert(sizeof(U) > 0);
+    static_assert(alignof(U) > 0);
+    static_assert(sizeof(U) <= sizeof(T));
+    static_assert(alignof(U) <= alignof(T));
+    static_assert(sizeof(T) % sizeof(U) == 0);
+
+    zx_u64 const new_len = this->m_len * sizeof(T) / sizeof(U);
 
     return ZXSliceMut<U>{.m_ptr = (U*)this->m_ptr, .m_len = new_len};
   }
