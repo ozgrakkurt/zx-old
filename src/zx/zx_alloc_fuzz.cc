@@ -32,7 +32,8 @@ static void fuzz_one(void* usr_ctx, ZXFuzzInput* fuzz_input) {
   for (zx_u64 i = 0; i < n_allocs; i++) {
     zx_u64 const len = zx_rand_mod_u64(
         fuzz_input->next(), zx_add_unsafe_u64(alloc.capacity_left(), 1));
-    zx_u8 const align_kind = zx_cast_unsafe_to_u8(zx_rand_mod_u64(fuzz_input->next(), 8));
+    zx_u8 const align_kind =
+        zx_cast_unsafe_to_u8(zx_rand_mod_u64(fuzz_input->next(), 8));
     ZXSliceMut<zx_u8> slice;
     ZXAllocStatus status;
     switch (align_kind) {

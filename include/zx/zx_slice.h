@@ -158,9 +158,9 @@ struct ZXSlice {
     static_assert(sizeof(T) > 0);
     static_assert(alignof(T) > 0);
 
-    return ZXSlice<T> {
-      .m_ptr = (T const*)zx_u64{ALIGN},
-      .m_len = 0,
+    return ZXSlice<T>{
+        .m_ptr = (T const*)zx_u64{ALIGN},
+        .m_len = 0,
     };
   }
 
@@ -569,9 +569,9 @@ struct ZXSliceMut {
     static_assert(sizeof(T) > 0);
     static_assert(alignof(T) > 0);
 
-    return ZXSliceMut<T> {
-      .m_ptr = (T*)zx_u64{ALIGN},
-      .m_len = 0,
+    return ZXSliceMut<T>{
+        .m_ptr = (T*)zx_u64{ALIGN},
+        .m_len = 0,
     };
   }
 
