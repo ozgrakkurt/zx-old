@@ -14,6 +14,7 @@
 #include <zx/zx_page_alloc.h>
 #include <zx/zx_print.h>
 #include <zx/zx_slice.h>
+#include <zx/zx_statx.h>
 #include <zx/zx_sys.h>
 
 enum class [[nodiscard]] ZXBacktraceStatus : zx_u8_c {
@@ -55,8 +56,81 @@ static ZXBacktraceStatus zx_backtrace(ZXErrTrace *err_trace,
   return ZXBacktraceStatus::Ok;
 }
 
+enum class [[nodiscard]] ZXPanicReadSelfStatus : zx_u8_c {
+  Ok = 0,
+  Nullptr,
+  OpenFileFailed,
+  StatxFailed,
+  ShortRead,
+  LongRead,
+  ReadFailed,
+  CloseFailed,
+};
+
+static ZXPanicReadSelfStatus zx_panic_read_self(ZXErrTrace *err_trace,
+                                                ZXSliceMut<zx_u8> file_buf,
+                                                zx_u64 *n_bytes_read) {
+  if (n_bytes_read == nullptr) {
+    return ZXPanicReadSelfStatus::Nullptr;
+  }
+
+  ZXPanicReadSelfStatus out_status = ZXPanicReadSelfStatus::Ok;
+
+  zx_i32 fd = -1;
+  zx_u64 n_read = 0;
+  statx stats;
+  __builtin_memset(&stats, 0, sizeof(stats));
+
+  if (ZXSysStatus const status = zx_sys_open(
+          ZXCString::init_unsafe("/proc/self/exe"), ZX_SYS_O_RDONLY, 0, &fd);
+      ZXSysStatus::Ok != status) {
+    zx_err_trace_push(err_trace, ZX_SRC_LOC, (zx_u8)status);
+    out_status = ZXPanicReadSelfStatus::OpenFileFailed;
+    goto cleanup;
+  }
+
+  if (ZXSysStatus const status =
+          zx_sys_statx(fd, ZXCString::init_unsafe(""), ZX_SYS_AT_EMPTY_PATH,
+                       STATX_SIZE, &stats);
+      ZXSysStatus::Ok != status) {
+    zx_err_trace_push(err_trace, ZX_SRC_LOC, (zx_u8)status);
+    out_status = ZXPanicReadSelfStatus::StatxFailed;
+    goto cleanup;
+  }
+
+  if (ZXSysStatus const status = zx_sys_read(fd, file_buf, &n_read);
+      ZXSysStatus::Ok != status) {
+    zx_err_trace_push(err_trace, ZX_SRC_LOC, (zx_u8)status);
+    out_status = ZXPanicReadSelfStatus::ReadFailed;
+    goto cleanup;
+  }
+
+  if (n_read < stats.stx_size) {
+    zx_err_trace_push(err_trace, ZX_SRC_LOC,
+                      (zx_u8)ZXPanicReadSelfStatus::ShortRead);
+    out_status = ZXPanicReadSelfStatus::ShortRead;
+    goto cleanup;
+  } else if (n_read > stats.stx_size) {
+    zx_err_trace_push(err_trace, ZX_SRC_LOC,
+                      (zx_u8)ZXPanicReadSelfStatus::LongRead);
+    out_status = ZXPanicReadSelfStatus::LongRead;
+    goto cleanup;
+  }
+
+  *n_bytes_read = n_read;
+cleanup:
+  if (ZXSysStatus const status = zx_sys_close(fd); ZXSysStatus::Ok != status) {
+    zx_err_trace_push(err_trace, ZX_SRC_LOC, (zx_u8)status);
+    return ZXPanicReadSelfStatus::CloseFailed;
+  }
+
+  return out_status;
+}
+
 enum class [[nodiscard]] ZXPanicPrintInfoStatus : zx_u8_c {
   Ok = 0,
+  OutOfMemory,
+  AllocFail,
   BacktraceFail,
   Nullptr,
   AddrsInitFail,
@@ -66,6 +140,24 @@ static ZXPanicPrintInfoStatus zx_panic_print_info(ZXErrTrace *err_trace,
                                                   ZXAlloc *alloc, ZXFmt *fmt) {
   if (alloc == nullptr || fmt == nullptr) {
     return ZXPanicPrintInfoStatus::Nullptr;
+  }
+
+  ZXSliceMut<zx_u8> file_buf;
+  switch (ZXAllocStatus const status = alloc->alloc<zx_u8>(1 << 26, &file_buf);
+          status) {
+  case ZXAllocStatus::Ok: {
+    break;
+  }
+  case ZXAllocStatus::OutOfMemory: {
+    zx_err_trace_push(err_trace, ZX_SRC_LOC, (zx_u8)status);
+    return ZXPanicPrintInfoStatus::OutOfMemory;
+    break;
+  }
+  default: {
+    zx_err_trace_push(err_trace, ZX_SRC_LOC, (zx_u8)status);
+    return ZXPanicPrintInfoStatus::AllocFail;
+    break;
+  }
   }
 
   ZXArr<zx_u64> addrs;
@@ -127,7 +219,7 @@ static bool ZX_PANICKING_ = false;
     __builtin_trap();
   }
   ZXSliceMut<zx_u8> mem;
-  if (ZXPageAllocStatus const status = zx_page_alloc_4kb(1 << 20, &mem);
+  if (ZXPageAllocStatus const status = zx_page_alloc_4kb(1 << 27, &mem);
       ZXPageAllocStatus::Ok != status) {
     ZX_EPRINT("Failed to allocate memory for panic debugging. Error code: ",
               (zx_u8)status, '\n');

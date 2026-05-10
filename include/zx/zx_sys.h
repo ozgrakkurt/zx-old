@@ -69,6 +69,9 @@ constexpr zx_u64 ZX_SYSCALL_MUNMAP = 11;
 constexpr zx_u64 ZX_SYSCALL_MADVISE = 28;
 constexpr zx_u64 ZX_SYSCALL_EXIT_GROUP = 231;
 
+// echo '#include <sys/syscall.h>' | gcc -E -dM -xc - | grep -i "statx"
+constexpr zx_u64 ZX_SYSCALL_STATX = 332;
+
 // echo '#include <sys/syscall.h>' | gcc -E -dM -xc - | grep -i "perf_event"
 constexpr zx_u64 ZX_SYSCALL_PERF_EVENT_OPEN = 298;
 
@@ -145,8 +148,7 @@ static inline ZXSysStatus zx_sys_close(zx_i32 fd) {
   return zx_sys_status_(ret);
 }
 
-[[noreturn]]
-static inline void zx_sys_abort() {
+[[noreturn]] static inline void zx_sys_abort() {
   zx_syscall1(ZX_SYSCALL_EXIT_GROUP, 127);
   __builtin_trap();
 }
@@ -207,6 +209,13 @@ constexpr zx_i32 ZX_SYS_MADV_HUGEPAGE = 14;
 constexpr zx_i32 ZX_SYS_PROT_NONE = 0x0;
 constexpr zx_i32 ZX_SYS_PROT_READ = 0x1;
 constexpr zx_i32 ZX_SYS_PROT_WRITE = 0x2;
+
+// echo '#include <sys/fcntl.h>' | gcc -E -dM -xc - | grep -i "O_RD"
+constexpr zx_i32 ZX_SYS_O_RDONLY = 00;
+
+// echo '#define _GNU_SOURCE 1
+// #include <sys/fcntl.h>' | gcc -E -dM -xc - | grep -i "AT_"
+constexpr zx_i32 ZX_SYS_AT_EMPTY_PATH = 0x1000;
 
 constexpr zx_i32 ZX_STDIN = 0;
 constexpr zx_i32 ZX_STDOUT = 1;
