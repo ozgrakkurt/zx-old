@@ -236,7 +236,16 @@ def make_ldflags(build_path: str, config: Config) -> List[str]:
         f"-O{profile.opt_level}",
     ]
 
-    if not profile.debug_info:
+    if profile.debug_info:
+        ldflags.append("-g")
+        # Make sure to keep frame pointer because it is useful for debugger on optimized builds.
+        # Didn't specifically test this but seems to be the general consensus on the internet.
+        ldflags.append("-fno-omit-frame-pointer")
+        ldflags.append("-mno-omit-leaf-frame-pointer")
+    else:
+        # Disable frame pointer usage by compiler. it is useless when we are not in debug mode.
+        ldflags.append("-fomit-frame-pointer")
+        ldflags.append("-momit-leaf-frame-pointer")
         # tell linker to strip debug info
         ldflags.append("-Wl,-s")
 

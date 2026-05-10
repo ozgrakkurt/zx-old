@@ -32,7 +32,7 @@ static ZXBacktraceStatus zx_backtrace(ZXErrTrace *err_trace,
 
   zx_u64 *frame_ptr = (zx_u64 *)__builtin_frame_address(0);
   while (frame_ptr != nullptr) {
-    zx_u64 const instr_ptr = frame_ptr[1];
+    zx_u64 const instr_ptr = zx_wrapping_sub_u64(frame_ptr[1], 1);
 
     ZXArrPushStatus const push_status = addrs->push(&instr_ptr);
     switch (push_status) {
@@ -69,8 +69,7 @@ static ZXPanicPrintInfoStatus zx_panic_print_info(ZXErrTrace *err_trace,
   }
 
   ZXArr<zx_u64> addrs;
-  if (ZXArrInitStatus const status =
-          ZXArr<zx_u64>::init(err_trace, alloc, 64, &addrs);
+  if (ZXArrInitStatus const status = ZXArr<zx_u64>::init(alloc, 64, &addrs);
       ZXArrInitStatus::Ok != status) {
     zx_err_trace_push(err_trace, ZX_SRC_LOC, (zx_u8)status);
     return ZXPanicPrintInfoStatus::AddrsInitFail;
@@ -125,14 +124,14 @@ static bool ZX_PANICKING_ = false;
               "could be because of the panic function panicking itself or "
               "multiple threads panicking simultaneously.\n Use a debugger to "
               "find out what is happening.\n");
-    zx_sys_abort();
+    __builtin_trap();
   }
   ZXSliceMut<zx_u8> mem;
   if (ZXPageAllocStatus const status = zx_page_alloc_4kb(1 << 20, &mem);
       ZXPageAllocStatus::Ok != status) {
     ZX_EPRINT("Failed to allocate memory for panic debugging. Error code: ",
               (zx_u8)status, '\n');
-    zx_sys_abort();
+    __builtin_trap();
   }
   ZXAlloc alloc = ZXAlloc::init(mem);
 
@@ -142,13 +141,12 @@ static bool ZX_PANICKING_ = false;
       ZXErrTraceInitStatus::Ok != status) {
     ZX_EPRINT("Failed to create ZXErrTrace for panic debugging. Error code: ",
               (zx_u8)status, '\n');
-    zx_sys_abort();
   }
 
   ZXSliceMut<zx_u8> fmt_mem;
   if (ZXAllocStatus::Ok != alloc.alloc<zx_u8>(1 << 14, &fmt_mem)) {
     ZX_EPRINT("Failed to alloc memory for string formatting.\n");
-    zx_sys_abort();
+    __builtin_trap();
   }
   ZXFmt fmt = ZXFmt::init(fmt_mem);
 
@@ -172,8 +170,8 @@ static bool ZX_PANICKING_ = false;
     (void)zx_sys_write(ZX_STDERR, fmt.written(), &n_written);
     (void)n_written;
 
-    zx_sys_abort();
+    __builtin_trap();
   }
 
-  zx_sys_abort();
+  __builtin_trap();
 }

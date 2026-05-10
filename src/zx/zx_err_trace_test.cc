@@ -3,35 +3,36 @@
 #include <zx/zx_fmt.h>
 #include <zx/zx_int.h>
 #include <zx/zx_page_alloc.h>
+#include <zx/zx_panic.h>
 #include <zx/zx_slice.h>
 #include <zx/zx_sys.h>
 
 static void assert(bool v) {
   if (!v) {
-    __builtin_trap();
+    zx_panic();
   }
 }
 
 static void do_test_nocap() {
   ZXAlloc noalloc = ZXAlloc::init(ZXSliceMut<zx_u8>::init_dangling());
   ZXErrTrace trace;
-  ZXErrTraceStatus status = ZXErrTrace::init(&noalloc, 1, &trace);
-  assert(status == ZXErrTraceStatus::OutOfMemory);
+  ZXErrTraceInitStatus status = ZXErrTrace::init(&noalloc, 1, &trace);
+  assert(status == ZXErrTraceInitStatus::OutOfMemory);
 
   status = ZXErrTrace::init(&noalloc, 0, &trace);
-  assert(status == ZXErrTraceStatus::Ok);
+  assert(status == ZXErrTraceInitStatus::Ok);
 
-  bool success = trace.push(ZX_SRC_LOC, ZXCString::init_unsafe("xd"));
+  bool success = zx_err_trace_push(&trace, ZX_SRC_LOC, 11);
   assert(!success);
 
   trace.reset();
 
-  success = trace.push(ZX_SRC_LOC, ZXCString::init_unsafe("xd"));
+  success = zx_err_trace_push(&trace, ZX_SRC_LOC, 11);
   assert(!success);
 
   trace.reset();
 
-  success = trace.push(ZX_SRC_LOC, ZXCString::init_unsafe("xd"));
+  success = zx_err_trace_push(&trace, ZX_SRC_LOC, 11);
   assert(!success);
 }
 
@@ -42,16 +43,16 @@ static void do_test(ZXAlloc *alloc) {
   ZXFmt fmt = ZXFmt::init(fmt_buf);
 
   ZXErrTrace trace;
-  ZXErrTraceStatus status = ZXErrTrace::init(alloc, 3, &trace);
-  assert(status == ZXErrTraceStatus::Ok);
+  ZXErrTraceInitStatus status = ZXErrTrace::init(alloc, 3, &trace);
+  assert(status == ZXErrTraceInitStatus::Ok);
 
-  bool success = trace.push(ZX_SRC_LOC, ZXCString::init_unsafe("inf0"));
+  bool success = zx_err_trace_push(&trace, ZX_SRC_LOC, 0);
   assert(success);
-  success = trace.push(ZX_SRC_LOC, ZXCString::init_unsafe("inf1"));
+  success = zx_err_trace_push(&trace, ZX_SRC_LOC, 1);
   assert(success);
-  success = trace.push(ZX_SRC_LOC, ZXCString::init_unsafe("inf2"));
+  success = zx_err_trace_push(&trace, ZX_SRC_LOC, 2);
   assert(success);
-  success = trace.push(ZX_SRC_LOC, ZXCString::init_unsafe("inf69"));
+  success = zx_err_trace_push(&trace, ZX_SRC_LOC, 255);
   assert(!success);
 
   fmt.reset();
@@ -68,9 +69,9 @@ static void do_test(ZXAlloc *alloc) {
   // }
 
   ZXSlice<zx_u8> const expected =
-      ZXCString::init_unsafe("zx_err_trace_test.cc[line=48]. Info = inf0\n"
-                             "zx_err_trace_test.cc[line=50]. Info = inf1\n"
-                             "zx_err_trace_test.cc[line=52]. Info = inf2\n")
+      ZXCString::init_unsafe("zx_err_trace_test.cc[line=49]. StatusCode = 0\n"
+                             "zx_err_trace_test.cc[line=51]. StatusCode = 1\n"
+                             "zx_err_trace_test.cc[line=53]. StatusCode = 2\n")
           .slice();
 
   // {
@@ -80,42 +81,6 @@ static void do_test(ZXAlloc *alloc) {
   // }
 
   assert(fmt.written().equals(expected));
-
-  assert(trace.pop());
-
-  fmt.reset();
-  overflow = false;
-  trace.format(&fmt, &overflow);
-  assert(!overflow);
-
-  ZXSlice<zx_u8> const expected2 =
-      ZXCString::init_unsafe("zx_err_trace_test.cc[line=48]. Info = inf0\n"
-                             "zx_err_trace_test.cc[line=50]. Info = inf1\n")
-          .slice();
-
-  assert(fmt.written().equals(expected2));
-
-  success = trace.push(ZX_SRC_LOC, ZXCString::init_unsafe("inf699"));
-  assert(success);
-
-  fmt.reset();
-  overflow = false;
-  trace.format(&fmt, &overflow);
-  assert(!overflow);
-
-  ZXSlice<zx_u8> const expected3 =
-      ZXCString::init_unsafe("zx_err_trace_test.cc[line=48]. Info = inf0\n"
-                             "zx_err_trace_test.cc[line=50]. Info = inf1\n"
-                             "zx_err_trace_test.cc[line=100]. Info = inf699\n")
-          .slice();
-
-  assert(fmt.written().equals(expected3));
-
-  assert(trace.pop());
-  assert(trace.pop());
-  assert(trace.pop());
-  assert(!trace.pop());
-  assert(!trace.pop());
 }
 // if (status != ZXErrTraceStatus::Ok) {
 //   bool fmt_overflow = false;

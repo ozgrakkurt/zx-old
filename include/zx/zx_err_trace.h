@@ -109,11 +109,13 @@ struct ZXErrTrace {
   }
 };
 
-static inline void zx_err_trace_push(ZXErrTrace *err_trace,
+static inline bool zx_err_trace_push(ZXErrTrace *err_trace,
                                      ZXSourceLocation_ location,
                                      zx_u8 status_code) {
   if (err_trace != nullptr) {
-    err_trace->push_(location, status_code);
+    return err_trace->push_(location, status_code);
+  } else {
+    return false;
   }
 }
 

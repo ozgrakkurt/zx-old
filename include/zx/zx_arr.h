@@ -1,7 +1,6 @@
 #ifndef ZX_ARR_H
 #define ZX_ARR_H
 
-#include <zx/zx_err_trace.h>
 #include <zx/zx_int.h>
 #include <zx/zx_slice.h>
 
@@ -22,8 +21,8 @@ template <typename T> struct ZXArr {
   ZXSliceMut<T> m_entries;
   zx_u64 m_offset;
 
-  static inline ZXArrInitStatus init(ZXErrTrace *trace, ZXAlloc *alloc,
-                                     zx_u64 capacity, ZXArr<T> *out) {
+  static inline ZXArrInitStatus init(ZXAlloc *alloc, zx_u64 capacity,
+                                     ZXArr<T> *out) {
     if (alloc == nullptr || out == nullptr) {
       return ZXArrInitStatus::Nullptr;
     }
@@ -35,12 +34,10 @@ template <typename T> struct ZXArr {
       break;
     }
     case ZXAllocStatus::OutOfMemory: {
-      zx_err_trace_push(trace, ZX_SRC_LOC, (zx_u8)status);
       return ZXArrInitStatus::OutOfMemory;
       break;
     }
     default: {
-      zx_err_trace_push(trace, ZX_SRC_LOC, (zx_u8)status);
       return ZXArrInitStatus::AllocFail;
       break;
     }
