@@ -35,7 +35,7 @@ static void do_test_nocap() {
   assert(!success);
 }
 
-static void do_test(ZXAlloc* alloc) {
+static void do_test(ZXAlloc *alloc) {
   ZXSliceMut<zx_u8> fmt_buf;
   ZXAllocStatus alloc_status = alloc->alloc<zx_u8>(1 << 12, &fmt_buf);
   assert(alloc_status == ZXAllocStatus::Ok);
@@ -68,10 +68,9 @@ static void do_test(ZXAlloc* alloc) {
   // }
 
   ZXSlice<zx_u8> const expected =
-      ZXCString::init_unsafe(
-          "zx_err_trace_test.cc[line=48]. Info = inf0\n"
-          "zx_err_trace_test.cc[line=50]. Info = inf1\n"
-          "zx_err_trace_test.cc[line=52]. Info = inf2\n")
+      ZXCString::init_unsafe("zx_err_trace_test.cc[line=48]. Info = inf0\n"
+                             "zx_err_trace_test.cc[line=50]. Info = inf1\n"
+                             "zx_err_trace_test.cc[line=52]. Info = inf2\n")
           .slice();
 
   // {
@@ -90,9 +89,8 @@ static void do_test(ZXAlloc* alloc) {
   assert(!overflow);
 
   ZXSlice<zx_u8> const expected2 =
-      ZXCString::init_unsafe(
-          "zx_err_trace_test.cc[line=48]. Info = inf0\n"
-          "zx_err_trace_test.cc[line=50]. Info = inf1\n")
+      ZXCString::init_unsafe("zx_err_trace_test.cc[line=48]. Info = inf0\n"
+                             "zx_err_trace_test.cc[line=50]. Info = inf1\n")
           .slice();
 
   assert(fmt.written().equals(expected2));
@@ -106,10 +104,9 @@ static void do_test(ZXAlloc* alloc) {
   assert(!overflow);
 
   ZXSlice<zx_u8> const expected3 =
-      ZXCString::init_unsafe(
-          "zx_err_trace_test.cc[line=48]. Info = inf0\n"
-          "zx_err_trace_test.cc[line=50]. Info = inf1\n"
-          "zx_err_trace_test.cc[line=100]. Info = inf699\n")
+      ZXCString::init_unsafe("zx_err_trace_test.cc[line=48]. Info = inf0\n"
+                             "zx_err_trace_test.cc[line=50]. Info = inf1\n"
+                             "zx_err_trace_test.cc[line=100]. Info = inf699\n")
           .slice();
 
   assert(fmt.written().equals(expected3));

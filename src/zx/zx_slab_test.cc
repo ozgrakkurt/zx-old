@@ -13,8 +13,7 @@ static void assert(bool cond) {
   }
 }
 
-static void smoke_test_inner(Slab* slab,
-                             ZXSliceMut<zx_u32> slab_keys,
+static void smoke_test_inner(Slab *slab, ZXSliceMut<zx_u32> slab_keys,
                              zx_u32 cap) {
   assert(slab->capacity() == cap);
   assert(slab->n_occupied() == 0);
@@ -24,13 +23,13 @@ static void smoke_test_inner(Slab* slab,
     zx_u32 idx = ZX_U32_MAX;
     assert(ZXSlabInsertStatus::Ok == slab->insert(&val, &idx));
     slab_keys.write_unsafe(i, idx);
-    val_type const* got_val_p = nullptr;
+    val_type const *got_val_p = nullptr;
     assert(ZXSlabAccessStatus::Found == slab->get(idx, &got_val_p));
     assert(got_val_p != nullptr);
     assert(*got_val_p == val);
 
     // backwards test
-    val_type* old_val_p = nullptr;
+    val_type *old_val_p = nullptr;
     assert(ZXSlabAccessStatus::Found ==
            slab->get_mut(slab_keys.read_unsafe(i / 2), &old_val_p));
     assert(old_val_p != nullptr);
@@ -43,12 +42,12 @@ static void smoke_test_inner(Slab* slab,
            slab->remove(slab_keys.read_unsafe(i), &val));
     assert(val == i);
 
-    val_type const* val_p = nullptr;
+    val_type const *val_p = nullptr;
     assert(ZXSlabAccessStatus::NotFound ==
            slab->get(slab_keys.read_unsafe(i), &val_p));
     assert(val_p == nullptr);
 
-    val_type* val_p_mut = nullptr;
+    val_type *val_p_mut = nullptr;
     assert(ZXSlabAccessStatus::NotFound ==
            slab->get_mut(slab_keys.read_unsafe(i), &val_p_mut));
     assert(val_p_mut == nullptr);
@@ -58,7 +57,7 @@ static void smoke_test_inner(Slab* slab,
   }
 
   for (zx_u32 i = cap / 2; i < cap; i++) {
-    val_type const* val_p = nullptr;
+    val_type const *val_p = nullptr;
     assert(ZXSlabAccessStatus::Found ==
            slab->get(slab_keys.read_unsafe(i), &val_p));
     assert(val_p != nullptr);
@@ -66,7 +65,7 @@ static void smoke_test_inner(Slab* slab,
   }
 }
 
-static void smoke_test(ZXAlloc* alloc, zx_u32 cap) {
+static void smoke_test(ZXAlloc *alloc, zx_u32 cap) {
   Slab slab;
   assert(ZXSlabInitStatus::Ok == Slab::init(alloc, cap, &slab));
 
@@ -94,10 +93,10 @@ static void noalloc_test() {
   val_type val = 100;
   assert(ZXSlabInsertStatus::OutOfCapacity == slab.insert(&val, &idx));
 
-  val_type* mut_p = nullptr;
+  val_type *mut_p = nullptr;
   assert(ZXSlabAccessStatus::OutOfBounds == slab.get_mut(0, &mut_p));
 
-  val_type const* immut_p = nullptr;
+  val_type const *immut_p = nullptr;
   assert(ZXSlabAccessStatus::OutOfBounds == slab.get(0, &immut_p));
 }
 

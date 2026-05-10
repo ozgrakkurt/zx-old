@@ -42,7 +42,7 @@ static constexpr zx_u64 ZX_RAPIDHASH_V3_SECRET_[8] = {
     0x90ed1765281c388c, 0xaaaaaaaaaaaaaaaa,
 };
 
-static inline void zx_rapidhash_v3_mum_(zx_u64* a, zx_u64* b) {
+static inline void zx_rapidhash_v3_mum_(zx_u64 *a, zx_u64 *b) {
   zx_u128 const r = ((zx_u128){*a}) * ((zx_u128){*b});
   *a = (zx_u64)r;
   *b = (zx_u64)(r >> 64);
@@ -53,9 +53,7 @@ static inline zx_u64 zx_rapidhash_v3_mix_(zx_u64 a, zx_u64 b) {
   return a ^ b;
 }
 
-static inline zx_u64 zx_rapidhash_v3_finish_(zx_u64 a,
-                                             zx_u64 b,
-                                             zx_u64 seed,
+static inline zx_u64 zx_rapidhash_v3_finish_(zx_u64 a, zx_u64 b, zx_u64 seed,
                                              zx_u64 i) {
   a ^= ZX_RAPIDHASH_V3_SECRET_[1];
   b ^= seed;

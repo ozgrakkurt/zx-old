@@ -364,9 +364,9 @@ enum io_uring_op {
 #define IORING_TIMEOUT_ETIME_SUCCESS (1U << 5)
 #define IORING_TIMEOUT_MULTISHOT (1U << 6)
 #define IORING_TIMEOUT_IMMEDIATE_ARG (1U << 7)
-#define IORING_TIMEOUT_CLOCK_MASK \
+#define IORING_TIMEOUT_CLOCK_MASK                                              \
   (IORING_TIMEOUT_BOOTTIME | IORING_TIMEOUT_REALTIME)
-#define IORING_TIMEOUT_UPDATE_MASK \
+#define IORING_TIMEOUT_UPDATE_MASK                                             \
   (IORING_TIMEOUT_UPDATE | IORING_LINK_TIMEOUT_UPDATE)
 /*
  * sqe->splice_flags
@@ -1086,6 +1086,6 @@ struct io_uring_zcrx_ifq_reg {
   zx_u64 __resv[3];
 };
 
-}  // extern "C"
+} // extern "C"
 
 #endif

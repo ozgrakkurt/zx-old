@@ -23,13 +23,13 @@ static void test_is_overlapping() {
 
 static void test_from_ptr() {
   zx_u256 data = 69;
-  zx_u256* ptr_mut = &data;
+  zx_u256 *ptr_mut = &data;
   ZXSliceMut<zx_u16> slice_mut;
   assert(ZXSliceStatus::Ok ==
          ZXSliceMut<zx_u16>::init_from_ptr(ptr_mut, &slice_mut));
   assert(slice_mut.len() == sizeof(zx_u256) / sizeof(zx_u16));
 
-  zx_u256 const* ptr = &data;
+  zx_u256 const *ptr = &data;
   ZXSlice<zx_u32> slice;
   assert(ZXSliceStatus::Ok == ZXSlice<zx_u32>::init_from_ptr(ptr, &slice));
   assert(slice.len() == sizeof(zx_u256) / sizeof(zx_u32));
@@ -37,12 +37,12 @@ static void test_from_ptr() {
 
 static void test_from_ptr_unsafe() {
   zx_u256 data = 69;
-  zx_u256* ptr_mut = &data;
+  zx_u256 *ptr_mut = &data;
   ZXSliceMut<zx_u16> const slice_mut =
       ZXSliceMut<zx_u16>::init_from_ptr_unsafe(ptr_mut);
   assert(slice_mut.len() == sizeof(zx_u256) / sizeof(zx_u16));
 
-  zx_u256 const* ptr = &data;
+  zx_u256 const *ptr = &data;
   ZXSlice<zx_u32> const slice = ZXSlice<zx_u32>::init_from_ptr_unsafe(ptr);
   assert(slice.len() == sizeof(zx_u256) / sizeof(zx_u32));
 }
@@ -67,7 +67,7 @@ static void test_immut() {
 
   assert((zx_u64)&data[10] == (zx_u64)sli.offset_unsafe(10));
 
-  zx_u32 const* pp = nullptr;
+  zx_u32 const *pp = nullptr;
   status = sli.offset(20, &pp);
   assert(status == ZXSliceStatus::OutOfBounds);
 
@@ -119,7 +119,7 @@ static void test_mut() {
 
   assert((zx_u64)&data[10] == (zx_u64)sli.offset_unsafe(10));
 
-  zx_u32* pp = nullptr;
+  zx_u32 *pp = nullptr;
   status = sli.offset(20, &pp);
   assert(status == ZXSliceStatus::OutOfBounds);
 

@@ -15,11 +15,11 @@ struct Ctx {
   ZXSliceMut<zx_u8> mem;
 };
 
-static void fuzz_one(void* usr_ctx, ZXFuzzInput* fuzz_input) {
+static void fuzz_one(void *usr_ctx, ZXFuzzInput *fuzz_input) {
   assert(usr_ctx != nullptr);
   assert(fuzz_input != nullptr);
 
-  Ctx const* ctx = (Ctx const*)usr_ctx;
+  Ctx const *ctx = (Ctx const *)usr_ctx;
   ZXAlloc alloc = ZXAlloc::init(ctx->mem);
 
   constexpr zx_u64 allocs_cap = 1024;
@@ -37,42 +37,42 @@ static void fuzz_one(void* usr_ctx, ZXFuzzInput* fuzz_input) {
     ZXSliceMut<zx_u8> slice;
     ZXAllocStatus status;
     switch (align_kind) {
-      case 0: {
-        status = alloc.aligned_alloc<zx_u8, 1>(len, &slice);
-        break;
-      }
-      case 1: {
-        status = alloc.aligned_alloc<zx_u8, 2>(len, &slice);
-        break;
-      }
-      case 2: {
-        status = alloc.aligned_alloc<zx_u8, 4>(len, &slice);
-        break;
-      }
-      case 3: {
-        status = alloc.aligned_alloc<zx_u8, 8>(len, &slice);
-        break;
-      }
-      case 4: {
-        status = alloc.aligned_alloc<zx_u8, 16>(len, &slice);
-        break;
-      }
-      case 5: {
-        status = alloc.aligned_alloc<zx_u8, 32>(len, &slice);
-        break;
-      }
-      case 6: {
-        status = alloc.aligned_alloc<zx_u8, 64>(len, &slice);
-        break;
-      }
-      case 7: {
-        status = alloc.aligned_alloc<zx_u8, 128>(len, &slice);
-        break;
-      }
-      default: {
-        __builtin_trap();
-        break;
-      }
+    case 0: {
+      status = alloc.aligned_alloc<zx_u8, 1>(len, &slice);
+      break;
+    }
+    case 1: {
+      status = alloc.aligned_alloc<zx_u8, 2>(len, &slice);
+      break;
+    }
+    case 2: {
+      status = alloc.aligned_alloc<zx_u8, 4>(len, &slice);
+      break;
+    }
+    case 3: {
+      status = alloc.aligned_alloc<zx_u8, 8>(len, &slice);
+      break;
+    }
+    case 4: {
+      status = alloc.aligned_alloc<zx_u8, 16>(len, &slice);
+      break;
+    }
+    case 5: {
+      status = alloc.aligned_alloc<zx_u8, 32>(len, &slice);
+      break;
+    }
+    case 6: {
+      status = alloc.aligned_alloc<zx_u8, 64>(len, &slice);
+      break;
+    }
+    case 7: {
+      status = alloc.aligned_alloc<zx_u8, 128>(len, &slice);
+      break;
+    }
+    default: {
+      __builtin_trap();
+      break;
+    }
     }
     if (ZXAllocStatus::Ok == status) {
       zx_u16 const expected_align = zx_shl_unsafe_u16(1, align_kind);
@@ -121,6 +121,6 @@ int main(void) {
   Ctx const ctx = Ctx{
       .mem = make_alloc(8192),
   };
-  zx_fuzz(&alloc, (void*)&ctx, fuzz_one);
+  zx_fuzz(&alloc, (void *)&ctx, fuzz_one);
   return 0;
 }

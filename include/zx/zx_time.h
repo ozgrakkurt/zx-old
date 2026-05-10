@@ -23,30 +23,30 @@ enum class [[nodiscard]] ZXTimeStatus : zx_u8_c {
 
 static inline ZXCString zx_time_status_to_cstring(ZXTimeStatus status) {
   switch (status) {
-    case ZXTimeStatus::Ok: {
-      return ZXCString::init_unsafe("ZXTimeStatus::Ok");
-    }
-    case ZXTimeStatus::PerfEventOpenErr: {
-      return ZXCString::init_unsafe("ZXTimeStatus::PerfEventOpenErr");
-    }
-    case ZXTimeStatus::MmapErr: {
-      return ZXCString::init_unsafe("ZXTimeStatus::MmapErr");
-    }
-    case ZXTimeStatus::NotSupported: {
-      return ZXCString::init_unsafe("ZXTimeStatus::NotSupported");
-    }
-    case ZXTimeStatus::InvalidNum: {
-      return ZXCString::init_unsafe("ZXTimeStatus::InvalidNum");
-    }
-    case ZXTimeStatus::MunmapErr: {
-      return ZXCString::init_unsafe("ZXTimeStatus::MunmapErr");
-    }
-    case ZXTimeStatus::CloseErr: {
-      return ZXCString::init_unsafe("ZXTimeStatus::CloseErr");
-    }
-    default: {
-      return ZXCString::init_unsafe("ZXTimeStatus::Unknown");
-    }
+  case ZXTimeStatus::Ok: {
+    return ZXCString::init_unsafe("ZXTimeStatus::Ok");
+  }
+  case ZXTimeStatus::PerfEventOpenErr: {
+    return ZXCString::init_unsafe("ZXTimeStatus::PerfEventOpenErr");
+  }
+  case ZXTimeStatus::MmapErr: {
+    return ZXCString::init_unsafe("ZXTimeStatus::MmapErr");
+  }
+  case ZXTimeStatus::NotSupported: {
+    return ZXCString::init_unsafe("ZXTimeStatus::NotSupported");
+  }
+  case ZXTimeStatus::InvalidNum: {
+    return ZXCString::init_unsafe("ZXTimeStatus::InvalidNum");
+  }
+  case ZXTimeStatus::MunmapErr: {
+    return ZXCString::init_unsafe("ZXTimeStatus::MunmapErr");
+  }
+  case ZXTimeStatus::CloseErr: {
+    return ZXCString::init_unsafe("ZXTimeStatus::CloseErr");
+  }
+  default: {
+    return ZXCString::init_unsafe("ZXTimeStatus::Unknown");
+  }
   }
 }
 
@@ -54,7 +54,7 @@ struct ZXTimeInfo {
   zx_u64 m_time_shift;
   zx_u64 m_time_mult;
 
-  static inline ZXTimeStatus init(ZXTimeInfo* out) {
+  static inline ZXTimeStatus init(ZXTimeInfo *out) {
     perf_event_attr pattr;
     __builtin_memset(&pattr, 0, sizeof(pattr));
     pattr.type = PERF_TYPE_HARDWARE;
@@ -66,7 +66,7 @@ struct ZXTimeInfo {
 
     ZXTimeStatus status = ZXTimeStatus::Ok;
     zx_i32 fd = -1;
-    perf_event_mmap_page* mmap_page = nullptr;
+    perf_event_mmap_page *mmap_page = nullptr;
 
     ZXSysStatus sys_status = zx_sys_perf_event_open(&pattr, 0, -1, -1, 0, &fd);
     if (sys_status != ZXSysStatus::Ok) {
@@ -76,7 +76,7 @@ struct ZXTimeInfo {
     zx_assert_dev(fd != -1);
 
     sys_status = zx_sys_mmap(nullptr, 4096, ZX_SYS_PROT_READ, ZX_SYS_MAP_SHARED,
-                             fd, 0, (zx_u8**)&mmap_page);
+                             fd, 0, (zx_u8 **)&mmap_page);
     if (sys_status != ZXSysStatus::Ok) {
       status = ZXTimeStatus::MmapErr;
       goto cleanup;
@@ -105,7 +105,7 @@ struct ZXTimeInfo {
   cleanup:
     if (mmap_page != nullptr) {
       ZXSliceMut<zx_u8> slice =
-          ZXSliceMut<zx_u8>::init_unsafe((zx_u8*)mmap_page, 4096);
+          ZXSliceMut<zx_u8>::init_unsafe((zx_u8 *)mmap_page, 4096);
       sys_status = zx_sys_munmap(slice);
       if (sys_status != ZXSysStatus::Ok) {
         status = ZXTimeStatus::MunmapErr;

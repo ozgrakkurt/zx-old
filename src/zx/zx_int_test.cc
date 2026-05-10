@@ -1,14 +1,15 @@
 #include <zx/zx_int.h>
+#include <zx/zx_panic.h>
 
 static void assert(bool test) {
   if (!test) {
-    __builtin_trap();
+    zx_panic();
   }
 }
 
 int main(void) {
   // wrapping add
-  assert(1 == zx_wrapping_add_u8(ZX_U8_MAX, 2));
+  assert(13 == zx_wrapping_add_u8(ZX_U8_MAX, 2));
   assert(1 == zx_wrapping_add_u16(ZX_U16_MAX, 2));
   assert(1 == zx_wrapping_add_u32(ZX_U32_MAX, 2));
   assert(1 == zx_wrapping_add_u64(ZX_U64_MAX, 2));

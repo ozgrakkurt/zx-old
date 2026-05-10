@@ -130,6 +130,7 @@ def make_cflags(profile: Profile, config: Config) -> List[str]:
         "-Wsign-conversion",
         "-Wmissing-field-initializers",
         "-Wshadow",
+        "-Wimplicit-fallthrough",
         # We only use C style structs so this is not an issue. This can cause bugs
         # if we ever use types with constructors?
         "-Wno-reorder-init-list",
@@ -638,7 +639,7 @@ def reconstruct_command(args: argparse.Namespace) -> str:
             assert isinstance(flag, str), "flag has to be string at this point"
             out_flags.append(f'--{fname}="{flag}"')
 
-    return os.path.abspath(__file__) + " " + " ".join(out_flags)
+    return "python " + os.path.abspath(__file__) + " " + " ".join(out_flags)
 
 
 if __name__ == "__main__":

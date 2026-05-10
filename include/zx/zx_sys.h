@@ -21,18 +21,18 @@ enum class [[nodiscard]] ZXSysStatus : unsigned char {
 
 static inline ZXCString zx_sys_status_to_cstring(ZXSysStatus status) {
   switch (status) {
-    case ZXSysStatus::Ok: {
-      return ZXCString::init_unsafe("ZXSysStatus::Ok");
-    }
-    case ZXSysStatus::UnexpectedError: {
-      return ZXCString::init_unsafe("ZXSysStatus::UnexpectedError");
-    }
-    case ZXSysStatus::Nullptr: {
-      return ZXCString::init_unsafe("ZXSysStatus::Nullptr");
-    }
-    default: {
-      return ZXCString::init_unsafe("ZXSysStatus::Unknown");
-    }
+  case ZXSysStatus::Ok: {
+    return ZXCString::init_unsafe("ZXSysStatus::Ok");
+  }
+  case ZXSysStatus::UnexpectedError: {
+    return ZXCString::init_unsafe("ZXSysStatus::UnexpectedError");
+  }
+  case ZXSysStatus::Nullptr: {
+    return ZXCString::init_unsafe("ZXSysStatus::Nullptr");
+  }
+  default: {
+    return ZXCString::init_unsafe("ZXSysStatus::Unknown");
+  }
   }
 }
 
@@ -49,12 +49,12 @@ static inline zx_u64 zx_sys_errno_(zx_u64 ret) {
 
 static inline ZXSysStatus zx_sys_status_(zx_u64 ret) {
   switch (zx_sys_errno_(ret)) {
-    case ZX_SYS_STATUS_SUCCESS: {
-      return ZXSysStatus::Ok;
-    }
-    default: {
-      return ZXSysStatus::UnexpectedError;
-    }
+  case ZX_SYS_STATUS_SUCCESS: {
+    return ZXSysStatus::Ok;
+  }
+  default: {
+    return ZXSysStatus::UnexpectedError;
+  }
   }
 }
 
@@ -77,9 +77,8 @@ constexpr zx_u64 ZX_SYSCALL_IO_URING_SETUP = 425;
 constexpr zx_u64 ZX_SYSCALL_IO_URING_ENTER = 426;
 constexpr zx_u64 ZX_SYSCALL_IO_URING_REGISTER = 427;
 
-static inline ZXSysStatus zx_sys_read(zx_i32 fd,
-                                      ZXSliceMut<zx_u8> buf,
-                                      zx_u64* n_read) {
+static inline ZXSysStatus zx_sys_read(zx_i32 fd, ZXSliceMut<zx_u8> buf,
+                                      zx_u64 *n_read) {
   if (n_read == nullptr) {
     return ZXSysStatus::Nullptr;
   }
@@ -98,9 +97,8 @@ static inline ZXSysStatus zx_sys_read(zx_i32 fd,
   return ZXSysStatus::Ok;
 }
 
-static inline ZXSysStatus zx_sys_write(zx_i32 fd,
-                                       ZXSlice<zx_u8> buf,
-                                       zx_u64* n_written) {
+static inline ZXSysStatus zx_sys_write(zx_i32 fd, ZXSlice<zx_u8> buf,
+                                       zx_u64 *n_written) {
   if (n_written == nullptr) {
     return ZXSysStatus::Nullptr;
   }
@@ -119,10 +117,8 @@ static inline ZXSysStatus zx_sys_write(zx_i32 fd,
   return ZXSysStatus::Ok;
 }
 
-static inline ZXSysStatus zx_sys_open(ZXCString pathname,
-                                      zx_i32 flags,
-                                      zx_u32 mode,
-                                      zx_i32* fd) {
+static inline ZXSysStatus zx_sys_open(ZXCString pathname, zx_i32 flags,
+                                      zx_u32 mode, zx_i32 *fd) {
   if (fd == nullptr) {
     return ZXSysStatus::Nullptr;
   }
@@ -156,13 +152,9 @@ static inline void zx_sys_abort() {
 }
 
 // returns the resulting pointer through `mem` argument
-static inline ZXSysStatus zx_sys_mmap(zx_u8* address,
-                                      zx_u64 length,
-                                      zx_i32 prot,
-                                      zx_i32 flags,
-                                      zx_i32 fd,
-                                      zx_i64 offset,
-                                      zx_u8** mem) {
+static inline ZXSysStatus zx_sys_mmap(zx_u8 *address, zx_u64 length,
+                                      zx_i32 prot, zx_i32 flags, zx_i32 fd,
+                                      zx_i64 offset, zx_u8 **mem) {
   if (mem == nullptr) {
     return ZXSysStatus::Nullptr;
   }
@@ -177,7 +169,7 @@ static inline ZXSysStatus zx_sys_mmap(zx_u8* address,
     return status;
   }
 
-  *mem = (zx_u8*)ret;
+  *mem = (zx_u8 *)ret;
   return ZXSysStatus::Ok;
 }
 

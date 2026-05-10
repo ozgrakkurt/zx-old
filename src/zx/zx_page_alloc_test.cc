@@ -2,7 +2,7 @@
 #include <zx/zx_page_alloc.h>
 #include <zx/zx_slice.h>
 
-typedef ZXPageAllocStatus allocfn(zx_u64 size, ZXSliceMut<zx_u8>* out);
+typedef ZXPageAllocStatus allocfn(zx_u64 size, ZXSliceMut<zx_u8> *out);
 
 static void do_test(allocfn alloc, zx_u64 size) {
   ZXSliceMut<zx_u8> mem;

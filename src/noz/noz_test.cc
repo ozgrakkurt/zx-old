@@ -11,8 +11,7 @@ static void assert(bool cond) {
   }
 }
 
-static void do_test(ZXSliceMut<zx_u8> input,
-                    ZXSliceMut<zx_u8> output,
+static void do_test(ZXSliceMut<zx_u8> input, ZXSliceMut<zx_u8> output,
                     ZXSliceMut<zx_u8> compressed,
                     ZXSliceMut<zx_u8> compressed_copy) {
   assert(input.len() == output.len());

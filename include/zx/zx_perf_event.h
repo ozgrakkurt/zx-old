@@ -6,12 +6,10 @@
 #include <zx/zx_sys.h>
 #include <zx/zx_syscall.h>
 
-static inline ZXSysStatus zx_sys_perf_event_open(perf_event_attr* attr,
-                                                 zx_i32 pid,
-                                                 zx_i32 cpu,
-                                                 zx_i32 group_fd,
-                                                 zx_u64 flags,
-                                                 zx_i32* fd) {
+static inline ZXSysStatus zx_sys_perf_event_open(perf_event_attr *attr,
+                                                 zx_i32 pid, zx_i32 cpu,
+                                                 zx_i32 group_fd, zx_u64 flags,
+                                                 zx_i32 *fd) {
   if (fd == nullptr) {
     return ZXSysStatus::Nullptr;
   }

@@ -14,7 +14,7 @@ static void assert(bool cond) {
   }
 }
 
-static void smoke_test_inner(Queue* q, zx_u32 cap) {
+static void smoke_test_inner(Queue *q, zx_u32 cap) {
   assert(q->capacity_left() == cap);
   assert(q->len() == 0);
 
@@ -48,7 +48,7 @@ static void smoke_test_inner(Queue* q, zx_u32 cap) {
   assert(69 == key);
 }
 
-static void smoke_test(ZXAlloc* alloc, zx_u32 cap) {
+static void smoke_test(ZXAlloc *alloc, zx_u32 cap) {
   Queue queue;
   assert(ZXQueueInitStatus::Ok == Queue::init(alloc, cap, &queue));
 

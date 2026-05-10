@@ -32,7 +32,7 @@ struct ZXFuzzInput {
   inline zx_u64 consumed_count_() const { return this->m_consumed_count; }
 };
 
-typedef void (*zx_fuzz_one_fn)(void* usr_ctx, ZXFuzzInput* fuzz_input);
-void zx_fuzz(ZXAlloc* alloc, void* usr_ctx, zx_fuzz_one_fn fuzz_one);
+typedef void (*zx_fuzz_one_fn)(void *usr_ctx, ZXFuzzInput *fuzz_input);
+void zx_fuzz(ZXAlloc *alloc, void *usr_ctx, zx_fuzz_one_fn fuzz_one);
 
 #endif

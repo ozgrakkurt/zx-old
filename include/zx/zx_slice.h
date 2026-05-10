@@ -7,7 +7,7 @@
 
 #include <zx/zx_int.h>
 
-static_assert(sizeof(void*) == 8);
+static_assert(sizeof(void *) == 8);
 
 enum class ZXSliceCmp : zx_u8_c {
   Equal,
@@ -26,12 +26,11 @@ enum class [[nodiscard]] ZXSliceStatus : zx_u8_c {
   Overlapping,
 };
 
-template <typename T>
-struct ZXSlice {
+template <typename T> struct ZXSlice {
   zx_u64 m_len;
-  T const* m_ptr;
+  T const *m_ptr;
 
-  static ZXSliceStatus init(T const* ptr, zx_u64 len, ZXSlice<T>* out) {
+  static ZXSliceStatus init(T const *ptr, zx_u64 len, ZXSlice<T> *out) {
     static_assert(sizeof(T) > 0);
     static_assert(alignof(T) > 0);
 
@@ -56,7 +55,7 @@ struct ZXSlice {
     return ZXSliceStatus::Ok;
   }
 
-  static ZXSlice<T> init_unsafe(T const* ptr, zx_u64 len) {
+  static ZXSlice<T> init_unsafe(T const *ptr, zx_u64 len) {
     static_assert(sizeof(T) > 0);
     static_assert(alignof(T) > 0);
 
@@ -82,7 +81,7 @@ struct ZXSlice {
   }
 
   template <typename U>
-  static inline ZXSliceStatus init_from_ptr(U const* ptr, ZXSlice<T>* out) {
+  static inline ZXSliceStatus init_from_ptr(U const *ptr, ZXSlice<T> *out) {
     static_assert(sizeof(T) > 0);
     static_assert(alignof(T) > 0);
     static_assert(sizeof(U) > 0);
@@ -103,7 +102,7 @@ struct ZXSlice {
     zx_u64 const len = sizeof(U) / sizeof(T);
 
     *out = ZXSlice<T>{
-        .m_ptr = (T const*)ptr,
+        .m_ptr = (T const *)ptr,
         .m_len = len,
     };
 
@@ -111,7 +110,7 @@ struct ZXSlice {
   }
 
   template <typename U>
-  static inline ZXSlice<T> init_from_ptr_unsafe(U const* ptr) {
+  static inline ZXSlice<T> init_from_ptr_unsafe(U const *ptr) {
     static_assert(sizeof(T) > 0);
     static_assert(alignof(T) > 0);
     static_assert(sizeof(U) > 0);
@@ -134,7 +133,7 @@ struct ZXSlice {
     zx_u64 const len = sizeof(U) / sizeof(T);
 
     return ZXSlice<T>{
-        .m_ptr = (T const*)ptr,
+        .m_ptr = (T const *)ptr,
         .m_len = len,
     };
   }
@@ -143,13 +142,12 @@ struct ZXSlice {
     static_assert(sizeof(T) > 0);
     static_assert(alignof(T) > 0);
     return ZXSlice<T>{
-        .m_ptr = (T const*)zx_u64{alignof(T)},
+        .m_ptr = (T const *)zx_u64{alignof(T)},
         .m_len = 0,
     };
   }
 
-  template <zx_u16 ALIGN>
-  static ZXSlice<T> init_aligned_dangling() {
+  template <zx_u16 ALIGN> static ZXSlice<T> init_aligned_dangling() {
     static_assert(ALIGN >= alignof(T));
     static_assert(zx_is_pow_two_u16(ALIGN));
     static_assert(ALIGN <= 128__wbu);
@@ -159,17 +157,16 @@ struct ZXSlice {
     static_assert(alignof(T) > 0);
 
     return ZXSlice<T>{
-        .m_ptr = (T const*)zx_u64{ALIGN},
+        .m_ptr = (T const *)zx_u64{ALIGN},
         .m_len = 0,
     };
   }
 
   inline zx_u64 len() const { return this->m_len; }
 
-  inline T const* ptr() const { return this->m_ptr; }
+  inline T const *ptr() const { return this->m_ptr; }
 
-  template <typename U>
-  inline ZXSliceStatus cast(ZXSlice<U>* out) const {
+  template <typename U> inline ZXSliceStatus cast(ZXSlice<U> *out) const {
     static_assert(sizeof(U) > 0);
     static_assert(alignof(U) > 0);
 
@@ -201,13 +198,12 @@ struct ZXSlice {
       }
     }
 
-    *out = ZXSlice<U>{.m_ptr = (U const*)this->m_ptr, .m_len = new_len};
+    *out = ZXSlice<U>{.m_ptr = (U const *)this->m_ptr, .m_len = new_len};
 
     return ZXSliceStatus::Ok;
   }
 
-  template <typename U>
-  inline ZXSlice<U> cast_unsafe() const {
+  template <typename U> inline ZXSlice<U> cast_unsafe() const {
     static_assert(sizeof(U) > 0);
     static_assert(alignof(U) > 0);
 
@@ -224,11 +220,10 @@ struct ZXSlice {
 
     zx_u64 const new_len = zx_div_unsafe_u64(byte_cap, sizeof(U));
 
-    return ZXSlice<U>{.m_ptr = (U const*)this->m_ptr, .m_len = new_len};
+    return ZXSlice<U>{.m_ptr = (U const *)this->m_ptr, .m_len = new_len};
   }
 
-  template <typename U>
-  inline ZXSlice<U> scast() const {
+  template <typename U> inline ZXSlice<U> scast() const {
     static_assert(sizeof(U) > 0);
     static_assert(alignof(U) > 0);
     static_assert(sizeof(U) <= sizeof(T));
@@ -237,10 +232,10 @@ struct ZXSlice {
 
     zx_u64 const new_len = this->m_len * sizeof(T) / sizeof(U);
 
-    return ZXSlice<U>{.m_ptr = (U const*)this->m_ptr, .m_len = new_len};
+    return ZXSlice<U>{.m_ptr = (U const *)this->m_ptr, .m_len = new_len};
   }
 
-  inline ZXSliceStatus slice(zx_u64 offset, zx_u64 len, ZXSlice<T>* out) const {
+  inline ZXSliceStatus slice(zx_u64 offset, zx_u64 len, ZXSlice<T> *out) const {
     if (out == nullptr) {
       return ZXSliceStatus::Nullptr;
     }
@@ -276,7 +271,7 @@ struct ZXSlice {
   }
 
   // returns (offset, end]
-  inline ZXSliceStatus slice_at(zx_u64 offset, ZXSlice<T>* out) const {
+  inline ZXSliceStatus slice_at(zx_u64 offset, ZXSlice<T> *out) const {
     if (out == nullptr) {
       return ZXSliceStatus::Nullptr;
     }
@@ -314,7 +309,7 @@ struct ZXSlice {
     };
   }
 
-  inline ZXSliceStatus offset(zx_u64 offset, T const** out) const {
+  inline ZXSliceStatus offset(zx_u64 offset, T const **out) const {
     if (out == nullptr) {
       return ZXSliceStatus::Nullptr;
     }
@@ -327,7 +322,7 @@ struct ZXSlice {
     return ZXSliceStatus::Ok;
   }
 
-  inline T const* offset_unsafe(zx_u64 offset) const {
+  inline T const *offset_unsafe(zx_u64 offset) const {
 #ifdef ZX_DEV
     if (offset >= this->m_len) {
       __builtin_trap();
@@ -336,12 +331,12 @@ struct ZXSlice {
     return &this->m_ptr[offset];
   }
 
-  inline ZXSliceStatus read(zx_u64 offset, T* out) const {
+  inline ZXSliceStatus read(zx_u64 offset, T *out) const {
     if (out == nullptr) {
       return ZXSliceStatus::Nullptr;
     }
 
-    T const* ptr = nullptr;
+    T const *ptr = nullptr;
     ZXSliceStatus const offset_status = this->offset(offset, &ptr);
     if (ZXSliceStatus::Ok != offset_status) {
       return offset_status;
@@ -357,7 +352,7 @@ struct ZXSlice {
   }
 
   template <typename U>
-  inline ZXSliceStatus read_unaligned(zx_u64 index, U* out) const {
+  inline ZXSliceStatus read_unaligned(zx_u64 index, U *out) const {
     if (out == nullptr) {
       return ZXSliceStatus::Nullptr;
     }
@@ -380,8 +375,7 @@ struct ZXSlice {
     return ZXSliceStatus::Ok;
   }
 
-  template <typename U>
-  inline U read_unaligned_unsafe(zx_u64 index) const {
+  template <typename U> inline U read_unaligned_unsafe(zx_u64 index) const {
 #ifdef ZX_DEV
     zx_u64 const item_cap = zx_sub_unsafe_u64(this->m_len, index);
     zx_u64 const byte_cap = zx_mul_unsafe_u64(item_cap, sizeof(T));
@@ -415,8 +409,8 @@ struct ZXSlice {
     // method.
     zx_u64 const byte_count = zx_mul_unsafe_u64(len, sizeof(T));
     // We are assuming little endian here.
-    zx_i32 res = __builtin_memcmp((zx_u8 const*)this->m_ptr,
-                                  (zx_u8 const*)other.m_ptr, byte_count);
+    zx_i32 res = __builtin_memcmp((zx_u8 const *)this->m_ptr,
+                                  (zx_u8 const *)other.m_ptr, byte_count);
     if (res == 0) {
       if (this->m_len > other.m_len) {
         return ZXSliceCmp::Greater;
@@ -437,12 +431,11 @@ struct ZXSlice {
   }
 };
 
-template <typename T>
-struct ZXSliceMut {
+template <typename T> struct ZXSliceMut {
   zx_u64 m_len;
-  T* m_ptr;
+  T *m_ptr;
 
-  static ZXSliceStatus init(T* ptr, zx_u64 len, ZXSliceMut<T>* out) {
+  static ZXSliceStatus init(T *ptr, zx_u64 len, ZXSliceMut<T> *out) {
     static_assert(sizeof(T) > 0);
     static_assert(alignof(T) > 0);
 
@@ -467,7 +460,7 @@ struct ZXSliceMut {
     return ZXSliceStatus::Ok;
   }
 
-  static ZXSliceMut<T> init_unsafe(T* ptr, zx_u64 len) {
+  static ZXSliceMut<T> init_unsafe(T *ptr, zx_u64 len) {
     static_assert(sizeof(T) > 0);
     static_assert(alignof(T) > 0);
 
@@ -493,7 +486,7 @@ struct ZXSliceMut {
   }
 
   template <typename U>
-  static inline ZXSliceStatus init_from_ptr(U* ptr, ZXSliceMut<T>* out) {
+  static inline ZXSliceStatus init_from_ptr(U *ptr, ZXSliceMut<T> *out) {
     static_assert(sizeof(T) > 0);
     static_assert(alignof(T) > 0);
     static_assert(sizeof(U) > 0);
@@ -514,7 +507,7 @@ struct ZXSliceMut {
     zx_u64 const len = sizeof(U) / sizeof(T);
 
     *out = ZXSliceMut<T>{
-        .m_ptr = (T*)ptr,
+        .m_ptr = (T *)ptr,
         .m_len = len,
     };
 
@@ -522,7 +515,7 @@ struct ZXSliceMut {
   }
 
   template <typename U>
-  static inline ZXSliceMut<T> init_from_ptr_unsafe(U* ptr) {
+  static inline ZXSliceMut<T> init_from_ptr_unsafe(U *ptr) {
     static_assert(sizeof(T) > 0);
     static_assert(alignof(T) > 0);
     static_assert(sizeof(U) > 0);
@@ -545,7 +538,7 @@ struct ZXSliceMut {
     zx_u64 const len = sizeof(U) / sizeof(T);
 
     return ZXSliceMut<T>{
-        .m_ptr = (T*)ptr,
+        .m_ptr = (T *)ptr,
         .m_len = len,
     };
   }
@@ -554,13 +547,12 @@ struct ZXSliceMut {
     static_assert(sizeof(T) > 0);
     static_assert(alignof(T) > 0);
     return ZXSliceMut<T>{
-        .m_ptr = (T*)zx_u64{alignof(T)},
+        .m_ptr = (T *)zx_u64{alignof(T)},
         .m_len = 0,
     };
   }
 
-  template <zx_u16 ALIGN>
-  static ZXSliceMut<T> init_aligned_dangling() {
+  template <zx_u16 ALIGN> static ZXSliceMut<T> init_aligned_dangling() {
     static_assert(ALIGN >= alignof(T));
     static_assert(zx_is_pow_two_u16(ALIGN));
     static_assert(ALIGN <= 128__wbu);
@@ -570,17 +562,16 @@ struct ZXSliceMut {
     static_assert(alignof(T) > 0);
 
     return ZXSliceMut<T>{
-        .m_ptr = (T*)zx_u64{ALIGN},
+        .m_ptr = (T *)zx_u64{ALIGN},
         .m_len = 0,
     };
   }
 
   inline zx_u64 len() const { return this->m_len; }
 
-  inline T* ptr() const { return this->m_ptr; }
+  inline T *ptr() const { return this->m_ptr; }
 
-  template <typename U>
-  inline ZXSliceStatus cast(ZXSliceMut<U>* out) const {
+  template <typename U> inline ZXSliceStatus cast(ZXSliceMut<U> *out) const {
     static_assert(sizeof(U) > 0);
     static_assert(alignof(U) > 0);
 
@@ -612,13 +603,12 @@ struct ZXSliceMut {
       }
     }
 
-    *out = ZXSliceMut<U>{.m_ptr = (U*)this->m_ptr, .m_len = new_len};
+    *out = ZXSliceMut<U>{.m_ptr = (U *)this->m_ptr, .m_len = new_len};
 
     return ZXSliceStatus::Ok;
   }
 
-  template <typename U>
-  inline ZXSliceMut<U> cast_unsafe() const {
+  template <typename U> inline ZXSliceMut<U> cast_unsafe() const {
     static_assert(sizeof(U) > 0);
     static_assert(alignof(U) > 0);
 
@@ -635,11 +625,10 @@ struct ZXSliceMut {
 
     zx_u64 const new_len = zx_div_unsafe_u64(byte_cap, sizeof(U));
 
-    return ZXSliceMut<U>{.m_ptr = (U*)this->m_ptr, .m_len = new_len};
+    return ZXSliceMut<U>{.m_ptr = (U *)this->m_ptr, .m_len = new_len};
   }
 
-  template <typename U>
-  inline ZXSliceMut<U> scast() const {
+  template <typename U> inline ZXSliceMut<U> scast() const {
     static_assert(sizeof(U) > 0);
     static_assert(alignof(U) > 0);
     static_assert(sizeof(U) <= sizeof(T));
@@ -648,12 +637,11 @@ struct ZXSliceMut {
 
     zx_u64 const new_len = this->m_len * sizeof(T) / sizeof(U);
 
-    return ZXSliceMut<U>{.m_ptr = (U*)this->m_ptr, .m_len = new_len};
+    return ZXSliceMut<U>{.m_ptr = (U *)this->m_ptr, .m_len = new_len};
   }
 
-  inline ZXSliceStatus slice(zx_u64 offset,
-                             zx_u64 len,
-                             ZXSliceMut<T>* out) const {
+  inline ZXSliceStatus slice(zx_u64 offset, zx_u64 len,
+                             ZXSliceMut<T> *out) const {
     if (out == nullptr) {
       return ZXSliceStatus::Nullptr;
     }
@@ -689,7 +677,7 @@ struct ZXSliceMut {
   }
 
   // returns (offset, end]
-  inline ZXSliceStatus slice_at(zx_u64 offset, ZXSliceMut<T>* out) const {
+  inline ZXSliceStatus slice_at(zx_u64 offset, ZXSliceMut<T> *out) const {
     if (out == nullptr) {
       return ZXSliceStatus::Nullptr;
     }
@@ -727,7 +715,7 @@ struct ZXSliceMut {
     };
   }
 
-  inline ZXSliceStatus offset(zx_u64 offset, T** out) const {
+  inline ZXSliceStatus offset(zx_u64 offset, T **out) const {
     if (out == nullptr) {
       return ZXSliceStatus::Nullptr;
     }
@@ -740,7 +728,7 @@ struct ZXSliceMut {
     return ZXSliceStatus::Ok;
   }
 
-  inline T* offset_unsafe(zx_u64 offset) const {
+  inline T *offset_unsafe(zx_u64 offset) const {
 #ifdef ZX_DEV
     if (offset >= this->m_len) {
       __builtin_trap();
@@ -749,7 +737,7 @@ struct ZXSliceMut {
     return &this->m_ptr[offset];
   }
 
-  inline ZXSliceStatus read(zx_u64 offset, T* out) const {
+  inline ZXSliceStatus read(zx_u64 offset, T *out) const {
     return this->as_const().read(offset, out);
   }
 
@@ -758,7 +746,7 @@ struct ZXSliceMut {
   }
 
   inline ZXSliceStatus write(zx_u64 offset, T val) const {
-    T* ptr = nullptr;
+    T *ptr = nullptr;
     ZXSliceStatus const offset_status = this->offset(offset, &ptr);
     if (ZXSliceStatus::Ok != offset_status) {
       return offset_status;
@@ -769,17 +757,16 @@ struct ZXSliceMut {
   }
 
   inline void write_unsafe(zx_u64 offset, T val) const {
-    T* ptr = this->offset_unsafe(offset);
+    T *ptr = this->offset_unsafe(offset);
     *ptr = val;
   }
 
   template <typename U>
-  inline ZXSliceStatus read_unaligned(zx_u64 index, U* out) const {
+  inline ZXSliceStatus read_unaligned(zx_u64 index, U *out) const {
     return this->as_const().template read_unaligned<U>(index, out);
   }
 
-  template <typename U>
-  inline U read_unaligned_unsafe(zx_u64 index) const {
+  template <typename U> inline U read_unaligned_unsafe(zx_u64 index) const {
     return this->as_const().template read_unaligned_unsafe<U>(index);
   }
 
@@ -816,7 +803,7 @@ struct ZXSliceMut {
 
   inline void fill(T val) const {
     zx_u64 const len = this->m_len;
-    T* const ptr = this->m_ptr;
+    T *const ptr = this->m_ptr;
     for (zx_u64 i = 0; i < len; i++) {
       ptr[i] = val;
     }
@@ -900,7 +887,7 @@ struct ZXSliceMut {
 struct ZXCString {
   ZXSlice<zx_u8> m_slice;
 
-  static inline ZXSliceStatus init(char const* cstring, ZXCString* out) {
+  static inline ZXSliceStatus init(char const *cstring, ZXCString *out) {
     if (cstring == nullptr || out == nullptr) {
       return ZXSliceStatus::Nullptr;
     }
@@ -908,7 +895,7 @@ struct ZXCString {
     zx_u64 const len = __builtin_strlen(cstring);
     ZXSlice<zx_u8> slice;
     ZXSliceStatus const init_status =
-        ZXSlice<zx_u8>::init((zx_u8 const*)cstring, len, &slice);
+        ZXSlice<zx_u8>::init((zx_u8 const *)cstring, len, &slice);
     if (init_status != ZXSliceStatus::Ok) {
       return init_status;
     }
@@ -920,7 +907,7 @@ struct ZXCString {
     return ZXSliceStatus::Ok;
   }
 
-  static inline ZXCString init_unsafe(char const* cstring) {
+  static inline ZXCString init_unsafe(char const *cstring) {
 #ifdef ZX_DEV
     if (cstring == nullptr) {
       __builtin_trap();
@@ -929,46 +916,46 @@ struct ZXCString {
 
     zx_u64 const len = __builtin_strlen(cstring);
     return ZXCString{
-        .m_slice = ZXSlice<zx_u8>::init_unsafe((zx_u8 const*)cstring, len),
+        .m_slice = ZXSlice<zx_u8>::init_unsafe((zx_u8 const *)cstring, len),
     };
   }
 
   inline ZXSlice<zx_u8> slice() const { return this->m_slice; }
 
-  inline char const* as_cstr() const {
-    return (char const*)this->m_slice.ptr();
+  inline char const *as_cstr() const {
+    return (char const *)this->m_slice.ptr();
   }
 };
 
 static inline ZXCString zx_slice_status_to_cstring(ZXSliceStatus status) {
   switch (status) {
-    case ZXSliceStatus::Ok: {
-      return ZXCString::init_unsafe("ZXSliceStatus::Ok");
-    }
-    case ZXSliceStatus::OutOfBounds: {
-      return ZXCString::init_unsafe("ZXSliceStatus::OutOfBounds");
-    }
-    case ZXSliceStatus::IntegerOverflow: {
-      return ZXCString::init_unsafe("ZXSliceStatus::IntegerOverflow");
-    }
-    case ZXSliceStatus::Nullptr: {
-      return ZXCString::init_unsafe("ZXSliceStatus::Nullptr");
-    }
-    case ZXSliceStatus::UnalignedPtr: {
-      return ZXCString::init_unsafe("ZXSliceStatus::UnalignedPtr");
-    }
-    case ZXSliceStatus::SizeMismatch: {
-      return ZXCString::init_unsafe("ZXSliceStatus::SizeMismatch");
-    }
-    case ZXSliceStatus::AlignmentMismatch: {
-      return ZXCString::init_unsafe("ZXSliceStatus::AlignmentMismatch");
-    }
-    case ZXSliceStatus::Overlapping: {
-      return ZXCString::init_unsafe("ZXSliceStatus::Overlapping");
-    }
-    default: {
-      return ZXCString::init_unsafe("ZXSliceStatus::Unknown");
-    }
+  case ZXSliceStatus::Ok: {
+    return ZXCString::init_unsafe("ZXSliceStatus::Ok");
+  }
+  case ZXSliceStatus::OutOfBounds: {
+    return ZXCString::init_unsafe("ZXSliceStatus::OutOfBounds");
+  }
+  case ZXSliceStatus::IntegerOverflow: {
+    return ZXCString::init_unsafe("ZXSliceStatus::IntegerOverflow");
+  }
+  case ZXSliceStatus::Nullptr: {
+    return ZXCString::init_unsafe("ZXSliceStatus::Nullptr");
+  }
+  case ZXSliceStatus::UnalignedPtr: {
+    return ZXCString::init_unsafe("ZXSliceStatus::UnalignedPtr");
+  }
+  case ZXSliceStatus::SizeMismatch: {
+    return ZXCString::init_unsafe("ZXSliceStatus::SizeMismatch");
+  }
+  case ZXSliceStatus::AlignmentMismatch: {
+    return ZXCString::init_unsafe("ZXSliceStatus::AlignmentMismatch");
+  }
+  case ZXSliceStatus::Overlapping: {
+    return ZXCString::init_unsafe("ZXSliceStatus::Overlapping");
+  }
+  default: {
+    return ZXCString::init_unsafe("ZXSliceStatus::Unknown");
+  }
   }
 }
 

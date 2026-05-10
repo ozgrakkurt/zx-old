@@ -17,12 +17,12 @@ constexpr zx_u64 ZX_FUZZ_N_MAGIC =
     sizeof(ZX_FUZZ_MAGIC) / sizeof(ZX_FUZZ_MAGIC[0]);
 // CONFIG
 
-static zx_u32* ZX_FUZZ_SAN_COV_ = nullptr;
+static zx_u32 *ZX_FUZZ_SAN_COV_ = nullptr;
 static zx_u64 ZX_FUZZ_SAN_COV_LEN_ = 0;
 
 extern "C" {
 
-void __sanitizer_cov_trace_pc_guard_init(zx_u32_c* start, zx_u32_c* stop) {
+void __sanitizer_cov_trace_pc_guard_init(zx_u32_c *start, zx_u32_c *stop) {
   if (start == nullptr) {
     __builtin_trap();
   }
@@ -30,7 +30,7 @@ void __sanitizer_cov_trace_pc_guard_init(zx_u32_c* start, zx_u32_c* stop) {
     __builtin_trap();
   }
 
-  static_assert(sizeof(void*) == sizeof(zx_u64));
+  static_assert(sizeof(void *) == sizeof(zx_u64));
 
   zx_u64 const start_addr = (zx_u64)start;
   zx_u64 const stop_addr = (zx_u64)stop;
@@ -51,20 +51,20 @@ void __sanitizer_cov_trace_pc_guard_init(zx_u32_c* start, zx_u32_c* stop) {
   if (ZX_FUZZ_SAN_COV_LEN_ != 0) {
     __builtin_trap();
   }
-  ZX_FUZZ_SAN_COV_ = (zx_u32*)start;
+  ZX_FUZZ_SAN_COV_ = (zx_u32 *)start;
   ZX_FUZZ_SAN_COV_LEN_ = n_slots;
 }
 
 __attribute__((no_builtin, no_sanitize("coverage"))) void
-__sanitizer_cov_trace_pc_guard(zx_u32_c* guard_variable) {
+__sanitizer_cov_trace_pc_guard(zx_u32_c *guard_variable) {
   *guard_variable = (*guard_variable + 1__wbu) | zx_u32{1};
 }
 
-}  // extern "C"
+} // extern "C"
 
 __attribute__((no_builtin, no_sanitize("coverage"))) static void
 zx_fuzz_reset_coverage() {
-  zx_u32* cov = ZX_FUZZ_SAN_COV_;
+  zx_u32 *cov = ZX_FUZZ_SAN_COV_;
   zx_u64 len = ZX_FUZZ_SAN_COV_LEN_;
   for (zx_u64 i = 0; i < len; i++) {
     cov[i] = 0;
@@ -72,8 +72,8 @@ zx_fuzz_reset_coverage() {
 }
 
 __attribute__((no_builtin, no_sanitize("coverage"))) static void
-zx_fuzz_load_coverage(zx_u32* dst, zx_u64 dst_len) {
-  zx_u32 const* src = ZX_FUZZ_SAN_COV_;
+zx_fuzz_load_coverage(zx_u32 *dst, zx_u64 dst_len) {
+  zx_u32 const *src = ZX_FUZZ_SAN_COV_;
   zx_u64 src_len = ZX_FUZZ_SAN_COV_LEN_;
   if (src_len != dst_len) {
     __builtin_trap();
@@ -96,7 +96,7 @@ struct ZXFuzzSlotSet {
   zx_u32 n_filled;
 };
 
-static void zx_fuzz_slot_set_push(ZXFuzzSlotSet* set, zx_u64 value) {
+static void zx_fuzz_slot_set_push(ZXFuzzSlotSet *set, zx_u64 value) {
   zx_fuzz_assert(set != nullptr);
   constexpr zx_u64 val_cap = sizeof(set->values) / sizeof(set->values[0]);
   static_assert(val_cap > 0);
@@ -114,7 +114,7 @@ struct ZXFuzzCtx {
   ZXSliceMut<bool> total_coverage;
 };
 
-static ZXFuzzCtx zx_fuzz_ctx_alloc(ZXAlloc* alloc) {
+static ZXFuzzCtx zx_fuzz_ctx_alloc(ZXAlloc *alloc) {
   ZXSliceMut<zx_u32> coverage;
   ZXAllocStatus alloc_status =
       alloc->alloc<zx_u32>(ZX_FUZZ_SAN_COV_LEN_, &coverage);
@@ -203,13 +203,11 @@ static bool zx_fuzz_push_signature(ZXSliceMut<zx_u32> signature_dedup,
   return is_new;
 }
 
-static ZXFuzzResult zx_fuzz_wrapper(ZXFuzzCtx* ctx,
-                                    zx_u64 base_score,
-                                    zx_u64 mut_idx,
-                                    void* usr_ctx,
+static ZXFuzzResult zx_fuzz_wrapper(ZXFuzzCtx *ctx, zx_u64 base_score,
+                                    zx_u64 mut_idx, void *usr_ctx,
                                     zx_fuzz_one_fn fuzz_one) {
   ZXFuzzInput fuzz_input = ZXFuzzInput::init_(ctx->fuzz_input.as_const());
-  zx_u32* coverage = ctx->coverage.ptr();
+  zx_u32 *coverage = ctx->coverage.ptr();
   zx_u64 coverage_len = ctx->coverage.len();
   // don't break these up
   zx_fuzz_reset_coverage();
@@ -242,7 +240,7 @@ static ZXFuzzResult zx_fuzz_wrapper(ZXFuzzCtx* ctx,
   };
 }
 
-void zx_fuzz(ZXAlloc* alloc, void* usr_ctx, zx_fuzz_one_fn fuzz_one) {
+void zx_fuzz(ZXAlloc *alloc, void *usr_ctx, zx_fuzz_one_fn fuzz_one) {
   ZXXoshiro256 rand = ZXXoshiro256::init(0);
 
   ZXFuzzCtx ctx = zx_fuzz_ctx_alloc(alloc);
@@ -275,7 +273,7 @@ void zx_fuzz(ZXAlloc* alloc, void* usr_ctx, zx_fuzz_one_fn fuzz_one) {
     }
 
     // try previous interesting values for this mut_idx
-    ZXFuzzSlotSet const* slot_set = ctx.slot_sets.offset_unsafe(mut_idx);
+    ZXFuzzSlotSet const *slot_set = ctx.slot_sets.offset_unsafe(mut_idx);
     for (zx_u32 i = 0; i < slot_set->n_filled; i++) {
       ctx.fuzz_input.write_unsafe(mut_idx, slot_set->values[i]);
       zx_fuzz_wrapper(&ctx, baseline_result.score, mut_idx, usr_ctx, fuzz_one);
@@ -310,4 +308,4 @@ void zx_fuzz(ZXAlloc* alloc, void* usr_ctx, zx_fuzz_one_fn fuzz_one) {
   }
 }
 
-#endif  // #ifdef ZX_FUZZ
+#endif // #ifdef ZX_FUZZ

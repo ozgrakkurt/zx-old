@@ -15,27 +15,27 @@ enum class [[nodiscard]] ZXAllocStatus : zx_u8_c {
 
 static inline ZXCString zx_alloc_status_to_cstring(ZXAllocStatus status) {
   switch (status) {
-    case ZXAllocStatus::Ok: {
-      return ZXCString::init_unsafe("ZXAllocStatus::Ok");
-    }
-    case ZXAllocStatus::Nullptr: {
-      return ZXCString::init_unsafe("ZXAllocStatus::Nullptr");
-    }
-    case ZXAllocStatus::OutOfMemory: {
-      return ZXCString::init_unsafe("ZXAllocStatus::OutOfMemory");
-    }
-    case ZXAllocStatus::IntegerOverflow: {
-      return ZXCString::init_unsafe("ZXAllocStatus::IntegerOverflow");
-    }
-    case ZXAllocStatus::SliceError: {
-      return ZXCString::init_unsafe("ZXAllocStatus::SliceError");
-    }
-    case ZXAllocStatus::SliceCastError: {
-      return ZXCString::init_unsafe("ZXAllocStatus::SliceCastError");
-    }
-    default: {
-      return ZXCString::init_unsafe("ZXAllocStatus::Unknown");
-    }
+  case ZXAllocStatus::Ok: {
+    return ZXCString::init_unsafe("ZXAllocStatus::Ok");
+  }
+  case ZXAllocStatus::Nullptr: {
+    return ZXCString::init_unsafe("ZXAllocStatus::Nullptr");
+  }
+  case ZXAllocStatus::OutOfMemory: {
+    return ZXCString::init_unsafe("ZXAllocStatus::OutOfMemory");
+  }
+  case ZXAllocStatus::IntegerOverflow: {
+    return ZXCString::init_unsafe("ZXAllocStatus::IntegerOverflow");
+  }
+  case ZXAllocStatus::SliceError: {
+    return ZXCString::init_unsafe("ZXAllocStatus::SliceError");
+  }
+  case ZXAllocStatus::SliceCastError: {
+    return ZXCString::init_unsafe("ZXAllocStatus::SliceCastError");
+  }
+  default: {
+    return ZXCString::init_unsafe("ZXAllocStatus::Unknown");
+  }
   }
 }
 
@@ -65,7 +65,7 @@ struct ZXAlloc {
   }
 
   template <typename T, zx_u16 ALIGN>
-  inline ZXAllocStatus aligned_alloc(zx_u64 len, ZXSliceMut<T>* out) {
+  inline ZXAllocStatus aligned_alloc(zx_u64 len, ZXSliceMut<T> *out) {
     static_assert(ALIGN >= alignof(T));
     static_assert(ALIGN <= 128);
     static_assert(ALIGN > 0);
@@ -83,7 +83,7 @@ struct ZXAlloc {
     ZXSliceMut<zx_u8> const mem = this->m_mem;
     zx_u64 const offset = this->m_offset;
 
-    static_assert(sizeof(void*) == sizeof(zx_u64));
+    static_assert(sizeof(void *) == sizeof(zx_u64));
     bool overflow = false;
     zx_u64 const addr = zx_add_u64((zx_u64)mem.ptr(), offset, &overflow);
     zx_u64 const aligned_addr = __builtin_align_up(addr, ALIGN);
@@ -120,12 +120,12 @@ struct ZXAlloc {
   }
 
   template <typename T>
-  inline ZXAllocStatus alloc(zx_u64 len, ZXSliceMut<T>* out) {
+  inline ZXAllocStatus alloc(zx_u64 len, ZXSliceMut<T> *out) {
     return this->aligned_alloc<T, alignof(T)>(len, out);
   }
 
   template <typename T, zx_u16 ALIGN>
-  inline ZXAllocStatus aligned_create(T** out) {
+  inline ZXAllocStatus aligned_create(T **out) {
     ZXSliceMut<T> slice;
     ZXAllocStatus const status = this->aligned_alloc<T, ALIGN>(1, &slice);
     if (status != ZXAllocStatus::Ok) {
@@ -135,8 +135,7 @@ struct ZXAlloc {
     return ZXAllocStatus::Ok;
   }
 
-  template <typename T>
-  inline ZXAllocStatus create(T** out) {
+  template <typename T> inline ZXAllocStatus create(T **out) {
     return this->aligned_create<T, alignof(T)>(out);
   }
 };

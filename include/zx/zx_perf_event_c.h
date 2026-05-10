@@ -401,6 +401,6 @@ struct perf_event_attr {
   zx_u64 config4; /* extension of config3 */
 };
 
-}  // extern "C"
+} // extern "C"
 
 #endif

@@ -93,14 +93,13 @@ struct ZXXoshiro256 {
       zx_u64 const cp_size = zx_sub_unsafe_u64(out.len(), blocks_end);
       zx_u64 const next = this->next();
       ZXSlice<zx_u8> const ws =
-          ZXSlice<zx_u8>::init_unsafe((zx_u8 const*)&next, cp_size);
+          ZXSlice<zx_u8>::init_unsafe((zx_u8 const *)&next, cp_size);
       ZXSliceMut<zx_u8> const os = out.slice_unsafe(blocks_end, cp_size);
       os.memcpy_from_unsafe(ws);
     }
   }
 
-  template <typename T>
-  inline T random() {
+  template <typename T> inline T random() {
     T v;
     this->fill(ZXSliceMut<zx_u8>::init_from_ptr_unsafe(&v));
     return v;

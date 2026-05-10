@@ -15,7 +15,7 @@ static void assert(bool cond) {
   }
 }
 
-static bool keys_eql(void const* ctx, key_type const* a, key_type const* b) {
+static bool keys_eql(void const *ctx, key_type const *a, key_type const *b) {
   (void)ctx;
   return *a == *b;
 }
@@ -24,9 +24,9 @@ static zx_u64 hash_key(key_type key) {
   return zx_rapidhash_v3(ZXSlice<zx_u8>::init_from_ptr_unsafe(&key), 0);
 }
 
-using HTable = ZXHashtable<key_type, void const*, keys_eql>;
+using HTable = ZXHashtable<key_type, void const *, keys_eql>;
 
-static void smoke_test_inner(HTable* table, zx_u32 len) {
+static void smoke_test_inner(HTable *table, zx_u32 len) {
   assert(table->capacity_left() == len);
 
   for (zx_u32 i = 0; i < zx_div_unsafe_u32(len, 2); i++) {
@@ -42,7 +42,7 @@ static void smoke_test_inner(HTable* table, zx_u32 len) {
     key_type const key = i;
     zx_u64 const hash = hash_key(key);
 
-    key_type const* entry = nullptr;
+    key_type const *entry = nullptr;
     assert(ZXHashtableGetStatus::Found ==
            table->get(hash, &key, nullptr, &entry));
     assert(entry != nullptr);
@@ -53,7 +53,7 @@ static void smoke_test_inner(HTable* table, zx_u32 len) {
     key_type const key = i;
     zx_u64 const hash = hash_key(key);
 
-    key_type const* entry = nullptr;
+    key_type const *entry = nullptr;
     assert(ZXHashtableGetStatus::NotFound ==
            table->get(hash, &key, nullptr, &entry));
     assert(entry == nullptr);
@@ -63,7 +63,7 @@ static void smoke_test_inner(HTable* table, zx_u32 len) {
     key_type const key = i;
     zx_u64 const hash = hash_key(key);
 
-    key_type const* entry = nullptr;
+    key_type const *entry = nullptr;
     assert(ZXHashtableGetOrInsertStatus::FoundExistingEntry ==
            table->get_or_insert(hash, &key, nullptr, &entry));
     assert(table->capacity_left() ==
@@ -76,7 +76,7 @@ static void smoke_test_inner(HTable* table, zx_u32 len) {
     key_type const key = i;
     zx_u64 const hash = hash_key(key);
 
-    key_type const* entry = nullptr;
+    key_type const *entry = nullptr;
     assert(ZXHashtableGetOrInsertStatus::CreatedNewEntry ==
            table->get_or_insert(hash, &key, nullptr, &entry));
     assert(table->capacity_left() ==
@@ -86,7 +86,7 @@ static void smoke_test_inner(HTable* table, zx_u32 len) {
   }
 }
 
-static void smoke_test(ZXAlloc* alloc, zx_u32 len) {
+static void smoke_test(ZXAlloc *alloc, zx_u32 len) {
   ZXSliceMut<zx_u8> mem;
   assert(ZXAllocStatus::Ok == alloc->alloc<zx_u8>(1 << 16, &mem));
   ZXFmt fmt = ZXFmt::init(mem);
@@ -112,7 +112,7 @@ static void smoke_test(ZXAlloc* alloc, zx_u32 len) {
   smoke_test_inner(&table, len);
 }
 
-static void nocap_test(ZXAlloc* alloc) {
+static void nocap_test(ZXAlloc *alloc) {
   HTable table;
   assert(ZXHashtableInitStatus::Ok == HTable::init(alloc, 0, &table));
   assert(table.capacity_left() == 0);
@@ -120,7 +120,7 @@ static void nocap_test(ZXAlloc* alloc) {
   key_type const key = 100;
   zx_u64 const hash = hash_key(key);
 
-  key_type const* entry_p = nullptr;
+  key_type const *entry_p = nullptr;
 
   assert(ZXHashtableGetStatus::NotFound ==
          table.get(hash, &key, nullptr, &entry_p));

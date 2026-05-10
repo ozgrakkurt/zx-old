@@ -15,9 +15,9 @@ struct Ctx {
   ZXAlloc alloc;
 };
 
-static void fuzz_one(void* usr_ctx, ZXFuzzInput* fuzz_input) {
+static void fuzz_one(void *usr_ctx, ZXFuzzInput *fuzz_input) {
   assert(usr_ctx != nullptr);
-  ZXAlloc* alloc = &((Ctx*)usr_ctx)->alloc;
+  ZXAlloc *alloc = &((Ctx *)usr_ctx)->alloc;
   alloc->reset();
 
   constexpr zx_u32 max_capacity = 128;
@@ -39,32 +39,32 @@ static void fuzz_one(void* usr_ctx, ZXFuzzInput* fuzz_input) {
     zx_u8 const op =
         zx_cast_unsafe_to_u8<zx_u64>(zx_mod_unsafe_u64(fuzz_input->next(), 2));
     switch (op) {
-      // push
-      case 0: {
-        ZXQueuePushStatus const status = queue.push(&end);
-        if (status == ZXQueuePushStatus::Ok) {
-          end = zx_add_unsafe_u32(end, 1);
-        } else if (status != ZXQueuePushStatus::OutOfCapacity) {
-          __builtin_trap();
-        }
-        break;
-      }
-      // pop
-      case 1: {
-        zx_u32 val = ZX_U32_MAX;
-        ZXQueuePopStatus const status = queue.pop(&val);
-        if (status == ZXQueuePopStatus::Ok) {
-          assert(val == start);
-          start = zx_add_unsafe_u32(start, 1);
-        } else if (status != ZXQueuePopStatus::Empty) {
-          __builtin_trap();
-        }
-
-        break;
-      }
-      default: {
+    // push
+    case 0: {
+      ZXQueuePushStatus const status = queue.push(&end);
+      if (status == ZXQueuePushStatus::Ok) {
+        end = zx_add_unsafe_u32(end, 1);
+      } else if (status != ZXQueuePushStatus::OutOfCapacity) {
         __builtin_trap();
       }
+      break;
+    }
+    // pop
+    case 1: {
+      zx_u32 val = ZX_U32_MAX;
+      ZXQueuePopStatus const status = queue.pop(&val);
+      if (status == ZXQueuePopStatus::Ok) {
+        assert(val == start);
+        start = zx_add_unsafe_u32(start, 1);
+      } else if (status != ZXQueuePopStatus::Empty) {
+        __builtin_trap();
+      }
+
+      break;
+    }
+    default: {
+      __builtin_trap();
+    }
     }
   }
 
@@ -98,6 +98,6 @@ int main(void) {
   Ctx ctx = Ctx{
       .alloc = op_alloc,
   };
-  zx_fuzz(&fuzz_alloc, (void*)&ctx, fuzz_one);
+  zx_fuzz(&fuzz_alloc, (void *)&ctx, fuzz_one);
   return 0;
 }

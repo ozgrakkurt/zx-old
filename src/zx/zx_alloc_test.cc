@@ -10,13 +10,13 @@ static void assert(bool v) {
 
 constexpr zx_u64 MEMORY_SIZE = 1 << 16;
 
-void do_test(ZXAlloc* alloc) {
-  ZXSliceMut<zx_i32*> slice;
-  ZXAllocStatus status = alloc->alloc<zx_i32*>(100, &slice);
+void do_test(ZXAlloc *alloc) {
+  ZXSliceMut<zx_i32 *> slice;
+  ZXAllocStatus status = alloc->alloc<zx_i32 *>(100, &slice);
   assert(status == ZXAllocStatus::Ok);
   assert(slice.len() == 100);
   assert(slice.ptr() != nullptr);
-  assert(__builtin_is_aligned(slice.ptr(), alignof(zx_i32*)));
+  assert(__builtin_is_aligned(slice.ptr(), alignof(zx_i32 *)));
 
   for (zx_u64 i = 0; i < 100; i++) {
     status = alloc->create<zx_i32>(slice.offset_unsafe(i));

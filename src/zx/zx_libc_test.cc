@@ -17,7 +17,7 @@ __attribute__((no_builtin)) static void check_memcpy(ZXSliceMut<zx_u8> dst,
     dst.write_unsafe(i, 69);
   }
 
-  void* out_dst = zx_memcpy(dst.ptr(), src.ptr(), src.len());
+  void *out_dst = zx_memcpy(dst.ptr(), src.ptr(), src.len());
   assert(out_dst == dst.ptr());
 
   for (zx_u64 i = 0; i < dst.len(); i++) {
@@ -30,7 +30,7 @@ __attribute__((no_builtin)) static void check_memset(ZXSliceMut<zx_u8> dst) {
     dst.write_unsafe(i, (zx_u8)i);
   }
 
-  void* out_dst = zx_memset(dst.ptr(), 69, dst.len());
+  void *out_dst = zx_memset(dst.ptr(), 69, dst.len());
   assert(out_dst == dst.ptr());
 
   for (zx_u64 i = 0; i < dst.len(); i++) {
@@ -97,13 +97,13 @@ __attribute__((no_builtin)) static void check_strlen(ZXSliceMut<zx_u8> str) {
   if (str.len() >= 2) {
     zx_u64 const pos = zx_sub_unsafe_u64(str.len(), 2);
     str.write_unsafe(pos, 0);
-    assert(pos == zx_strlen((char const*)str.ptr()));
+    assert(pos == zx_strlen((char const *)str.ptr()));
     str.write_unsafe(pos, 69);
   }
 
   zx_u64 const pos = zx_sub_unsafe_u64(str.len(), 1);
   str.write_unsafe(pos, 0);
-  assert(pos == zx_strlen((char const*)str.ptr()));
+  assert(pos == zx_strlen((char const *)str.ptr()));
 }
 
 static ZXSliceMut<zx_u8> make_alloc(zx_u64 capacity) {

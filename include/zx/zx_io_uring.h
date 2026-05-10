@@ -15,9 +15,8 @@
 #include <zx/zx_sys.h>
 #include <zx/zx_syscall.h>
 
-static inline ZXSysStatus zx_sys_io_uring_setup(zx_u32 n_entries,
-                                                io_uring_params* params,
-                                                zx_i32* fd) {
+static inline ZXSysStatus
+zx_sys_io_uring_setup(zx_u32 n_entries, io_uring_params *params, zx_i32 *fd) {
   if (fd == nullptr) {
     return ZXSysStatus::Nullptr;
   }
@@ -41,11 +40,9 @@ static inline ZXSysStatus zx_sys_io_uring_setup(zx_u32 n_entries,
   return ZXSysStatus::Ok;
 }
 
-static inline ZXSysStatus zx_sys_io_uring_enter(zx_i32 fd,
-                                                zx_u32 to_submit,
+static inline ZXSysStatus zx_sys_io_uring_enter(zx_i32 fd, zx_u32 to_submit,
                                                 zx_u32 min_complete,
-                                                zx_u32 flags,
-                                                void* arg,
+                                                zx_u32 flags, void *arg,
                                                 zx_u64 sz) {
   zx_u64 const ret =
       zx_syscall6(ZX_SYSCALL_IO_URING_ENTER, (zx_u64)fd, to_submit,
@@ -53,9 +50,8 @@ static inline ZXSysStatus zx_sys_io_uring_enter(zx_i32 fd,
   return zx_sys_status_(ret);
 }
 
-static inline ZXSysStatus zx_sys_io_uring_register(zx_i32 fd,
-                                                   zx_u32 opcode,
-                                                   void const* arg,
+static inline ZXSysStatus zx_sys_io_uring_register(zx_i32 fd, zx_u32 opcode,
+                                                   void const *arg,
                                                    zx_u32 nr_args) {
   zx_u64 const ret = zx_syscall4(ZX_SYSCALL_IO_URING_REGISTER, (zx_u64)fd,
                                  opcode, (zx_u64)arg, nr_args);

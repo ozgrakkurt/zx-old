@@ -24,6 +24,7 @@ ZX: Library = Library(
         [
             "zx_libc",
             "zx_fuzz",
+            "zx_panic",
         ]
     ),
     test_targets=set(
@@ -67,6 +68,10 @@ NOZ: Library = Library(
     test_targets=set(["noz_test"]),
     fuzz_targets=set(["noz_fuzz", "noz_decompress_fuzz"]),
     bench_targets=set(["noz_bench"]),
+)
+
+ZIO: Library = Library(
+    source_files=set(["zio"]),
 )
 
 PROJECT: Project = Project(

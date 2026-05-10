@@ -14,11 +14,8 @@ static void assert(bool cond) {
   }
 }
 
-static void do_memcpy(ZXFmt* fmt,
-                      ZXTimeInfo time_info,
-                      ZXSlice<zx_u8> input,
-                      ZXSliceMut<zx_u8> compressed,
-                      ZXSliceMut<zx_u8> output) {
+static void do_memcpy(ZXFmt *fmt, ZXTimeInfo time_info, ZXSlice<zx_u8> input,
+                      ZXSliceMut<zx_u8> compressed, ZXSliceMut<zx_u8> output) {
   assert(input.len() == output.len());
   assert(compressed.len() >= input.len());
   ZXSliceMut<zx_u8> compr = compressed.slice_unsafe(0, input.len());
@@ -61,11 +58,8 @@ static void do_memcpy(ZXFmt* fmt,
   assert(input.equals(output.as_const()));
 }
 
-static void do_noz(ZXFmt* fmt,
-                   ZXTimeInfo time_info,
-                   ZXSlice<zx_u8> input,
-                   ZXSliceMut<zx_u8> compressed,
-                   ZXSliceMut<zx_u8> output) {
+static void do_noz(ZXFmt *fmt, ZXTimeInfo time_info, ZXSlice<zx_u8> input,
+                   ZXSliceMut<zx_u8> compressed, ZXSliceMut<zx_u8> output) {
   assert(input.len() == output.len());
   assert(compressed.len() >= input.len());
 
@@ -110,7 +104,7 @@ static void do_noz(ZXFmt* fmt,
   assert(input.equals(output.as_const()));
 }
 
-static void roundtrip(ZXAlloc* alloc, zx_u64 len) {
+static void roundtrip(ZXAlloc *alloc, zx_u64 len) {
   ZXTimeInfo time_info;
   assert(ZXTimeStatus::Ok == ZXTimeInfo::init(&time_info));
 

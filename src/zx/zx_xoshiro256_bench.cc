@@ -14,7 +14,7 @@ static void assert(bool cond) {
 }
 
 template <typename T>
-static zx_u64 do_loop(ZXAlloc* alloc, ZXTimeInfo time_info, zx_u64 len) {
+static zx_u64 do_loop(ZXAlloc *alloc, ZXTimeInfo time_info, zx_u64 len) {
   // Mess with alignment
   ZXSliceMut<zx_u8> nouse;
   assert(ZXAllocStatus::Ok == alloc->alloc<zx_u8>(69, &nouse));
@@ -38,7 +38,7 @@ static zx_u64 do_loop(ZXAlloc* alloc, ZXTimeInfo time_info, zx_u64 len) {
 }
 
 template <typename T>
-static zx_u64 do_fill(ZXAlloc* alloc, ZXTimeInfo time_info, zx_u64 len) {
+static zx_u64 do_fill(ZXAlloc *alloc, ZXTimeInfo time_info, zx_u64 len) {
   // Mess with alignment
   ZXSliceMut<zx_u8> nouse;
   assert(ZXAllocStatus::Ok == alloc->alloc<zx_u8>(69, &nouse));
@@ -59,7 +59,7 @@ static zx_u64 do_fill(ZXAlloc* alloc, ZXTimeInfo time_info, zx_u64 len) {
   return lap;
 }
 
-static void roundtrip(ZXAlloc* alloc, ZXTimeInfo time_info, zx_u64 len) {
+static void roundtrip(ZXAlloc *alloc, ZXTimeInfo time_info, zx_u64 len) {
   alloc->reset();
   zx_u64 const fill_bytes = do_fill<zx_u8>(alloc, time_info, len);
   alloc->reset();

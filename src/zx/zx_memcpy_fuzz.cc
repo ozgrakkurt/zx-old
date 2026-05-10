@@ -1,3 +1,4 @@
+#include "./zx_libc.h"
 #include <zx/zx_alloc.h>
 #include <zx/zx_fuzz.h>
 #include <zx/zx_int.h>
@@ -5,7 +6,6 @@
 #include <zx/zx_slice.h>
 #include <zx/zx_sys.h>
 #include <zx/zx_xoshiro256.h>
-#include "./zx_libc.h"
 
 static void assert(bool cond) {
   if (!cond) [[unlikely]] {
@@ -32,15 +32,15 @@ __attribute__((no_builtin)) static bool is_eq(ZXSlice<zx_u8> left,
   return true;
 }
 
-__attribute__((no_builtin)) static void fuzz_one(void* usr_ctx,
-                                                 ZXFuzzInput* fuzz_input) {
+__attribute__((no_builtin)) static void fuzz_one(void *usr_ctx,
+                                                 ZXFuzzInput *fuzz_input) {
   assert(usr_ctx != nullptr);
-  ZXSliceMut<zx_u8> mem = ((Ctx const*)usr_ctx)->mem;
+  ZXSliceMut<zx_u8> mem = ((Ctx const *)usr_ctx)->mem;
   assert(mem.len() > 0);
 
-  zx_u64 const len = zx_max_u64(
-      1,
-      zx_mod_unsafe_u64(fuzz_input->next(), zx_div_unsafe_u64(mem.len(), 2)));
+  zx_u64 const len =
+      zx_max_u64(1, zx_mod_unsafe_u64(fuzz_input->next(),
+                                      zx_div_unsafe_u64(mem.len(), 2)));
 
   ZXXoshiro256 rand = ZXXoshiro256::init(fuzz_input->next());
   rand.fill(mem);
@@ -87,6 +87,6 @@ int main(void) {
   Ctx const ctx = Ctx{
       .mem = make_alloc(4096),
   };
-  zx_fuzz(&alloc, (void*)&ctx, fuzz_one);
+  zx_fuzz(&alloc, (void *)&ctx, fuzz_one);
   return 0;
 }

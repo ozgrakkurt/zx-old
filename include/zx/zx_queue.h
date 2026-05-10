@@ -13,27 +13,27 @@ enum class [[nodiscard]] ZXQueueInitStatus : zx_u8_c {
   Nullptr,
 };
 
-static inline ZXCString zx_queue_init_status_to_cstring(
-    ZXQueueInitStatus status) {
+static inline ZXCString
+zx_queue_init_status_to_cstring(ZXQueueInitStatus status) {
   switch (status) {
-    case ZXQueueInitStatus::Ok: {
-      return ZXCString::init_unsafe("ZXQueueInitStatus::Ok");
-    }
-    case ZXQueueInitStatus::OutOfMemory: {
-      return ZXCString::init_unsafe("ZXQueueInitStatus::OutOfMemory");
-    }
-    case ZXQueueInitStatus::AllocFail: {
-      return ZXCString::init_unsafe("ZXQueueInitStatus::AllocFail");
-    }
-    case ZXQueueInitStatus::IntegerOverflow: {
-      return ZXCString::init_unsafe("ZXQueueInitStatus::IntegerOverFlow");
-    }
-    case ZXQueueInitStatus::Nullptr: {
-      return ZXCString::init_unsafe("ZXQueueInitStatus::Nullptr");
-    }
-    default: {
-      return ZXCString::init_unsafe("ZXQueueInitStatus::Unknown");
-    }
+  case ZXQueueInitStatus::Ok: {
+    return ZXCString::init_unsafe("ZXQueueInitStatus::Ok");
+  }
+  case ZXQueueInitStatus::OutOfMemory: {
+    return ZXCString::init_unsafe("ZXQueueInitStatus::OutOfMemory");
+  }
+  case ZXQueueInitStatus::AllocFail: {
+    return ZXCString::init_unsafe("ZXQueueInitStatus::AllocFail");
+  }
+  case ZXQueueInitStatus::IntegerOverflow: {
+    return ZXCString::init_unsafe("ZXQueueInitStatus::IntegerOverFlow");
+  }
+  case ZXQueueInitStatus::Nullptr: {
+    return ZXCString::init_unsafe("ZXQueueInitStatus::Nullptr");
+  }
+  default: {
+    return ZXCString::init_unsafe("ZXQueueInitStatus::Unknown");
+  }
   }
 }
 
@@ -43,18 +43,18 @@ enum class [[nodiscard]] ZXQueuePushStatus : zx_u8_c {
   Nullptr,
 };
 
-static inline ZXCString zx_queue_push_status_to_cstring(
-    ZXQueuePushStatus status) {
+static inline ZXCString
+zx_queue_push_status_to_cstring(ZXQueuePushStatus status) {
   switch (status) {
-    case ZXQueuePushStatus::Ok: {
-      return ZXCString::init_unsafe("ZXQueuePushStatus::Ok");
-    }
-    case ZXQueuePushStatus::OutOfCapacity: {
-      return ZXCString::init_unsafe("ZXQueuePushStatus::OutOfCapacity");
-    }
-    default: {
-      return ZXCString::init_unsafe("ZXQueuePushStatus::Unknown");
-    }
+  case ZXQueuePushStatus::Ok: {
+    return ZXCString::init_unsafe("ZXQueuePushStatus::Ok");
+  }
+  case ZXQueuePushStatus::OutOfCapacity: {
+    return ZXCString::init_unsafe("ZXQueuePushStatus::OutOfCapacity");
+  }
+  default: {
+    return ZXCString::init_unsafe("ZXQueuePushStatus::Unknown");
+  }
   }
 }
 
@@ -64,32 +64,30 @@ enum class [[nodiscard]] ZXQueuePopStatus : zx_u8_c {
   Nullptr,
 };
 
-static inline ZXCString zx_queue_pop_status_to_cstring(
-    ZXQueuePopStatus status) {
+static inline ZXCString
+zx_queue_pop_status_to_cstring(ZXQueuePopStatus status) {
   switch (status) {
-    case ZXQueuePopStatus::Ok: {
-      return ZXCString::init_unsafe("ZXQueuePopStatus::Ok");
-    }
-    case ZXQueuePopStatus::Empty: {
-      return ZXCString::init_unsafe("ZXQueuePopStatus::Empty");
-    }
-    default: {
-      return ZXCString::init_unsafe("ZXQueuePopStatus::Unknown");
-    }
+  case ZXQueuePopStatus::Ok: {
+    return ZXCString::init_unsafe("ZXQueuePopStatus::Ok");
+  }
+  case ZXQueuePopStatus::Empty: {
+    return ZXCString::init_unsafe("ZXQueuePopStatus::Empty");
+  }
+  default: {
+    return ZXCString::init_unsafe("ZXQueuePopStatus::Unknown");
+  }
   }
 }
 
-template <typename T>
-struct ZXQueue {
+template <typename T> struct ZXQueue {
   ZXSliceMut<T> m_entries;
   zx_u32 m_start;
   zx_u32 m_len;
   zx_u32 m_cap_mask;
   zx_u32 m_capacity;
 
-  static inline ZXQueueInitStatus init(ZXAlloc* alloc,
-                                       zx_u32 capacity,
-                                       ZXQueue* queue) {
+  static inline ZXQueueInitStatus init(ZXAlloc *alloc, zx_u32 capacity,
+                                       ZXQueue *queue) {
     if (alloc == nullptr || queue == nullptr) {
       return ZXQueueInitStatus::Nullptr;
     }
@@ -105,17 +103,17 @@ struct ZXQueue {
 
     ZXSliceMut<T> entries;
     switch (alloc->alloc<T>(cap, &entries)) {
-      case ZXAllocStatus::Ok: {
-        break;
-      }
-      case ZXAllocStatus::OutOfMemory: {
-        return ZXQueueInitStatus::OutOfMemory;
-        break;
-      }
-      default: {
-        return ZXQueueInitStatus::AllocFail;
-        break;
-      }
+    case ZXAllocStatus::Ok: {
+      break;
+    }
+    case ZXAllocStatus::OutOfMemory: {
+      return ZXQueueInitStatus::OutOfMemory;
+      break;
+    }
+    default: {
+      return ZXQueueInitStatus::AllocFail;
+      break;
+    }
     }
 
     *queue = ZXQueue{
@@ -145,7 +143,7 @@ struct ZXQueue {
 
   inline zx_u32 len() const { return this->m_len; }
 
-  inline ZXQueuePushStatus push(T const* entry) {
+  inline ZXQueuePushStatus push(T const *entry) {
     if (entry == nullptr) {
       return ZXQueuePushStatus::Nullptr;
     }
@@ -162,7 +160,7 @@ struct ZXQueue {
     return ZXQueuePushStatus::Ok;
   }
 
-  inline ZXQueuePopStatus pop(T* entry) {
+  inline ZXQueuePopStatus pop(T *entry) {
     if (entry == nullptr) {
       return ZXQueuePopStatus::Nullptr;
     }

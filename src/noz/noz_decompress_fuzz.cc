@@ -18,11 +18,11 @@ struct Ctx {
   ZXSliceMut<zx_u8> compressed;
 };
 
-static void fuzz_one(void* usr_ctx, ZXFuzzInput* fuzz_input) {
+static void fuzz_one(void *usr_ctx, ZXFuzzInput *fuzz_input) {
   assert(usr_ctx != nullptr);
   assert(fuzz_input != nullptr);
 
-  Ctx const* ctx = (Ctx const*)usr_ctx;
+  Ctx const *ctx = (Ctx const *)usr_ctx;
 
   zx_u64 const compressed_len =
       zx_rand_mod_u64(fuzz_input->next(), ctx->compressed.len());
@@ -48,22 +48,22 @@ static void fuzz_one(void* usr_ctx, ZXFuzzInput* fuzz_input) {
 
     zx_u64 const data_kind = fuzz_input->next() % 3;
     switch (data_kind) {
-      case 0: {
-        rand.fill(slice);
-        break;
-      }
-      case 1: {
-        slice.memset(0);
-        break;
-      }
-      case 2: {
-        slice.memset(0xaa);
-        break;
-      }
-      default: {
-        __builtin_trap();
-        break;
-      }
+    case 0: {
+      rand.fill(slice);
+      break;
+    }
+    case 1: {
+      slice.memset(0);
+      break;
+    }
+    case 2: {
+      slice.memset(0xaa);
+      break;
+    }
+    default: {
+      __builtin_trap();
+      break;
+    }
     }
 
     offset = zx_add_unsafe_u64(offset, len);
@@ -101,6 +101,6 @@ int main(void) {
       .output = make_alloc(4096),
       .compressed = make_alloc(8192),
   };
-  zx_fuzz(&alloc, (void*)&ctx, fuzz_one);
+  zx_fuzz(&alloc, (void *)&ctx, fuzz_one);
   return 0;
 }

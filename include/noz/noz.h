@@ -12,21 +12,21 @@ enum class [[nodiscard]] NozCompressBoundStatus : zx_u8_c {
   IntegerOverflow,
 };
 
-static inline ZXCString noz_compress_bound_status_to_cstring(
-    NozCompressBoundStatus status) {
+static inline ZXCString
+noz_compress_bound_status_to_cstring(NozCompressBoundStatus status) {
   switch (status) {
-    case NozCompressBoundStatus::Ok: {
-      return ZXCString::init_unsafe("NozCompressBoundStatus::Ok");
-    }
-    case NozCompressBoundStatus::Nullptr: {
-      return ZXCString::init_unsafe("NozCompressBoundStatus::Nullptr");
-    }
-    case NozCompressBoundStatus::IntegerOverflow: {
-      return ZXCString::init_unsafe("NozCompressBoundStatus::IntegerOverflow");
-    }
-    default: {
-      return ZXCString::init_unsafe("NozCompressBoundStatus::Unknown");
-    }
+  case NozCompressBoundStatus::Ok: {
+    return ZXCString::init_unsafe("NozCompressBoundStatus::Ok");
+  }
+  case NozCompressBoundStatus::Nullptr: {
+    return ZXCString::init_unsafe("NozCompressBoundStatus::Nullptr");
+  }
+  case NozCompressBoundStatus::IntegerOverflow: {
+    return ZXCString::init_unsafe("NozCompressBoundStatus::IntegerOverflow");
+  }
+  default: {
+    return ZXCString::init_unsafe("NozCompressBoundStatus::Unknown");
+  }
   }
 }
 
@@ -38,27 +38,27 @@ enum class [[nodiscard]] NozCompressStatus : zx_u8_c {
   OutputTooShort,
 };
 
-static inline ZXCString noz_compress_status_to_cstring(
-    NozCompressStatus status) {
+static inline ZXCString
+noz_compress_status_to_cstring(NozCompressStatus status) {
   switch (status) {
-    case NozCompressStatus::Ok: {
-      return ZXCString::init_unsafe("NozCompressStatus::Ok");
-    }
-    case NozCompressStatus::Nullptr: {
-      return ZXCString::init_unsafe("NozCompressStatus::Nullptr");
-    }
-    case NozCompressStatus::InputOutputOverlap: {
-      return ZXCString::init_unsafe("NozCompressStatus::InputOutputOverlap");
-    }
-    case NozCompressStatus::BoundFail: {
-      return ZXCString::init_unsafe("NozCompressStatus::BoundFail");
-    }
-    case NozCompressStatus::OutputTooShort: {
-      return ZXCString::init_unsafe("NozCompressStatus::OutputTooShort");
-    }
-    default: {
-      return ZXCString::init_unsafe("NozCompressStatus::Unknown");
-    }
+  case NozCompressStatus::Ok: {
+    return ZXCString::init_unsafe("NozCompressStatus::Ok");
+  }
+  case NozCompressStatus::Nullptr: {
+    return ZXCString::init_unsafe("NozCompressStatus::Nullptr");
+  }
+  case NozCompressStatus::InputOutputOverlap: {
+    return ZXCString::init_unsafe("NozCompressStatus::InputOutputOverlap");
+  }
+  case NozCompressStatus::BoundFail: {
+    return ZXCString::init_unsafe("NozCompressStatus::BoundFail");
+  }
+  case NozCompressStatus::OutputTooShort: {
+    return ZXCString::init_unsafe("NozCompressStatus::OutputTooShort");
+  }
+  default: {
+    return ZXCString::init_unsafe("NozCompressStatus::Unknown");
+  }
   }
 }
 
@@ -69,29 +69,29 @@ enum class [[nodiscard]] NozDecompressStatus : zx_u8_c {
   InputTooShort,
 };
 
-static inline ZXCString noz_decompress_status_to_cstring(
-    NozDecompressStatus status) {
+static inline ZXCString
+noz_decompress_status_to_cstring(NozDecompressStatus status) {
   switch (status) {
-    case NozDecompressStatus::Ok: {
-      return ZXCString::init_unsafe("NozDecompressStatus::Ok");
-    }
-    case NozDecompressStatus::Nullptr: {
-      return ZXCString::init_unsafe("NozDecompressStatus::Nullptr");
-    }
-    case NozDecompressStatus::InputOutputOverlap: {
-      return ZXCString::init_unsafe("NozDecompressStatus::InputOutputOverlap");
-    }
-    case NozDecompressStatus::InputTooShort: {
-      return ZXCString::init_unsafe("NozDecompressStatus::InputTooShort");
-    }
-    default: {
-      return ZXCString::init_unsafe("NozDecompressStatus::Unknown");
-    }
+  case NozDecompressStatus::Ok: {
+    return ZXCString::init_unsafe("NozDecompressStatus::Ok");
+  }
+  case NozDecompressStatus::Nullptr: {
+    return ZXCString::init_unsafe("NozDecompressStatus::Nullptr");
+  }
+  case NozDecompressStatus::InputOutputOverlap: {
+    return ZXCString::init_unsafe("NozDecompressStatus::InputOutputOverlap");
+  }
+  case NozDecompressStatus::InputTooShort: {
+    return ZXCString::init_unsafe("NozDecompressStatus::InputTooShort");
+  }
+  default: {
+    return ZXCString::init_unsafe("NozDecompressStatus::Unknown");
+  }
   }
 }
 
 static inline NozCompressBoundStatus noz_compress_bound(zx_u64 input_size,
-                                                        zx_u64* bound) {
+                                                        zx_u64 *bound) {
   if (bound == nullptr) {
     return NozCompressBoundStatus::Nullptr;
   }
@@ -115,7 +115,7 @@ static inline NozCompressBoundStatus noz_compress_bound(zx_u64 input_size,
 
 static inline NozCompressStatus noz_compress(ZXSlice<zx_u8> input,
                                              ZXSliceMut<zx_u8> output,
-                                             zx_u64* n_written) {
+                                             zx_u64 *n_written) {
   if (n_written == nullptr) {
     return NozCompressStatus::Nullptr;
   }
@@ -147,20 +147,19 @@ static inline NozCompressStatus noz_compress(ZXSlice<zx_u8> input,
        in_offset = zx_add_unsafe_u64(in_offset, 64)) {
     zx_u64 const data_offset = zx_add_unsafe_u64(out_offset, sizeof(zx_u64));
     zx_u64_c n_w;
-    __asm__(
-        "vmovdqu8 %[input], %%zmm31\n\t"
-        "vpcmpub $4, %%zmm31, %[zeros], %%k7\n\t"
-        "kmovq %%k7, %[out0]\n\t"
-        "kmovq %%k7, %[n_w]\n\t"
-        "vpcompressb %%zmm31, %%zmm30 %{%%k7%}\n\t"
-        "vmovdqu8 %%zmm30, %[out1]\n\t"
-        "popcntq %[n_w], %[n_w]\n\t"
-        : [out0] "=&m"(*(zx_u8(*)[8]) & output.ptr()[out_offset]),
-          [out1] "=&m"(*(zx_u8(*)[64]) & output.ptr()[data_offset]),
-          [n_w] "=&r"(n_w)
-        : [input] "m"(*(zx_u8 const(*)[64]) & input.ptr()[in_offset]),
-          [zeros] "v"(zeros)
-        : "zmm30", "zmm31", "k7");
+    __asm__("vmovdqu8 %[input], %%zmm31\n\t"
+            "vpcmpub $4, %%zmm31, %[zeros], %%k7\n\t"
+            "kmovq %%k7, %[out0]\n\t"
+            "kmovq %%k7, %[n_w]\n\t"
+            "vpcompressb %%zmm31, %%zmm30 %{%%k7%}\n\t"
+            "vmovdqu8 %%zmm30, %[out1]\n\t"
+            "popcntq %[n_w], %[n_w]\n\t"
+            : [out0] "=&m"(*(zx_u8(*)[8]) & output.ptr()[out_offset]),
+              [out1] "=&m"(*(zx_u8(*)[64]) & output.ptr()[data_offset]),
+              [n_w] "=&r"(n_w)
+            : [input] "m"(*(zx_u8 const(*)[64]) & input.ptr()[in_offset]),
+              [zeros] "v"(zeros)
+            : "zmm30", "zmm31", "k7");
 
     out_offset = zx_add_unsafe_u64(data_offset, n_w);
   }
@@ -171,20 +170,19 @@ static inline NozCompressStatus noz_compress(ZXSlice<zx_u8> input,
         __builtin_ia32_bzhi_di(~(zx_u64){0}, remainder);
     zx_u64 const data_offset = zx_add_unsafe_u64(out_offset, sizeof(zx_u64));
     zx_u64_c n_w;
-    __asm__(
-        "vmovdqu8 %[input], %%zmm31 %{%[loadmask]%}%{z%}\n\t"
-        "vpcmpub $4, %%zmm31, %[zeros], %%k7\n\t"
-        "kmovq %%k7, %[out0]\n\t"
-        "kmovq %%k7, %[n_w]\n\t"
-        "vpcompressb %%zmm31, %%zmm30 %{%%k7%}\n\t"
-        "vmovdqu8 %%zmm30, %[out1]\n\t"
-        "popcntq %[n_w], %[n_w]\n\t"
-        : [out0] "=&m"(*(zx_u8(*)[8]) & output.ptr()[out_offset]),
-          [out1] "=&m"(*(zx_u8(*)[64]) & output.ptr()[data_offset]),
-          [n_w] "=&r"(n_w)
-        : [input] "m"(*(zx_u8 const(*)[64]) & input.ptr()[in_offset]),
-          [zeros] "v"(zeros), [loadmask] "k"(loadmask)
-        : "zmm31", "zmm30", "k7");
+    __asm__("vmovdqu8 %[input], %%zmm31 %{%[loadmask]%}%{z%}\n\t"
+            "vpcmpub $4, %%zmm31, %[zeros], %%k7\n\t"
+            "kmovq %%k7, %[out0]\n\t"
+            "kmovq %%k7, %[n_w]\n\t"
+            "vpcompressb %%zmm31, %%zmm30 %{%%k7%}\n\t"
+            "vmovdqu8 %%zmm30, %[out1]\n\t"
+            "popcntq %[n_w], %[n_w]\n\t"
+            : [out0] "=&m"(*(zx_u8(*)[8]) & output.ptr()[out_offset]),
+              [out1] "=&m"(*(zx_u8(*)[64]) & output.ptr()[data_offset]),
+              [n_w] "=&r"(n_w)
+            : [input] "m"(*(zx_u8 const(*)[64]) & input.ptr()[in_offset]),
+              [zeros] "v"(zeros), [loadmask] "k"(loadmask)
+            : "zmm31", "zmm30", "k7");
 
     out_offset = zx_add_unsafe_u64(data_offset, n_w);
   }
@@ -193,9 +191,8 @@ static inline NozCompressStatus noz_compress(ZXSlice<zx_u8> input,
   return NozCompressStatus::Ok;
 }
 
-static inline NozDecompressStatus noz_decompress(ZXSlice<zx_u8> input,
-                                                 ZXSliceMut<zx_u8> output,
-                                                 zx_u64* n_read) {
+static inline NozDecompressStatus
+noz_decompress(ZXSlice<zx_u8> input, ZXSliceMut<zx_u8> output, zx_u64 *n_read) {
   if (n_read == nullptr) {
     *n_read = 0;
     return NozDecompressStatus::Nullptr;
@@ -231,13 +228,12 @@ static inline NozDecompressStatus noz_decompress(ZXSlice<zx_u8> input,
       return NozDecompressStatus::InputTooShort;
     }
 
-    __asm__(
-        "vpexpandb %[input], %%zmm31 %{%[control]%}%{z%}\n\t"
-        "vmovdqu8 %%zmm31, %[output]\n\t"
-        : [output] "=&m"(*(zx_u8(*)[64]) & output.ptr()[out_offset])
-        : [input] "m"(*(zx_u8 const(*)[64]) & input.ptr()[control_end]),
-          [control] "k"(control)
-        : "zmm31");
+    __asm__("vpexpandb %[input], %%zmm31 %{%[control]%}%{z%}\n\t"
+            "vmovdqu8 %%zmm31, %[output]\n\t"
+            : [output] "=&m"(*(zx_u8(*)[64]) & output.ptr()[out_offset])
+            : [input] "m"(*(zx_u8 const(*)[64]) & input.ptr()[control_end]),
+              [control] "k"(control)
+            : "zmm31");
 
     in_offset = step_end;
   }
@@ -263,13 +259,12 @@ static inline NozDecompressStatus noz_decompress(ZXSlice<zx_u8> input,
     register zx_u64_c const storemask __asm__("k6") =
         __builtin_ia32_bzhi_di(~(zx_u64){0}, remainder);
 
-    __asm__(
-        "vpexpandb %[input], %%zmm31 %{%[control]%}%{z%}\n\t"
-        "vmovdqu8 %%zmm31, %[output] %{%[storemask]%}\n\t"
-        : [output] "=&m"(*(zx_u8(*)[64]) & output.ptr()[out_offset])
-        : [input] "m"(*(zx_u8 const(*)[64]) & input.ptr()[control_end]),
-          [control] "k"(control), [storemask] "k"(storemask)
-        : "zmm31");
+    __asm__("vpexpandb %[input], %%zmm31 %{%[control]%}%{z%}\n\t"
+            "vmovdqu8 %%zmm31, %[output] %{%[storemask]%}\n\t"
+            : [output] "=&m"(*(zx_u8(*)[64]) & output.ptr()[out_offset])
+            : [input] "m"(*(zx_u8 const(*)[64]) & input.ptr()[control_end]),
+              [control] "k"(control), [storemask] "k"(storemask)
+            : "zmm31");
 
     in_offset = step_end;
   }

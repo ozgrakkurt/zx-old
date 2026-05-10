@@ -1,3 +1,4 @@
+#include "./zx_libc.h"
 #include <zx/zx_alloc.h>
 #include <zx/zx_fmt.h>
 #include <zx/zx_int.h>
@@ -6,7 +7,6 @@
 #include <zx/zx_sys.h>
 #include <zx/zx_time.h>
 #include <zx/zx_xoshiro256.h>
-#include "./zx_libc.h"
 
 static void assert(bool cond) {
   if (!cond) {
@@ -14,7 +14,7 @@ static void assert(bool cond) {
   }
 }
 
-static void do_strlen(ZXFmt* fmt, ZXTimeInfo time_info, char const* str) {
+static void do_strlen(ZXFmt *fmt, ZXTimeInfo time_info, char const *str) {
   ZXTimer timer = ZXTimer::init(time_info);
 
   timer.lap();
@@ -36,9 +36,7 @@ static void do_strlen(ZXFmt* fmt, ZXTimeInfo time_info, char const* str) {
   assert(!overflow);
 }
 
-static void do_memcpy(ZXFmt* fmt,
-                      ZXTimeInfo time_info,
-                      ZXSlice<zx_u8> src,
+static void do_memcpy(ZXFmt *fmt, ZXTimeInfo time_info, ZXSlice<zx_u8> src,
                       ZXSliceMut<zx_u8> dst) {
   assert(src.len() == dst.len());
 
@@ -78,9 +76,7 @@ static void do_memcpy(ZXFmt* fmt,
   assert(!overflow);
 }
 
-static void do_memset(ZXFmt* fmt,
-                      ZXTimeInfo time_info,
-                      zx_u8 src,
+static void do_memset(ZXFmt *fmt, ZXTimeInfo time_info, zx_u8 src,
                       ZXSliceMut<zx_u8> dst) {
   ZXTimer timer = ZXTimer::init(time_info);
 
@@ -107,7 +103,7 @@ static void do_memset(ZXFmt* fmt,
   }
 }
 
-static void roundtrip(ZXAlloc* alloc, zx_u64 len) {
+static void roundtrip(ZXAlloc *alloc, zx_u64 len) {
   ZXTimeInfo time_info;
   assert(ZXTimeStatus::Ok == ZXTimeInfo::init(&time_info));
 
@@ -141,7 +137,7 @@ static void roundtrip(ZXAlloc* alloc, zx_u64 len) {
 
   src.memset(0xaa);
   src.write_unsafe(zx_sub_unsafe_u64(src.len(), 1), zx_u8{0});
-  do_strlen(&fmt, time_info, (char const*)src.ptr());
+  do_strlen(&fmt, time_info, (char const *)src.ptr());
 
   zx_u64 n_written = 0;
   assert(ZXSysStatus::Ok == zx_sys_write(ZX_STDERR, fmt.written(), &n_written));

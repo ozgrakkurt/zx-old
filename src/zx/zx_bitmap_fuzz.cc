@@ -11,19 +11,19 @@ static void assert(bool cond) {
   }
 }
 
-static bool tst_get(ZXBitmap const* bmp, zx_u64 idx) {
+static bool tst_get(ZXBitmap const *bmp, zx_u64 idx) {
   bool b = false;
   assert(ZXBitmapAccessStatus::Ok == bmp->get(idx, &b));
   return b;
 }
 
-static bool tst_set(ZXBitmap* bmp, zx_u64 idx) {
+static bool tst_set(ZXBitmap *bmp, zx_u64 idx) {
   bool b = false;
   assert(ZXBitmapAccessStatus::Ok == bmp->set(idx, &b));
   return b;
 }
 
-static bool tst_unset(ZXBitmap* bmp, zx_u64 idx) {
+static bool tst_unset(ZXBitmap *bmp, zx_u64 idx) {
   bool b = false;
   assert(ZXBitmapAccessStatus::Ok == bmp->unset(idx, &b));
   return b;
@@ -33,9 +33,9 @@ struct Ctx {
   ZXAlloc alloc;
 };
 
-static void fuzz_one(void* usr_ctx, ZXFuzzInput* fuzz_input) {
+static void fuzz_one(void *usr_ctx, ZXFuzzInput *fuzz_input) {
   assert(usr_ctx != nullptr);
-  ZXAlloc* alloc = &((Ctx*)usr_ctx)->alloc;
+  ZXAlloc *alloc = &((Ctx *)usr_ctx)->alloc;
   alloc->reset();
 
   constexpr zx_u32 max_capacity = 128;
@@ -61,43 +61,43 @@ static void fuzz_one(void* usr_ctx, ZXFuzzInput* fuzz_input) {
     zx_u32 const idx = zx_cast_unsafe_to_u32<zx_u64>(
         zx_mod_unsafe_u64(fuzz_input->next(), capacity));
     switch (op) {
-      // set unsafe
-      case 0: {
-        assert(bits.read_unsafe(idx) == bmp.set_unsafe(idx));
-        bits.write_unsafe(idx, true);
-        break;
-      }
-      // set
-      case 1: {
-        assert(bits.read_unsafe(idx) == tst_set(&bmp, idx));
-        bits.write_unsafe(idx, true);
-        break;
-      }
-      // unset unsafe
-      case 2: {
-        assert(bits.read_unsafe(idx) == bmp.unset_unsafe(idx));
-        bits.write_unsafe(idx, false);
-        break;
-      }
-      // unset
-      case 3: {
-        assert(bits.read_unsafe(idx) == tst_unset(&bmp, idx));
-        bits.write_unsafe(idx, false);
-        break;
-      }
-      // get unsafe
-      case 4: {
-        assert(bits.read_unsafe(idx) == bmp.get_unsafe(idx));
-        break;
-      }
-      // get
-      case 5: {
-        assert(bits.read_unsafe(idx) == tst_get(&bmp, idx));
-        break;
-      }
-      default: {
-        __builtin_trap();
-      }
+    // set unsafe
+    case 0: {
+      assert(bits.read_unsafe(idx) == bmp.set_unsafe(idx));
+      bits.write_unsafe(idx, true);
+      break;
+    }
+    // set
+    case 1: {
+      assert(bits.read_unsafe(idx) == tst_set(&bmp, idx));
+      bits.write_unsafe(idx, true);
+      break;
+    }
+    // unset unsafe
+    case 2: {
+      assert(bits.read_unsafe(idx) == bmp.unset_unsafe(idx));
+      bits.write_unsafe(idx, false);
+      break;
+    }
+    // unset
+    case 3: {
+      assert(bits.read_unsafe(idx) == tst_unset(&bmp, idx));
+      bits.write_unsafe(idx, false);
+      break;
+    }
+    // get unsafe
+    case 4: {
+      assert(bits.read_unsafe(idx) == bmp.get_unsafe(idx));
+      break;
+    }
+    // get
+    case 5: {
+      assert(bits.read_unsafe(idx) == tst_get(&bmp, idx));
+      break;
+    }
+    default: {
+      __builtin_trap();
+    }
     }
   }
 
@@ -139,6 +139,6 @@ int main(void) {
   Ctx ctx = Ctx{
       .alloc = op_alloc,
   };
-  zx_fuzz(&fuzz_alloc, (void*)&ctx, fuzz_one);
+  zx_fuzz(&fuzz_alloc, (void *)&ctx, fuzz_one);
   return 0;
 }

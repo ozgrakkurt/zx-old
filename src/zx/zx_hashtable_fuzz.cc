@@ -29,7 +29,7 @@ struct RefMap {
   ZXSliceMut<KeyVal> m_entries;
   zx_u32 m_offset;
 
-  static inline RefMap init(ZXAlloc* alloc, zx_u32 capacity) {
+  static inline RefMap init(ZXAlloc *alloc, zx_u32 capacity) {
     ZXSliceMut<KeyVal> entries;
     assert(ZXAllocStatus::Ok == alloc->alloc<KeyVal>(capacity, &entries));
     return RefMap{
@@ -53,7 +53,7 @@ struct RefMap {
     return zx_sub_unsafe_u32(this->capacity(), this->m_offset);
   }
 
-  inline KeyVal select_random(ZXXoshiro256* rand) const {
+  inline KeyVal select_random(ZXXoshiro256 *rand) const {
     assert(this->len() > 0);
     zx_u32 const idx = zx_mod_unsafe_u32((zx_u32)rand->next(), this->len());
     return this->m_entries.read_unsafe(idx);
@@ -61,7 +61,7 @@ struct RefMap {
 
   inline bool insert(KeyVal kv) {
     for (zx_u32 i = 0; i < this->m_offset; i++) {
-      KeyVal* entry = this->m_entries.offset_unsafe(i);
+      KeyVal *entry = this->m_entries.offset_unsafe(i);
       if (entry->key == kv.key) {
         entry->val = kv.val;
         return true;
@@ -77,7 +77,7 @@ struct RefMap {
 
   inline bool remove(key_type key) {
     for (zx_u32 i = 0; i < this->m_offset; i++) {
-      KeyVal* entry = this->m_entries.offset_unsafe(i);
+      KeyVal *entry = this->m_entries.offset_unsafe(i);
       if (entry->key == key) {
         *entry = this->m_entries.read_unsafe(this->m_offset);
         this->m_offset = zx_sub_unsafe_u32(this->m_offset, 1);
@@ -88,10 +88,10 @@ struct RefMap {
     return false;
   }
 
-  inline bool get(key_type key, KeyVal const** out) const {
+  inline bool get(key_type key, KeyVal const **out) const {
     assert(out != nullptr);
     for (zx_u32 i = 0; i < this->len(); i++) {
-      KeyVal const* entry = this->m_entries.offset_unsafe(i);
+      KeyVal const *entry = this->m_entries.offset_unsafe(i);
       if (entry->key == key) {
         *out = entry;
         return true;
@@ -101,10 +101,10 @@ struct RefMap {
     return false;
   }
 
-  inline bool get_mut(key_type key, KeyVal** out) const {
+  inline bool get_mut(key_type key, KeyVal **out) const {
     assert(out != nullptr);
     for (zx_u32 i = 0; i < this->len(); i++) {
-      KeyVal* entry = this->m_entries.offset_unsafe(i);
+      KeyVal *entry = this->m_entries.offset_unsafe(i);
       if (entry->key == key) {
         *out = entry;
         return true;
@@ -115,7 +115,7 @@ struct RefMap {
   }
 };
 
-static bool keys_eql(void const* ctx, KeyVal const* l, KeyVal const* r) {
+static bool keys_eql(void const *ctx, KeyVal const *l, KeyVal const *r) {
   (void)ctx;
   return l->key == r->key;
 }
@@ -124,11 +124,11 @@ static zx_u64 make_hash(key_type key) {
   return zx_rapidhash_v3(ZXSlice<zx_u8>::init_from_ptr_unsafe(&key), 169);
 }
 
-using HTable = ZXHashtable<KeyVal, void const*, keys_eql>;
+using HTable = ZXHashtable<KeyVal, void const *, keys_eql>;
 
-static void fuzz_one(void* usr_ctx, ZXFuzzInput* fuzz_input) {
+static void fuzz_one(void *usr_ctx, ZXFuzzInput *fuzz_input) {
   assert(usr_ctx != nullptr);
-  ZXAlloc* alloc = &((Ctx*)usr_ctx)->alloc;
+  ZXAlloc *alloc = &((Ctx *)usr_ctx)->alloc;
   alloc->reset();
 
   constexpr zx_u32 max_capacity = 128;
@@ -156,133 +156,130 @@ static void fuzz_one(void* usr_ctx, ZXFuzzInput* fuzz_input) {
     zx_u64 const seed = fuzz_input->next();
     ZXXoshiro256 key_rand = ZXXoshiro256::init(seed);
     switch (op) {
-      // insert
-      case 0: {
-        KeyVal const kv = KeyVal{
-            .key = key_rand.random<key_type>(),
-            .val = val_rand.random<val_type>(),
-        };
-        zx_u64 const hash = make_hash(kv.key);
+    // insert
+    case 0: {
+      KeyVal const kv = KeyVal{
+          .key = key_rand.random<key_type>(),
+          .val = val_rand.random<val_type>(),
+      };
+      zx_u64 const hash = make_hash(kv.key);
 
-        ZXHashtableInsertStatus const hstatus =
-            table.insert(hash, &kv, nullptr);
-        if (ZXHashtableInsertStatus::CreatedNewEntry == hstatus) {
-          KeyVal const* kvp = nullptr;
-          assert(!map.get(kv.key, &kvp));
-          assert(map.insert(kv));
-        } else if (ZXHashtableInsertStatus::ModifiedExistingEntry == hstatus) {
-          KeyVal const* kvp = nullptr;
-          assert(map.get(kv.key, &kvp));
-          assert(kvp != nullptr);
-          assert(kvp->key == kv.key);
-          assert(map.insert(kv));
-        } else if (ZXHashtableInsertStatus::OutOfCapacity == hstatus) {
-          assert(!map.insert(kv));
-        } else {
-          __builtin_trap();
-        }
-
-        if (hstatus != ZXHashtableInsertStatus::OutOfCapacity) {
-          KeyVal const* kvp = nullptr;
-          assert(ZXHashtableGetStatus::Found ==
-                 table.get(hash, &kv, nullptr, &kvp));
-          assert(kvp != nullptr);
-          assert(kvp->key == kv.key && kvp->val == kv.val);
-        } else {
-          KeyVal const* kvp = nullptr;
-          assert(ZXHashtableGetStatus::NotFound ==
-                 table.get(hash, &kv, nullptr, &kvp));
-        }
-
-        break;
-      }
-      // get_or_insert
-      case 1: {
-        KeyVal const kv = KeyVal{
-            .key = key_rand.random<key_type>(),
-            .val = val_rand.random<val_type>(),
-        };
-        zx_u64 const hash = make_hash(kv.key);
-
-        KeyVal const* kvp = nullptr;
-        ZXHashtableGetOrInsertStatus const hstatus =
-            table.get_or_insert(hash, &kv, nullptr, &kvp);
-        if (ZXHashtableGetOrInsertStatus::CreatedNewEntry == hstatus) {
-          KeyVal const* kvp2 = nullptr;
-          assert(!map.get(kv.key, &kvp2));
-          assert(map.insert(kv));
-        } else if (ZXHashtableGetOrInsertStatus::FoundExistingEntry ==
-                   hstatus) {
-          KeyVal const* kvp2 = nullptr;
-          assert(map.get(kv.key, &kvp2));
-          assert(kvp2 != nullptr);
-          assert(kvp2->key == kv.key);
-        } else if (ZXHashtableGetOrInsertStatus::OutOfCapacity == hstatus) {
-          assert(!map.insert(kv));
-        } else {
-          __builtin_trap();
-        }
-
-        if (hstatus != ZXHashtableGetOrInsertStatus::OutOfCapacity) {
-          KeyVal const* kvp2 = nullptr;
-          assert(ZXHashtableGetStatus::Found ==
-                 table.get(hash, &kv, nullptr, &kvp2));
-          assert(kvp2 != nullptr);
-          assert(kvp->key == kvp2->key && kvp->val == kvp2->val);
-        } else {
-          KeyVal const* kvp2 = nullptr;
-          assert(ZXHashtableGetStatus::NotFound ==
-                 table.get(hash, &kv, nullptr, &kvp2));
-        }
-
-        break;
-      }
-      // rand get
-      case 2: {
-        KeyVal const kv = KeyVal{
-            .key = key_rand.random<key_type>(),
-            .val = val_rand.random<val_type>(),
-        };
-        zx_u64 const hash = make_hash(kv.key);
-        KeyVal const* kvp = nullptr;
-        ZXHashtableGetStatus const hstatus =
-            table.get(hash, &kv, nullptr, &kvp);
-        if (hstatus == ZXHashtableGetStatus::Found) {
-          assert(kvp != nullptr);
-          KeyVal const* expected_kvp = nullptr;
-          assert(map.get(kv.key, &expected_kvp));
-          assert(expected_kvp != nullptr);
-          assert(kvp->key == expected_kvp->key);
-          assert(kvp->val == expected_kvp->val);
-        } else if (hstatus == ZXHashtableGetStatus::NotFound) {
-          KeyVal const* expected_kvp = nullptr;
-          assert(!map.get(kv.key, &expected_kvp));
-        } else {
-          __builtin_trap();
-        }
-        break;
-      }
-      // rand select
-      case 3: {
-        if (map.len() == 0) {
-          continue;
-        }
-
-        KeyVal const kv = map.select_random(&key_rand);
-        zx_u64 const hash = make_hash(kv.key);
-        KeyVal const* kvp_im = nullptr;
-        assert(ZXHashtableGetStatus::Found ==
-               table.get(hash, &kv, nullptr, &kvp_im));
-
-        assert(kvp_im != nullptr);
-
-        assert(kvp_im->key == kv.key && kvp_im->val == kv.val);
-        break;
-      }
-      default: {
+      ZXHashtableInsertStatus const hstatus = table.insert(hash, &kv, nullptr);
+      if (ZXHashtableInsertStatus::CreatedNewEntry == hstatus) {
+        KeyVal const *kvp = nullptr;
+        assert(!map.get(kv.key, &kvp));
+        assert(map.insert(kv));
+      } else if (ZXHashtableInsertStatus::ModifiedExistingEntry == hstatus) {
+        KeyVal const *kvp = nullptr;
+        assert(map.get(kv.key, &kvp));
+        assert(kvp != nullptr);
+        assert(kvp->key == kv.key);
+        assert(map.insert(kv));
+      } else if (ZXHashtableInsertStatus::OutOfCapacity == hstatus) {
+        assert(!map.insert(kv));
+      } else {
         __builtin_trap();
-        break;
       }
+
+      if (hstatus != ZXHashtableInsertStatus::OutOfCapacity) {
+        KeyVal const *kvp = nullptr;
+        assert(ZXHashtableGetStatus::Found ==
+               table.get(hash, &kv, nullptr, &kvp));
+        assert(kvp != nullptr);
+        assert(kvp->key == kv.key && kvp->val == kv.val);
+      } else {
+        KeyVal const *kvp = nullptr;
+        assert(ZXHashtableGetStatus::NotFound ==
+               table.get(hash, &kv, nullptr, &kvp));
+      }
+
+      break;
+    }
+    // get_or_insert
+    case 1: {
+      KeyVal const kv = KeyVal{
+          .key = key_rand.random<key_type>(),
+          .val = val_rand.random<val_type>(),
+      };
+      zx_u64 const hash = make_hash(kv.key);
+
+      KeyVal const *kvp = nullptr;
+      ZXHashtableGetOrInsertStatus const hstatus =
+          table.get_or_insert(hash, &kv, nullptr, &kvp);
+      if (ZXHashtableGetOrInsertStatus::CreatedNewEntry == hstatus) {
+        KeyVal const *kvp2 = nullptr;
+        assert(!map.get(kv.key, &kvp2));
+        assert(map.insert(kv));
+      } else if (ZXHashtableGetOrInsertStatus::FoundExistingEntry == hstatus) {
+        KeyVal const *kvp2 = nullptr;
+        assert(map.get(kv.key, &kvp2));
+        assert(kvp2 != nullptr);
+        assert(kvp2->key == kv.key);
+      } else if (ZXHashtableGetOrInsertStatus::OutOfCapacity == hstatus) {
+        assert(!map.insert(kv));
+      } else {
+        __builtin_trap();
+      }
+
+      if (hstatus != ZXHashtableGetOrInsertStatus::OutOfCapacity) {
+        KeyVal const *kvp2 = nullptr;
+        assert(ZXHashtableGetStatus::Found ==
+               table.get(hash, &kv, nullptr, &kvp2));
+        assert(kvp2 != nullptr);
+        assert(kvp->key == kvp2->key && kvp->val == kvp2->val);
+      } else {
+        KeyVal const *kvp2 = nullptr;
+        assert(ZXHashtableGetStatus::NotFound ==
+               table.get(hash, &kv, nullptr, &kvp2));
+      }
+
+      break;
+    }
+    // rand get
+    case 2: {
+      KeyVal const kv = KeyVal{
+          .key = key_rand.random<key_type>(),
+          .val = val_rand.random<val_type>(),
+      };
+      zx_u64 const hash = make_hash(kv.key);
+      KeyVal const *kvp = nullptr;
+      ZXHashtableGetStatus const hstatus = table.get(hash, &kv, nullptr, &kvp);
+      if (hstatus == ZXHashtableGetStatus::Found) {
+        assert(kvp != nullptr);
+        KeyVal const *expected_kvp = nullptr;
+        assert(map.get(kv.key, &expected_kvp));
+        assert(expected_kvp != nullptr);
+        assert(kvp->key == expected_kvp->key);
+        assert(kvp->val == expected_kvp->val);
+      } else if (hstatus == ZXHashtableGetStatus::NotFound) {
+        KeyVal const *expected_kvp = nullptr;
+        assert(!map.get(kv.key, &expected_kvp));
+      } else {
+        __builtin_trap();
+      }
+      break;
+    }
+    // rand select
+    case 3: {
+      if (map.len() == 0) {
+        continue;
+      }
+
+      KeyVal const kv = map.select_random(&key_rand);
+      zx_u64 const hash = make_hash(kv.key);
+      KeyVal const *kvp_im = nullptr;
+      assert(ZXHashtableGetStatus::Found ==
+             table.get(hash, &kv, nullptr, &kvp_im));
+
+      assert(kvp_im != nullptr);
+
+      assert(kvp_im->key == kv.key && kvp_im->val == kv.val);
+      break;
+    }
+    default: {
+      __builtin_trap();
+      break;
+    }
     }
   }
 }
@@ -308,6 +305,6 @@ int main(void) {
   Ctx ctx = Ctx{
       .alloc = op_alloc,
   };
-  zx_fuzz(&fuzz_alloc, (void*)&ctx, fuzz_one);
+  zx_fuzz(&fuzz_alloc, (void *)&ctx, fuzz_one);
   return 0;
 }

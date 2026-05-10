@@ -14,27 +14,27 @@ enum class [[nodiscard]] ZXBitmapInitStatus : zx_u8_c {
   Nullptr,
 };
 
-static inline ZXCString zx_bitmap_init_status_to_cstring(
-    ZXBitmapInitStatus status) {
+static inline ZXCString
+zx_bitmap_init_status_to_cstring(ZXBitmapInitStatus status) {
   switch (status) {
-    case ZXBitmapInitStatus::Ok: {
-      return ZXCString::init_unsafe("ZXBitmapInitStatus::Ok");
-    }
-    case ZXBitmapInitStatus::OutOfMemory: {
-      return ZXCString::init_unsafe("ZXBitmapInitStatus::OutOfMemory");
-    }
-    case ZXBitmapInitStatus::AllocFail: {
-      return ZXCString::init_unsafe("ZXBitmapInitStatus::AllocFail");
-    }
-    case ZXBitmapInitStatus::IntegerOverflow: {
-      return ZXCString::init_unsafe("ZXBitmapInitStatus::IntegerOverFlow");
-    }
-    case ZXBitmapInitStatus::Nullptr: {
-      return ZXCString::init_unsafe("ZXBitmapInitStatus::Nullptr");
-    }
-    default: {
-      return ZXCString::init_unsafe("ZXBitmapInitStatus::Unknown");
-    }
+  case ZXBitmapInitStatus::Ok: {
+    return ZXCString::init_unsafe("ZXBitmapInitStatus::Ok");
+  }
+  case ZXBitmapInitStatus::OutOfMemory: {
+    return ZXCString::init_unsafe("ZXBitmapInitStatus::OutOfMemory");
+  }
+  case ZXBitmapInitStatus::AllocFail: {
+    return ZXCString::init_unsafe("ZXBitmapInitStatus::AllocFail");
+  }
+  case ZXBitmapInitStatus::IntegerOverflow: {
+    return ZXCString::init_unsafe("ZXBitmapInitStatus::IntegerOverFlow");
+  }
+  case ZXBitmapInitStatus::Nullptr: {
+    return ZXCString::init_unsafe("ZXBitmapInitStatus::Nullptr");
+  }
+  default: {
+    return ZXCString::init_unsafe("ZXBitmapInitStatus::Unknown");
+  }
   }
 }
 
@@ -44,21 +44,21 @@ enum class [[nodiscard]] ZXBitmapAccessStatus : zx_u8_c {
   Nullptr,
 };
 
-static inline ZXCString zx_bitmap_access_status_to_cstring(
-    ZXBitmapAccessStatus status) {
+static inline ZXCString
+zx_bitmap_access_status_to_cstring(ZXBitmapAccessStatus status) {
   switch (status) {
-    case ZXBitmapAccessStatus::Ok: {
-      return ZXCString::init_unsafe("ZXBitmapAccessStatus::Ok");
-    }
-    case ZXBitmapAccessStatus::Nullptr: {
-      return ZXCString::init_unsafe("ZXBitmapAccessStatus::Nullptr");
-    }
-    case ZXBitmapAccessStatus::OutOfBounds: {
-      return ZXCString::init_unsafe("ZXBitmapAccessStatus::OutOfBounds");
-    }
-    default: {
-      return ZXCString::init_unsafe("ZXBitmapAccessStatus::Unknown");
-    }
+  case ZXBitmapAccessStatus::Ok: {
+    return ZXCString::init_unsafe("ZXBitmapAccessStatus::Ok");
+  }
+  case ZXBitmapAccessStatus::Nullptr: {
+    return ZXCString::init_unsafe("ZXBitmapAccessStatus::Nullptr");
+  }
+  case ZXBitmapAccessStatus::OutOfBounds: {
+    return ZXCString::init_unsafe("ZXBitmapAccessStatus::OutOfBounds");
+  }
+  default: {
+    return ZXCString::init_unsafe("ZXBitmapAccessStatus::Unknown");
+  }
   }
 }
 
@@ -68,21 +68,21 @@ enum class [[nodiscard]] ZXBitmapIterStatus : zx_u8_c {
   Nullptr,
 };
 
-static inline ZXCString zx_bitmap_iter_status_to_cstring(
-    ZXBitmapIterStatus status) {
+static inline ZXCString
+zx_bitmap_iter_status_to_cstring(ZXBitmapIterStatus status) {
   switch (status) {
-    case ZXBitmapIterStatus::Continue: {
-      return ZXCString::init_unsafe("ZXBitmapIterStatus::Continue");
-    }
-    case ZXBitmapIterStatus::Finished: {
-      return ZXCString::init_unsafe("ZXBitmapIterStatus::Finished");
-    }
-    case ZXBitmapIterStatus::Nullptr: {
-      return ZXCString::init_unsafe("ZXBitmapIterStatus::Nullptr");
-    }
-    default: {
-      return ZXCString::init_unsafe("ZXBitmapIterStatus::Unknown");
-    }
+  case ZXBitmapIterStatus::Continue: {
+    return ZXCString::init_unsafe("ZXBitmapIterStatus::Continue");
+  }
+  case ZXBitmapIterStatus::Finished: {
+    return ZXCString::init_unsafe("ZXBitmapIterStatus::Finished");
+  }
+  case ZXBitmapIterStatus::Nullptr: {
+    return ZXCString::init_unsafe("ZXBitmapIterStatus::Nullptr");
+  }
+  default: {
+    return ZXCString::init_unsafe("ZXBitmapIterStatus::Unknown");
+  }
   }
 }
 
@@ -92,7 +92,7 @@ struct ZXBitmapIter {
   zx_u64 m_position;
   zx_u64 m_word;
 
-  inline ZXBitmapIterStatus next(zx_u64* idx) {
+  inline ZXBitmapIterStatus next(zx_u64 *idx) {
     if (idx == nullptr) {
       return ZXBitmapIterStatus::Nullptr;
     }
@@ -122,9 +122,8 @@ struct ZXBitmap {
   ZXSliceMut<zx_u64> m_storage;
   zx_u64 m_n_bits;
 
-  static inline ZXBitmapInitStatus init(ZXAlloc* alloc,
-                                        zx_u64 n_bits,
-                                        ZXBitmap* bitmap) {
+  static inline ZXBitmapInitStatus init(ZXAlloc *alloc, zx_u64 n_bits,
+                                        ZXBitmap *bitmap) {
     if (alloc == nullptr || bitmap == nullptr) {
       return ZXBitmapInitStatus::IntegerOverflow;
     }
@@ -139,17 +138,17 @@ struct ZXBitmap {
 
     ZXSliceMut<zx_u64> storage;
     switch (alloc->alloc<zx_u64>(bitmap_len, &storage)) {
-      case ZXAllocStatus::Ok: {
-        break;
-      }
-      case ZXAllocStatus::OutOfMemory: {
-        return ZXBitmapInitStatus::OutOfMemory;
-        break;
-      }
-      default: {
-        return ZXBitmapInitStatus::AllocFail;
-        break;
-      }
+    case ZXAllocStatus::Ok: {
+      break;
+    }
+    case ZXAllocStatus::OutOfMemory: {
+      return ZXBitmapInitStatus::OutOfMemory;
+      break;
+    }
+    default: {
+      return ZXBitmapInitStatus::AllocFail;
+      break;
+    }
     }
     storage.memset(0);
 
@@ -164,7 +163,7 @@ struct ZXBitmap {
 
   inline void reset() const { this->m_storage.memset(0); }
 
-  inline ZXBitmapAccessStatus get(zx_u64 idx, bool* is_set) const {
+  inline ZXBitmapAccessStatus get(zx_u64 idx, bool *is_set) const {
     if (is_set == nullptr) {
       return ZXBitmapAccessStatus::Nullptr;
     }
@@ -195,7 +194,7 @@ struct ZXBitmap {
   }
 
   // returns the old state of the bit
-  inline ZXBitmapAccessStatus set(zx_u64 idx, bool* is_set) {
+  inline ZXBitmapAccessStatus set(zx_u64 idx, bool *is_set) {
     if (is_set == nullptr) {
       return ZXBitmapAccessStatus::Nullptr;
     }
@@ -208,7 +207,7 @@ struct ZXBitmap {
     zx_u8 const bit_shift =
         zx_cast_unsafe_to_u8<zx_u64>(zx_mod_unsafe_u64(idx, 8));
     zx_u8 const mask = zx_shl_unsafe_u8(1, bit_shift);
-    zx_u8* byte_p =
+    zx_u8 *byte_p =
         this->m_storage.cast_unsafe<zx_u8>().offset_unsafe(byte_index);
     zx_u8 const byte = *byte_p;
     *byte_p = byte | mask;
@@ -222,7 +221,7 @@ struct ZXBitmap {
     zx_u8 const bit_shift =
         zx_cast_unsafe_to_u8<zx_u64>(zx_mod_unsafe_u64(idx, 8));
     zx_u8 const mask = zx_shl_unsafe_u8(1, bit_shift);
-    zx_u8* byte_p =
+    zx_u8 *byte_p =
         this->m_storage.cast_unsafe<zx_u8>().offset_unsafe(byte_index);
     zx_u8 const byte = *byte_p;
     *byte_p = byte | mask;
@@ -230,7 +229,7 @@ struct ZXBitmap {
   }
 
   // returns the old state of the bit
-  inline ZXBitmapAccessStatus unset(zx_u64 idx, bool* is_set) {
+  inline ZXBitmapAccessStatus unset(zx_u64 idx, bool *is_set) {
     if (is_set == nullptr) {
       return ZXBitmapAccessStatus::Nullptr;
     }
@@ -243,7 +242,7 @@ struct ZXBitmap {
     zx_u8 const bit_shift =
         zx_cast_unsafe_to_u8<zx_u64>(zx_mod_unsafe_u64(idx, 8));
     zx_u8 const mask = zx_shl_unsafe_u8(1, bit_shift);
-    zx_u8* byte_p =
+    zx_u8 *byte_p =
         this->m_storage.cast_unsafe<zx_u8>().offset_unsafe(byte_index);
     zx_u8 const byte = *byte_p;
     *byte_p = byte & ~mask;
@@ -257,7 +256,7 @@ struct ZXBitmap {
     zx_u8 const bit_shift =
         zx_cast_unsafe_to_u8<zx_u64>(zx_mod_unsafe_u64(idx, 8));
     zx_u8 const mask = zx_shl_unsafe_u8(1, bit_shift);
-    zx_u8* byte_p =
+    zx_u8 *byte_p =
         this->m_storage.cast_unsafe<zx_u8>().offset_unsafe(byte_index);
     zx_u8 const byte = *byte_p;
     *byte_p = byte & ~mask;

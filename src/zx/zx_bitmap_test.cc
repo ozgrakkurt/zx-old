@@ -10,25 +10,25 @@ static void assert(bool cond) {
   }
 }
 
-static bool tst_get(ZXBitmap const* bmp, zx_u64 idx) {
+static bool tst_get(ZXBitmap const *bmp, zx_u64 idx) {
   bool b = false;
   assert(ZXBitmapAccessStatus::Ok == bmp->get(idx, &b));
   return b;
 }
 
-static bool tst_set(ZXBitmap* bmp, zx_u64 idx) {
+static bool tst_set(ZXBitmap *bmp, zx_u64 idx) {
   bool b = false;
   assert(ZXBitmapAccessStatus::Ok == bmp->set(idx, &b));
   return b;
 }
 
-static bool tst_unset(ZXBitmap* bmp, zx_u64 idx) {
+static bool tst_unset(ZXBitmap *bmp, zx_u64 idx) {
   bool b = false;
   assert(ZXBitmapAccessStatus::Ok == bmp->unset(idx, &b));
   return b;
 }
 
-static void iter_test(ZXAlloc* alloc, ZXBitmap const* bmap) {
+static void iter_test(ZXAlloc *alloc, ZXBitmap const *bmap) {
   ZXBitmap bitmap;
   assert(ZXBitmapInitStatus::Ok ==
          ZXBitmap::init(alloc, bmap->n_bits(), &bitmap));
@@ -45,7 +45,7 @@ static void iter_test(ZXAlloc* alloc, ZXBitmap const* bmap) {
   }
 }
 
-static void smoke_test_inner(ZXAlloc* alloc, ZXBitmap* bitmap, zx_u64 len) {
+static void smoke_test_inner(ZXAlloc *alloc, ZXBitmap *bitmap, zx_u64 len) {
   bool v = false;
   assert(ZXBitmapAccessStatus::OutOfBounds == bitmap->get(len, &v));
   assert(ZXBitmapAccessStatus::OutOfBounds == bitmap->set(len, &v));
@@ -109,7 +109,7 @@ static void smoke_test_inner(ZXAlloc* alloc, ZXBitmap* bitmap, zx_u64 len) {
   iter_test(alloc, bitmap);
 }
 
-static void smoke_test(ZXAlloc* alloc, zx_u64 len) {
+static void smoke_test(ZXAlloc *alloc, zx_u64 len) {
   ZXBitmap bitmap;
   assert(ZXBitmapInitStatus::Ok == ZXBitmap::init(alloc, len, &bitmap));
 

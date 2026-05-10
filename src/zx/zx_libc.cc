@@ -16,41 +16,37 @@
 #include <zx/zx_int.h>
 
 // Define _start function that calls the user defined main.
-__asm__(
-    ".type _start, @function\n"
-    ".global _start\n"
-    "_start:\n\t"
-    "xorq %rbp, %rbp\n\t"
-    "popq %rdi\n\t"
-    "movq %rsp, %rsi\n\t"
-    "andq $-16, %rsp\n\t"
-    "callq main\n\t"
-    "movq %rax, %rdi\n\t"
-    "movq $60, %rax\n\t"
-    "syscall\n\t");
+__asm__(".type _start, @function\n"
+        ".global _start\n"
+        "_start:\n\t"
+        "xorq %rbp, %rbp\n\t"
+        "popq %rdi\n\t"
+        "movq %rsp, %rsi\n\t"
+        "andq $-16, %rsp\n\t"
+        "callq main\n\t"
+        "movq %rax, %rdi\n\t"
+        "movq $60, %rax\n\t"
+        "syscall\n\t");
 
 extern "C" {
 
-__attribute__((no_builtin)) void* memcpy(void* __restrict dest,
-                                         void const* __restrict src,
-                                         zx_u64_c count) {
+__attribute__((no_builtin)) void *
+memcpy(void *__restrict dest, void const *__restrict src, zx_u64_c count) {
   return zx_memcpy(dest, src, count);
 }
 
-__attribute__((no_builtin)) void* memset(void* dest,
-                                         zx_i32_c ch,
+__attribute__((no_builtin)) void *memset(void *dest, zx_i32_c ch,
                                          zx_u64_c count) {
   return zx_memset(dest, ch, count);
 }
 
-__attribute__((no_builtin)) zx_i32_c memcmp(void const* lhs,
-                                            void const* rhs,
+__attribute__((no_builtin)) zx_i32_c memcmp(void const *lhs, void const *rhs,
                                             zx_u64_c count) {
   return zx_memcmp(lhs, rhs, count);
 }
 
-__attribute__((no_builtin)) zx_u64_c strlen(char const* str) {
+__attribute__((no_builtin)) zx_u64_c strlen(char const *str) {
   return zx_strlen(str);
 }
 
-}  // extern "C"
+} // extern "C"

@@ -41,9 +41,7 @@ static inline zx_u64_c zx_syscall2(zx_u64_c num, zx_u64_c arg1, zx_u64_c arg2) {
   return ret;
 }
 
-static inline zx_u64_c zx_syscall3(zx_u64_c num,
-                                   zx_u64_c arg1,
-                                   zx_u64_c arg2,
+static inline zx_u64_c zx_syscall3(zx_u64_c num, zx_u64_c arg1, zx_u64_c arg2,
                                    zx_u64_c arg3) {
   zx_u64_c ret;
 
@@ -55,11 +53,8 @@ static inline zx_u64_c zx_syscall3(zx_u64_c num,
   return ret;
 }
 
-static inline zx_u64_c zx_syscall4(zx_u64_c num,
-                                   zx_u64_c arg1,
-                                   zx_u64_c arg2,
-                                   zx_u64_c arg3,
-                                   zx_u64_c arg4) {
+static inline zx_u64_c zx_syscall4(zx_u64_c num, zx_u64_c arg1, zx_u64_c arg2,
+                                   zx_u64_c arg3, zx_u64_c arg4) {
   zx_u64_c ret;
   register zx_u64_c r10 __asm__("r10") = arg4;
 
@@ -71,11 +66,8 @@ static inline zx_u64_c zx_syscall4(zx_u64_c num,
   return ret;
 }
 
-static inline zx_u64_c zx_syscall5(zx_u64_c num,
-                                   zx_u64_c arg1,
-                                   zx_u64_c arg2,
-                                   zx_u64_c arg3,
-                                   zx_u64_c arg4,
+static inline zx_u64_c zx_syscall5(zx_u64_c num, zx_u64_c arg1, zx_u64_c arg2,
+                                   zx_u64_c arg3, zx_u64_c arg4,
                                    zx_u64_c arg5) {
   zx_u64_c ret;
   register zx_u64_c r10 __asm__("r10") = arg4;
@@ -90,12 +82,8 @@ static inline zx_u64_c zx_syscall5(zx_u64_c num,
   return ret;
 }
 
-static inline zx_u64_c zx_syscall6(zx_u64_c num,
-                                   zx_u64_c arg1,
-                                   zx_u64_c arg2,
-                                   zx_u64_c arg3,
-                                   zx_u64_c arg4,
-                                   zx_u64_c arg5,
+static inline zx_u64_c zx_syscall6(zx_u64_c num, zx_u64_c arg1, zx_u64_c arg2,
+                                   zx_u64_c arg3, zx_u64_c arg4, zx_u64_c arg5,
                                    zx_u64_c arg6) {
   zx_u64_c ret;
   register zx_u64_c r10 __asm__("r10") = arg4;
