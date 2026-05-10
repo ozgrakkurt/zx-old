@@ -1,8 +1,6 @@
 #ifndef ZX_INT_H
 #define ZX_INT_H
 
-#include <zx/zx_panic.h>
-
 typedef unsigned char zx_u8_c;
 static_assert(sizeof(zx_u8_c) == 1);
 static_assert(alignof(zx_u8_c) == 1);
@@ -108,7 +106,7 @@ constexpr static inline T zx_add_(T a, T b, bool *failure) {
       *failure = true;
     } else {
 #ifdef ZX_DEV
-      zx_panic();
+      __builtin_trap();
 #endif
     }
   }
@@ -143,7 +141,7 @@ template <typename T> constexpr static inline T zx_add_unsafe_(T a, T b) {
 #ifdef ZX_DEV
   T res;
   if (__builtin_add_overflow(a, b, &res)) [[unlikely]] {
-    zx_panic();
+    __builtin_trap();
   }
   return res;
 #else
@@ -215,7 +213,7 @@ constexpr static inline T zx_sub_(T a, T b, bool *failure) {
       *failure = true;
     } else {
 #ifdef ZX_DEV
-      zx_panic();
+      __builtin_trap();
 #endif
     }
   }
@@ -250,7 +248,7 @@ template <typename T> constexpr static inline T zx_sub_unsafe_(T a, T b) {
 #ifdef ZX_DEV
   T res;
   if (__builtin_sub_overflow(a, b, &res)) [[unlikely]] {
-    zx_panic();
+    __builtin_trap();
   }
   return res;
 #else
@@ -306,7 +304,7 @@ constexpr static inline T zx_mul_(T a, T b, bool *failure) {
       *failure = true;
     } else {
 #ifdef ZX_DEV
-      zx_panic();
+      __builtin_trap();
 #endif
     }
   }
@@ -341,7 +339,7 @@ template <typename T> constexpr static inline T zx_mul_unsafe_(T a, T b) {
 #ifdef ZX_DEV
   T res;
   if (__builtin_mul_overflow(a, b, &res)) [[unlikely]] {
-    zx_panic();
+    __builtin_trap();
   }
   return res;
 #else
@@ -380,7 +378,7 @@ constexpr static inline T zx_div_(T a, T b, bool *failure) {
       *failure = true;
     } else {
 #ifdef ZX_DEV
-      zx_panic();
+      __builtin_trap();
 #endif
     }
     return 0;
@@ -403,7 +401,7 @@ constexpr static inline zx_u64 zx_div_u64(zx_u64 a, zx_u64 b, bool *failure) {
 template <typename T> constexpr static inline T zx_div_unsafe_(T a, T b) {
   if (b == 0) [[unlikely]] {
 #ifdef ZX_DEV
-    zx_panic();
+    __builtin_trap();
 #else
     return 0;
 #endif
@@ -430,7 +428,7 @@ constexpr static inline T zx_mod_(T a, T b, bool *failure) {
       *failure = true;
     } else {
 #ifdef ZX_DEV
-      zx_panic();
+      __builtin_trap();
 #endif
     }
     return 0;
@@ -463,7 +461,7 @@ constexpr static inline zx_u64 zx_rand_mod_u64(zx_u64 a, zx_u64 b) {
 template <typename T> constexpr static inline T zx_mod_unsafe_(T a, T b) {
   if (b == 0) [[unlikely]] {
 #ifdef ZX_DEV
-    zx_panic();
+    __builtin_trap();
 #else
     return 0;
 #endif
@@ -691,7 +689,7 @@ constexpr static inline T zx_shl_(T a, zx_u8 amount, bool *failure) {
       *failure = true;
     } else {
 #ifdef ZX_DEV
-      zx_panic();
+      __builtin_trap();
 #endif
     }
     return 0;
@@ -719,7 +717,7 @@ constexpr static inline T zx_shl_unsafe_(T a, zx_u8 amount) {
   constexpr zx_u8 N_BITS = sizeof(T) * 8;
   if (amount >= N_BITS) [[unlikely]] {
 #ifdef ZX_DEV
-    zx_panic();
+    __builtin_trap();
 #else
     return 0;
 #endif
@@ -747,7 +745,7 @@ constexpr static inline T zx_shr_(T a, zx_u8 amount, bool *failure) {
       *failure = true;
     } else {
 #ifdef ZX_DEV
-      zx_panic();
+      __builtin_trap();
 #endif
     }
     return 0;
@@ -775,7 +773,7 @@ constexpr static inline T zx_shr_unsafe_(T a, zx_u8 amount) {
   constexpr zx_u8 N_BITS = sizeof(T) * 8;
   if (amount >= N_BITS) [[unlikely]] {
 #ifdef ZX_DEV
-    zx_panic();
+    __builtin_trap();
 #else
     return 0;
 #endif
@@ -873,7 +871,7 @@ constexpr static inline Tgt zx_int_cast_(Src a, bool *failure) {
       *failure = true;
     } else {
 #ifdef ZX_DEV
-      zx_panic();
+      __builtin_trap();
 #endif
     }
   }
@@ -916,7 +914,7 @@ template <typename Tgt, typename Src>
 constexpr static inline Tgt zx_int_cast_unsafe_(Src a) {
   Tgt res;
   if (__builtin_add_overflow(a, Src{0}, &res)) [[unlikely]] {
-    zx_panic();
+    __builtin_trap();
   }
   return res;
 }

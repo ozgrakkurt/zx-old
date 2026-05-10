@@ -134,6 +134,7 @@ enum class [[nodiscard]] ZXPanicPrintInfoStatus : zx_u8_c {
   BacktraceFail,
   Nullptr,
   AddrsInitFail,
+  ReadSelfFail,
 };
 
 static ZXPanicPrintInfoStatus zx_panic_print_info(ZXErrTrace *err_trace,
@@ -199,6 +200,22 @@ static ZXPanicPrintInfoStatus zx_panic_print_info(ZXErrTrace *err_trace,
   }
 
   zx_u64 n_written = 0;
+  (void)zx_sys_write(ZX_STDERR, fmt->written(), &n_written);
+  (void)n_written;
+
+  zx_u64 self_exe_size = 0;
+  if (ZXPanicReadSelfStatus const status =
+          zx_panic_read_self(err_trace, file_buf, &self_exe_size);
+      ZXPanicReadSelfStatus::Ok != status) {
+    zx_err_trace_push(err_trace, ZX_SRC_LOC, 0);
+    return ZXPanicPrintInfoStatus::ReadSelfFail;
+  }
+
+  fmt->reset();
+  overflow = false;
+  ZX_FMT(fmt, &overflow, "Length of self exe: ", self_exe_size, '\n');
+
+  n_written = 0;
   (void)zx_sys_write(ZX_STDERR, fmt->written(), &n_written);
   (void)n_written;
 
