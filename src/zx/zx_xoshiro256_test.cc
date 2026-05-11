@@ -1,4 +1,5 @@
 #include <zx/zx_int.h>
+#include <zx/zx_panic.h>
 #include <zx/zx_xoshiro256.h>
 
 static void basic() {
@@ -9,7 +10,7 @@ static void basic() {
   zx_u64 const b = rand.next();
 
   if (a == b) {
-    __builtin_trap();
+    zx_panic();
   }
 }
 
@@ -26,7 +27,7 @@ static void fill_aligned() {
   for (zx_u64 i = 0; i < data.len(); i++) {
     zx_u64 const v = data.as_const().read_unsafe(i);
     if (v == 69) {
-      __builtin_trap();
+      zx_panic();
     }
   }
 }
@@ -44,7 +45,7 @@ static void fill_partial() {
   for (zx_u64 i = 0; i < data.len(); i++) {
     zx_u8 const v = data.as_const().read_unsafe(i);
     if (v == 69) {
-      __builtin_trap();
+      zx_panic();
     }
   }
 }
@@ -62,7 +63,7 @@ static void fill_long_and_partial() {
   for (zx_u64 i = 0; i < data.len(); i++) {
     zx_u8 const v = data.as_const().read_unsafe(i);
     if (v == 69) {
-      __builtin_trap();
+      zx_panic();
     }
   }
 }

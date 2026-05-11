@@ -1,24 +1,28 @@
-#ifndef ZX_ELF_H
-#define ZX_ELF_H
+#ifndef ZX_ELF_C_H
+#define ZX_ELF_C_H
+
+#include <zx/zx_int.h>
+
+extern "C" {
 
 /* 32-bit ELF base types. */
-typedef __u32 Elf32_Addr;
-typedef __u16 Elf32_Half;
-typedef __u32 Elf32_Off;
-typedef __s32 Elf32_Sword;
-typedef __u32 Elf32_Word;
-typedef __u16 Elf32_Versym;
+typedef zx_u32 Elf32_Addr;
+typedef zx_u16 Elf32_Half;
+typedef zx_u32 Elf32_Off;
+typedef zx_i32 Elf32_Sword;
+typedef zx_u32 Elf32_Word;
+typedef zx_u16 Elf32_Versym;
 
 /* 64-bit ELF base types. */
-typedef __u64 Elf64_Addr;
-typedef __u16 Elf64_Half;
-typedef __s16 Elf64_SHalf;
-typedef __u64 Elf64_Off;
-typedef __s32 Elf64_Sword;
-typedef __u32 Elf64_Word;
-typedef __u64 Elf64_Xword;
-typedef __s64 Elf64_Sxword;
-typedef __u16 Elf64_Versym;
+typedef zx_u64 Elf64_Addr;
+typedef zx_u16 Elf64_Half;
+typedef zx_i16 Elf64_SHalf;
+typedef zx_u64 Elf64_Off;
+typedef zx_i32 Elf64_Sword;
+typedef zx_u32 Elf64_Word;
+typedef zx_u64 Elf64_Xword;
+typedef zx_i64 Elf64_Sxword;
+typedef zx_u16 Elf64_Versym;
 
 /* These constants are for the segment types stored in the image headers */
 #define PT_NULL 0
@@ -616,5 +620,7 @@ typedef struct {
   Elf64_Word vda_name;
   Elf64_Word vda_next;
 } Elf64_Verdaux;
+
+} // extern "C"
 
 #endif

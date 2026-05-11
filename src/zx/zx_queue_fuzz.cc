@@ -2,12 +2,13 @@
 #include <zx/zx_fuzz.h>
 #include <zx/zx_int.h>
 #include <zx/zx_page_alloc.h>
+#include <zx/zx_panic.h>
 #include <zx/zx_queue.h>
 #include <zx/zx_slice.h>
 
 static void assert(bool cond) {
   if (!cond) [[unlikely]] {
-    __builtin_trap();
+    zx_panic();
   }
 }
 
@@ -45,7 +46,7 @@ static void fuzz_one(void *usr_ctx, ZXFuzzInput *fuzz_input) {
       if (status == ZXQueuePushStatus::Ok) {
         end = zx_add_unsafe_u32(end, 1);
       } else if (status != ZXQueuePushStatus::OutOfCapacity) {
-        __builtin_trap();
+        zx_panic();
       }
       break;
     }
@@ -57,13 +58,13 @@ static void fuzz_one(void *usr_ctx, ZXFuzzInput *fuzz_input) {
         assert(val == start);
         start = zx_add_unsafe_u32(start, 1);
       } else if (status != ZXQueuePopStatus::Empty) {
-        __builtin_trap();
+        zx_panic();
       }
 
       break;
     }
     default: {
-      __builtin_trap();
+      zx_panic();
     }
     }
   }

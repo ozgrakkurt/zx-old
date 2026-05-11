@@ -6,6 +6,7 @@
 #endif
 
 #include <zx/zx_int.h>
+#include <zx/zx_panic.h>
 
 static_assert(sizeof(void *) == 8);
 
@@ -61,16 +62,16 @@ template <typename T> struct ZXSlice {
 
 #ifdef ZX_DEV
     if (ptr == nullptr) {
-      __builtin_trap();
+      zx_panic();
     }
 
     if (!__builtin_is_aligned(ptr, alignof(T))) {
-      __builtin_trap();
+      zx_panic();
     }
 
     zx_u64 res;
     if (__builtin_mul_overflow(len, zx_u64{sizeof(T)}, &res)) {
-      __builtin_trap();
+      zx_panic();
     }
 #endif
 
@@ -119,14 +120,14 @@ template <typename T> struct ZXSlice {
 
 #ifdef ZX_DEV
     if (ptr == nullptr) {
-      __builtin_trap();
+      zx_panic();
     }
 
     if (!__builtin_is_aligned(ptr, alignof(U))) {
-      __builtin_trap();
+      zx_panic();
     }
     if (!__builtin_is_aligned(ptr, alignof(T))) {
-      __builtin_trap();
+      zx_panic();
     }
 #endif
 
@@ -211,10 +212,10 @@ template <typename T> struct ZXSlice {
 
 #ifdef ZX_DEV
     if (byte_cap % sizeof(U) != 0) {
-      __builtin_trap();
+      zx_panic();
     }
     if (!__builtin_is_aligned(this->m_ptr, alignof(U))) {
-      __builtin_trap();
+      zx_panic();
     }
 #endif
 
@@ -260,7 +261,7 @@ template <typename T> struct ZXSlice {
 #ifdef ZX_DEV
     zx_u64 const needed_len = zx_add_unsafe_u64(offset, len);
     if (this->m_len < needed_len) {
-      __builtin_trap();
+      zx_panic();
     }
 #endif
 
@@ -297,7 +298,7 @@ template <typename T> struct ZXSlice {
   inline ZXSlice<T> slice_at_unsafe(zx_u64 offset) const {
 #ifdef ZX_DEV
     if (offset > this->m_len) {
-      __builtin_trap();
+      zx_panic();
     }
 #endif
 
@@ -325,7 +326,7 @@ template <typename T> struct ZXSlice {
   inline T const *offset_unsafe(zx_u64 offset) const {
 #ifdef ZX_DEV
     if (offset >= this->m_len) {
-      __builtin_trap();
+      zx_panic();
     }
 #endif
     return &this->m_ptr[offset];
@@ -380,7 +381,7 @@ template <typename T> struct ZXSlice {
     zx_u64 const item_cap = zx_sub_unsafe_u64(this->m_len, index);
     zx_u64 const byte_cap = zx_mul_unsafe_u64(item_cap, sizeof(T));
     if (byte_cap < sizeof(U)) {
-      __builtin_trap();
+      zx_panic();
     }
 #endif
 
@@ -466,16 +467,16 @@ template <typename T> struct ZXSliceMut {
 
 #ifdef ZX_DEV
     if (ptr == nullptr) {
-      __builtin_trap();
+      zx_panic();
     }
 
     if (!__builtin_is_aligned(ptr, alignof(T))) {
-      __builtin_trap();
+      zx_panic();
     }
 
     zx_u64 res;
     if (__builtin_mul_overflow(len, zx_u64{sizeof(T)}, &res)) {
-      __builtin_trap();
+      zx_panic();
     }
 #endif
 
@@ -524,14 +525,14 @@ template <typename T> struct ZXSliceMut {
 
 #ifdef ZX_DEV
     if (ptr == nullptr) {
-      __builtin_trap();
+      zx_panic();
     }
 
     if (!__builtin_is_aligned(ptr, alignof(U))) {
-      __builtin_trap();
+      zx_panic();
     }
     if (!__builtin_is_aligned(ptr, alignof(T))) {
-      __builtin_trap();
+      zx_panic();
     }
 #endif
 
@@ -616,10 +617,10 @@ template <typename T> struct ZXSliceMut {
 
 #ifdef ZX_DEV
     if (byte_cap % sizeof(U) != 0) {
-      __builtin_trap();
+      zx_panic();
     }
     if (!__builtin_is_aligned(this->m_ptr, alignof(U))) {
-      __builtin_trap();
+      zx_panic();
     }
 #endif
 
@@ -666,7 +667,7 @@ template <typename T> struct ZXSliceMut {
 #ifdef ZX_DEV
     zx_u64 const needed_len = zx_add_unsafe_u64(offset, len);
     if (this->m_len < needed_len) {
-      __builtin_trap();
+      zx_panic();
     }
 #endif
 
@@ -703,7 +704,7 @@ template <typename T> struct ZXSliceMut {
   inline ZXSliceMut<T> slice_at_unsafe(zx_u64 offset) const {
 #ifdef ZX_DEV
     if (offset > this->m_len) {
-      __builtin_trap();
+      zx_panic();
     }
 #endif
 
@@ -731,7 +732,7 @@ template <typename T> struct ZXSliceMut {
   inline T *offset_unsafe(zx_u64 offset) const {
 #ifdef ZX_DEV
     if (offset >= this->m_len) {
-      __builtin_trap();
+      zx_panic();
     }
 #endif
     return &this->m_ptr[offset];
@@ -794,7 +795,7 @@ template <typename T> struct ZXSliceMut {
     zx_u64 const item_cap = zx_sub_unsafe_u64(this->m_len, index);
     zx_u64 const byte_cap = zx_mul_unsafe_u64(item_cap, sizeof(T));
     if (byte_cap < sizeof(U)) {
-      __builtin_trap();
+      zx_panic();
     }
 #endif
 
@@ -841,11 +842,11 @@ template <typename T> struct ZXSliceMut {
   inline void memcpy_from_unsafe(ZXSlice<T> other) const {
 #ifdef ZX_DEV
     if (this->m_len != other.m_len) {
-      __builtin_trap();
+      zx_panic();
     }
 
     if (this->as_const().is_overlapping(other)) {
-      __builtin_trap();
+      zx_panic();
     }
 #endif
 
@@ -872,7 +873,7 @@ template <typename T> struct ZXSliceMut {
   inline void memmove_from_unsafe(ZXSlice<T> other) const {
 #ifdef ZX_DEV
     if (this->m_len != other.m_len) {
-      __builtin_trap();
+      zx_panic();
     }
 #endif
 
@@ -910,7 +911,7 @@ struct ZXCString {
   static inline ZXCString init_unsafe(char const *cstring) {
 #ifdef ZX_DEV
     if (cstring == nullptr) {
-      __builtin_trap();
+      zx_panic();
     }
 #endif
 

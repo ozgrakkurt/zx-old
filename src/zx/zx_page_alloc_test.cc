@@ -1,5 +1,6 @@
 #include <zx/zx_int.h>
 #include <zx/zx_page_alloc.h>
+#include <zx/zx_panic.h>
 #include <zx/zx_slice.h>
 
 typedef ZXPageAllocStatus allocfn(zx_u64 size, ZXSliceMut<zx_u8> *out);
@@ -8,7 +9,7 @@ static void do_test(allocfn alloc, zx_u64 size) {
   ZXSliceMut<zx_u8> mem;
   ZXPageAllocStatus status = alloc(size, &mem);
   if (status != ZXPageAllocStatus::Ok) {
-    __builtin_trap();
+    zx_panic();
   }
   zx_u8 const first = mem.as_const().read_unsafe(0);
   zx_u8 const last = mem.as_const().read_unsafe(zx_sub_unsafe_u64(size, 1));
@@ -16,13 +17,13 @@ static void do_test(allocfn alloc, zx_u64 size) {
 
   status = zx_page_free(mem);
   if (status != ZXPageAllocStatus::Ok) {
-    __builtin_trap();
+    zx_panic();
   }
 
   // munmaping an already unmapped region doesn't fail
   status = zx_page_free(mem);
   if (status != ZXPageAllocStatus::Ok) {
-    __builtin_trap();
+    zx_panic();
   }
 }
 

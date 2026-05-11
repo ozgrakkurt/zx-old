@@ -3,6 +3,7 @@
 
 #include <zx/zx_assert.h>
 #include <zx/zx_int.h>
+#include <zx/zx_panic.h>
 #include <zx/zx_slice.h>
 
 struct ZXFmt {
@@ -51,7 +52,7 @@ struct ZXFmt {
         *overflow = true;
       } else {
 #ifdef ZX_DEV
-        __builtin_trap();
+        zx_panic();
 #endif
       }
     }
@@ -78,7 +79,7 @@ struct ZXFmt {
         *overflow = true;
       } else {
 #ifdef ZX_DEV
-        __builtin_trap();
+        zx_panic();
 #endif
       }
     }
@@ -117,7 +118,7 @@ struct ZXFmt {
           *overflow = true;
         } else {
 #ifdef ZX_DEV
-          __builtin_trap();
+          zx_panic();
 #endif
         }
       }

@@ -3,13 +3,14 @@
 #include <zx/zx_hashtable.h>
 #include <zx/zx_int.h>
 #include <zx/zx_page_alloc.h>
+#include <zx/zx_panic.h>
 #include <zx/zx_rapidhash_v3.h>
 #include <zx/zx_slice.h>
 #include <zx/zx_xoshiro256.h>
 
 static void assert(bool cond) {
   if (!cond) [[unlikely]] {
-    __builtin_trap();
+    zx_panic();
   }
 }
 
@@ -178,7 +179,7 @@ static void fuzz_one(void *usr_ctx, ZXFuzzInput *fuzz_input) {
       } else if (ZXHashtableInsertStatus::OutOfCapacity == hstatus) {
         assert(!map.insert(kv));
       } else {
-        __builtin_trap();
+        zx_panic();
       }
 
       if (hstatus != ZXHashtableInsertStatus::OutOfCapacity) {
@@ -218,7 +219,7 @@ static void fuzz_one(void *usr_ctx, ZXFuzzInput *fuzz_input) {
       } else if (ZXHashtableGetOrInsertStatus::OutOfCapacity == hstatus) {
         assert(!map.insert(kv));
       } else {
-        __builtin_trap();
+        zx_panic();
       }
 
       if (hstatus != ZXHashtableGetOrInsertStatus::OutOfCapacity) {
@@ -255,7 +256,7 @@ static void fuzz_one(void *usr_ctx, ZXFuzzInput *fuzz_input) {
         KeyVal const *expected_kvp = nullptr;
         assert(!map.get(kv.key, &expected_kvp));
       } else {
-        __builtin_trap();
+        zx_panic();
       }
       break;
     }
@@ -277,7 +278,7 @@ static void fuzz_one(void *usr_ctx, ZXFuzzInput *fuzz_input) {
       break;
     }
     default: {
-      __builtin_trap();
+      zx_panic();
       break;
     }
     }

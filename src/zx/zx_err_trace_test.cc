@@ -92,7 +92,7 @@ static void do_test(ZXAlloc *alloc) {
 //     zx_sys_write(ZX_STDERR, fmt.written(), &n_written);
 // (void)w_status;
 // (void)n_written;
-//   __builtin_trap();
+//   zx_panic();
 // }
 
 int main(void) {

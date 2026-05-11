@@ -25,6 +25,7 @@
 #define ZX_XOSHIRO256_H
 
 #include <zx/zx_int.h>
+#include <zx/zx_panic.h>
 #include <zx/zx_slice.h>
 
 struct ZXXoshiro256 {
@@ -52,7 +53,7 @@ struct ZXXoshiro256 {
         all_zero &= rand.s[i] == 0;
       }
       if (all_zero) {
-        __builtin_trap();
+        zx_panic();
       }
     }
 #endif

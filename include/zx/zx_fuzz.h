@@ -7,6 +7,7 @@
 
 #include <zx/zx_alloc.h>
 #include <zx/zx_int.h>
+#include <zx/zx_panic.h>
 #include <zx/zx_slice.h>
 
 struct ZXFuzzInput {
@@ -24,7 +25,7 @@ struct ZXFuzzInput {
     zx_u64 const offset = this->m_consumed_count;
     this->m_consumed_count = zx_add_unsafe_u64(offset, 1);
     if (this->m_input.len() <= offset) {
-      __builtin_trap();
+      zx_panic();
     }
     return this->m_input.read_unsafe(offset);
   }

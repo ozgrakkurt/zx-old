@@ -1,4 +1,5 @@
 #include <zx/zx_int.h>
+#include <zx/zx_panic.h>
 #include <zx/zx_rapidhash_v3.h>
 
 int main(void) {
@@ -20,7 +21,7 @@ int main(void) {
       zx_u64 const chg_hash = zx_rapidhash_v3(s.as_const(), 0);
 
       if (base_hash == chg_hash) {
-        __builtin_trap();
+        zx_panic();
       }
       s.write_unsafe(i, 76);
     }

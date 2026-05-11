@@ -1,5 +1,6 @@
 #include <zx/zx_fmt.h>
 #include <zx/zx_int.h>
+#include <zx/zx_panic.h>
 #include <zx/zx_slice.h>
 #include <zx/zx_sys.h>
 #include <zx/zx_time.h>
@@ -23,7 +24,7 @@ int main(void) {
         zx_sys_write(ZX_STDERR, fmt.written(), &n_written);
     (void)w_status;
     (void)n_written;
-    __builtin_trap();
+    zx_panic();
   }
 
   ZXTimer timer = ZXTimer::init(info);

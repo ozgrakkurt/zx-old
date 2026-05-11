@@ -8,6 +8,8 @@
 
 #include <zx/zx_alloc.h>
 #include <zx/zx_arr.h>
+#include <zx/zx_assert.h>
+#include <zx/zx_elf_c.h>
 #include <zx/zx_err_trace.h>
 #include <zx/zx_fmt.h>
 #include <zx/zx_int.h>
@@ -33,7 +35,7 @@ static ZXBacktraceStatus zx_backtrace(ZXErrTrace *err_trace,
 
   zx_u64 *frame_ptr = (zx_u64 *)__builtin_frame_address(0);
   while (frame_ptr != nullptr) {
-    zx_u64 const instr_ptr = zx_wrapping_sub_u64(frame_ptr[1], 1);
+    zx_u64 const instr_ptr = zx_saturating_sub_u64(frame_ptr[1], 1);
 
     ZXArrPushStatus const push_status = addrs->push(&instr_ptr);
     switch (push_status) {
@@ -135,6 +137,7 @@ enum class [[nodiscard]] ZXPanicPrintInfoStatus : zx_u8_c {
   Nullptr,
   AddrsInitFail,
   ReadSelfFail,
+  ParseElfFail,
 };
 
 static ZXPanicPrintInfoStatus zx_panic_print_info(ZXErrTrace *err_trace,
@@ -211,13 +214,39 @@ static ZXPanicPrintInfoStatus zx_panic_print_info(ZXErrTrace *err_trace,
     return ZXPanicPrintInfoStatus::ReadSelfFail;
   }
 
-  fmt->reset();
-  overflow = false;
-  ZX_FMT(fmt, &overflow, "Length of self exe: ", self_exe_size, '\n');
+  ZX_EPRINT("Length of self exe: ", self_exe_size, '\n');
 
-  n_written = 0;
-  (void)zx_sys_write(ZX_STDERR, fmt->written(), &n_written);
-  (void)n_written;
+  Elf64_Ehdr const *ex_header = file_buf.as_const()
+                                    .slice_unsafe(0, sizeof(Elf64_Ehdr))
+                                    .cast_unsafe<Elf64_Ehdr>()
+                                    .offset_unsafe(0);
+  ZX_EPRINT("etype: ", ex_header->e_type, '\n');
+  ZX_EPRINT("e_shoff: ", ex_header->e_shoff, '\n');
+
+  if (ex_header->e_shentsize != sizeof(Elf64_Shdr)) {
+    zx_err_trace_push(err_trace, ZX_SRC_LOC, 0);
+    return ZXPanicPrintInfoStatus::ParseElfFail;
+  }
+
+  zx_u64 const sec_headers_nbytes =
+      zx_mul_unsafe_u64(sizeof(Elf64_Shdr), ex_header->e_shnum);
+  ZXSlice<Elf64_Shdr> const sec_headers =
+      file_buf.as_const()
+          .slice_unsafe(ex_header->e_shoff, sec_headers_nbytes)
+          .cast_unsafe<Elf64_Shdr>();
+
+  ZX_EPRINT("n_headers: ", sec_headers.len(), '\n');
+
+  Elf64_Shdr const *names_header =
+      sec_headers.offset_unsafe(ex_header->e_shstrndx);
+  ZXSlice<zx_u8> const names = file_buf.as_const().slice_unsafe(
+      names_header->sh_offset, names_header->sh_size);
+  for (zx_u64 offset = 0; offset < names.len();) {
+    zx_u64 const len =
+        __builtin_strlen((char const *)names.slice_at_unsafe(offset).ptr());
+    ZX_EPRINT("NEYMXD: ", (char const *)names.offset_unsafe(offset), '\n');
+    offset = zx_add_unsafe_u64(1, zx_add_unsafe_u64(len, offset));
+  }
 
   return ZXPanicPrintInfoStatus::Ok;
 }
@@ -233,14 +262,14 @@ static bool ZX_PANICKING_ = false;
               "could be because of the panic function panicking itself or "
               "multiple threads panicking simultaneously.\n Use a debugger to "
               "find out what is happening.\n");
-    __builtin_trap();
+    zx_sys_abort();
   }
   ZXSliceMut<zx_u8> mem;
   if (ZXPageAllocStatus const status = zx_page_alloc_4kb(1 << 27, &mem);
       ZXPageAllocStatus::Ok != status) {
     ZX_EPRINT("Failed to allocate memory for panic debugging. Error code: ",
               (zx_u8)status, '\n');
-    __builtin_trap();
+    zx_sys_abort();
   }
   ZXAlloc alloc = ZXAlloc::init(mem);
 
@@ -250,12 +279,13 @@ static bool ZX_PANICKING_ = false;
       ZXErrTraceInitStatus::Ok != status) {
     ZX_EPRINT("Failed to create ZXErrTrace for panic debugging. Error code: ",
               (zx_u8)status, '\n');
+    zx_sys_abort();
   }
 
   ZXSliceMut<zx_u8> fmt_mem;
   if (ZXAllocStatus::Ok != alloc.alloc<zx_u8>(1 << 14, &fmt_mem)) {
     ZX_EPRINT("Failed to alloc memory for string formatting.\n");
-    __builtin_trap();
+    zx_sys_abort();
   }
   ZXFmt fmt = ZXFmt::init(fmt_mem);
 
@@ -279,8 +309,8 @@ static bool ZX_PANICKING_ = false;
     (void)zx_sys_write(ZX_STDERR, fmt.written(), &n_written);
     (void)n_written;
 
-    __builtin_trap();
+    zx_sys_abort();
   }
 
-  __builtin_trap();
+  zx_sys_abort();
 }

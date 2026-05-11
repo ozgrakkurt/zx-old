@@ -2,12 +2,13 @@
 #include <zx/zx_fuzz.h>
 #include <zx/zx_int.h>
 #include <zx/zx_page_alloc.h>
+#include <zx/zx_panic.h>
 #include <zx/zx_slice.h>
 #include <zx/zx_sys.h>
 
 static void assert(bool cond) {
   if (!cond) [[unlikely]] {
-    __builtin_trap();
+    zx_panic();
   }
 }
 
@@ -70,7 +71,7 @@ static void fuzz_one(void *usr_ctx, ZXFuzzInput *fuzz_input) {
       break;
     }
     default: {
-      __builtin_trap();
+      zx_panic();
       break;
     }
     }

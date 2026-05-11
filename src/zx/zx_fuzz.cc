@@ -2,6 +2,7 @@
 
 #include <zx/zx_fuzz.h>
 #include <zx/zx_int.h>
+#include <zx/zx_panic.h>
 #include <zx/zx_rapidhash_v3.h>
 #include <zx/zx_slice.h>
 #include <zx/zx_time.h>
@@ -24,10 +25,10 @@ extern "C" {
 
 void __sanitizer_cov_trace_pc_guard_init(zx_u32_c *start, zx_u32_c *stop) {
   if (start == nullptr) {
-    __builtin_trap();
+    zx_panic();
   }
   if (stop == nullptr) {
-    __builtin_trap();
+    zx_panic();
   }
 
   static_assert(sizeof(void *) == sizeof(zx_u64));
@@ -36,20 +37,20 @@ void __sanitizer_cov_trace_pc_guard_init(zx_u32_c *start, zx_u32_c *stop) {
   zx_u64 const stop_addr = (zx_u64)stop;
 
   if (stop_addr < start_addr) {
-    __builtin_trap();
+    zx_panic();
   }
   zx_u64 const n_bytes = zx_sub_unsafe_u64(stop_addr, start_addr);
 
   if (n_bytes % sizeof(zx_u32) != 0) {
-    __builtin_trap();
+    zx_panic();
   }
   zx_u64 const n_slots = zx_div_unsafe_u64(n_bytes, sizeof(zx_u32));
 
   if (ZX_FUZZ_SAN_COV_ != nullptr) {
-    __builtin_trap();
+    zx_panic();
   }
   if (ZX_FUZZ_SAN_COV_LEN_ != 0) {
-    __builtin_trap();
+    zx_panic();
   }
   ZX_FUZZ_SAN_COV_ = (zx_u32 *)start;
   ZX_FUZZ_SAN_COV_LEN_ = n_slots;
@@ -76,7 +77,7 @@ zx_fuzz_load_coverage(zx_u32 *dst, zx_u64 dst_len) {
   zx_u32 const *src = ZX_FUZZ_SAN_COV_;
   zx_u64 src_len = ZX_FUZZ_SAN_COV_LEN_;
   if (src_len != dst_len) {
-    __builtin_trap();
+    zx_panic();
   }
   for (zx_u64 i = 0; i < dst_len; i++) {
     dst[i] = src[i];
@@ -85,7 +86,7 @@ zx_fuzz_load_coverage(zx_u32 *dst, zx_u64 dst_len) {
 
 static void zx_fuzz_assert(bool cond) {
   if (!cond) [[unlikely]] {
-    __builtin_trap();
+    zx_panic();
   }
 }
 
@@ -170,7 +171,7 @@ static zx_u64 zx_fuzz_calculate_score(ZXSlice<zx_u32> coverage) {
 static bool zx_fuzz_update_total_coverage(ZXSliceMut<bool> total_coverage,
                                           ZXSlice<zx_u32> coverage) {
   if (total_coverage.len() != coverage.len()) {
-    __builtin_trap();
+    zx_panic();
   }
 
   bool new_coverage = false;
@@ -193,7 +194,7 @@ struct ZXFuzzResult {
 static bool zx_fuzz_push_signature(ZXSliceMut<zx_u32> signature_dedup,
                                    zx_u32 signature) {
   if (signature_dedup.len() == 0) {
-    __builtin_trap();
+    zx_panic();
   }
 
   zx_u64 const idx = zx_rand_mod_u64(signature, signature_dedup.len());

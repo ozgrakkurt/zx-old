@@ -1,10 +1,11 @@
 #include "./zx_libc.h"
 #include <zx/zx_page_alloc.h>
+#include <zx/zx_panic.h>
 #include <zx/zx_sys.h>
 
 static void assert(bool test) {
   if (!test) {
-    __builtin_trap();
+    zx_panic();
   }
 }
 

@@ -2,13 +2,14 @@
 #include <zx/zx_fuzz.h>
 #include <zx/zx_int.h>
 #include <zx/zx_page_alloc.h>
+#include <zx/zx_panic.h>
 #include <zx/zx_slab.h>
 #include <zx/zx_slice.h>
 #include <zx/zx_xoshiro256.h>
 
 static void assert(bool cond) {
   if (!cond) [[unlikely]] {
-    __builtin_trap();
+    zx_panic();
   }
 }
 
@@ -108,7 +109,7 @@ static void fuzz_one(void *usr_ctx, ZXFuzzInput *fuzz_input) {
       break;
     }
     default: {
-      __builtin_trap();
+      zx_panic();
     }
     }
     for (zx_u32 j = 0; j < n_slab_keys; j++) {
@@ -120,23 +121,23 @@ static void fuzz_one(void *usr_ctx, ZXFuzzInput *fuzz_input) {
       }
       case ZXSlabAccessStatus::NotFound: {
         if (op == 0) {
-          __builtin_trap();
+          zx_panic();
         } else if (op == 1) {
-          __builtin_trap();
+          zx_panic();
 
         } else if (op == 2) {
-          __builtin_trap();
+          zx_panic();
         } else {
-          __builtin_trap();
+          zx_panic();
         }
         break;
       }
       case ZXSlabAccessStatus::OutOfBounds: {
-        __builtin_trap();
+        zx_panic();
         break;
       }
       default: {
-        __builtin_trap();
+        zx_panic();
         break;
       }
       }
@@ -152,15 +153,15 @@ static void fuzz_one(void *usr_ctx, ZXFuzzInput *fuzz_input) {
       break;
     }
     case ZXSlabAccessStatus::NotFound: {
-      __builtin_trap();
+      zx_panic();
       break;
     }
     case ZXSlabAccessStatus::OutOfBounds: {
-      __builtin_trap();
+      zx_panic();
       break;
     }
     default: {
-      __builtin_trap();
+      zx_panic();
       break;
     }
     }

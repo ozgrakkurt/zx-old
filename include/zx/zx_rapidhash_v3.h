@@ -30,6 +30,7 @@
 #define ZX_RAPIDHASH_V3_H
 
 #include <zx/zx_int.h>
+#include <zx/zx_panic.h>
 #include <zx/zx_slice.h>
 
 #ifndef __LITTLE_ENDIAN__
@@ -65,7 +66,7 @@ static inline zx_u64 zx_rapidhash_v3_finish_(zx_u64 a, zx_u64 b, zx_u64 seed,
 static inline zx_u64 zx_rapidhash_v3_16_(ZXSlice<zx_u8> key, zx_u64 seed) {
 #ifdef ZX_DEV
   if (key.len() > 16) {
-    __builtin_trap();
+    zx_panic();
   }
 #endif
 
@@ -100,7 +101,7 @@ static inline zx_u64 zx_rapidhash_v3_16_(ZXSlice<zx_u8> key, zx_u64 seed) {
 static inline zx_u64 zx_rapidhash_v3_long_(ZXSlice<zx_u8> key, zx_u64 seed) {
 #ifdef ZX_DEV
   if (key.len() <= 16) {
-    __builtin_trap();
+    zx_panic();
   }
 #endif
   zx_u64 a = 0;

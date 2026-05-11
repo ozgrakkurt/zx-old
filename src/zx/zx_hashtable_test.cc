@@ -3,6 +3,7 @@
 #include <zx/zx_hashtable.h>
 #include <zx/zx_int.h>
 #include <zx/zx_page_alloc.h>
+#include <zx/zx_panic.h>
 #include <zx/zx_rapidhash_v3.h>
 #include <zx/zx_slice.h>
 #include <zx/zx_sys.h>
@@ -11,7 +12,7 @@ typedef zx_u256 key_type;
 
 static void assert(bool cond) {
   if (!cond) {
-    __builtin_trap();
+    zx_panic();
   }
 }
 
@@ -104,7 +105,7 @@ static void smoke_test(ZXAlloc *alloc, zx_u32 len) {
         zx_sys_write(ZX_STDERR, fmt.written(), &n_written);
     (void)w_status;
     (void)n_written;
-    __builtin_trap();
+    zx_panic();
   }
 
   smoke_test_inner(&table, len);
