@@ -9,6 +9,7 @@
 #include <zx/zx_alloc.h>
 #include <zx/zx_arr.h>
 #include <zx/zx_assert.h>
+#include <zx/zx_dwarf_c.h>
 #include <zx/zx_elf_c.h>
 #include <zx/zx_err_trace.h>
 #include <zx/zx_fmt.h>
@@ -138,6 +139,7 @@ enum class [[nodiscard]] ZXPanicPrintInfoStatus : zx_u8_c {
   AddrsInitFail,
   ReadSelfFail,
   ParseElfFail,
+  ParseDwarfFail,
 };
 
 static ZXPanicPrintInfoStatus zx_panic_print_info(ZXErrTrace *err_trace,
@@ -243,6 +245,7 @@ static ZXPanicPrintInfoStatus zx_panic_print_info(ZXErrTrace *err_trace,
       names_header->sh_offset, names_header->sh_size);
   Elf64_Shdr const *debug_info_header = nullptr;
   Elf64_Shdr const *debug_line_header = nullptr;
+  Elf64_Shdr const *debug_abbrev_header = nullptr;
   for (zx_u64 offset = 0, idx = 0; offset < names.len(); idx += 1) {
     ZXSlice<zx_u8> const name =
         ZXCString::init_unsafe(
@@ -252,6 +255,8 @@ static ZXPanicPrintInfoStatus zx_panic_print_info(ZXErrTrace *err_trace,
       debug_info_header = sec_headers.offset_unsafe(idx);
     } else if (name.equals(ZXCString::init_unsafe(".debug_line").slice())) {
       debug_line_header = sec_headers.offset_unsafe(idx);
+    } else if (name.equals(ZXCString::init_unsafe(".debug_abbrev").slice())) {
+      debug_abbrev_header = sec_headers.offset_unsafe(idx);
     }
     offset = zx_add_unsafe_u64(1, zx_add_unsafe_u64(name.len(), offset));
   }
@@ -263,9 +268,69 @@ static ZXPanicPrintInfoStatus zx_panic_print_info(ZXErrTrace *err_trace,
     zx_err_trace_push(err_trace, ZX_SRC_LOC, 0);
     return ZXPanicPrintInfoStatus::ParseElfFail;
   }
+  if (debug_abbrev_header == nullptr) {
+    zx_err_trace_push(err_trace, ZX_SRC_LOC, 0);
+    return ZXPanicPrintInfoStatus::ParseElfFail;
+  }
 
   ZX_EPRINT(".debug_line size: ", debug_line_header->sh_size, '\n',
-            ".debug_info size: ", debug_info_header->sh_size, '\n');
+            ".debug_info size: ", debug_info_header->sh_size, '\n',
+            ".debug_abbrev size: ", debug_abbrev_header->sh_size, '\n');
+
+  ZXSlice<zx_u8> const debug_abbrev_raw = file_buf.as_const().slice_unsafe(
+      debug_abbrev_header->sh_offset, debug_abbrev_header->sh_size);
+  ZXSlice<zx_u8> const debug_info_raw = file_buf.as_const().slice_unsafe(
+      debug_info_header->sh_offset, debug_info_header->sh_size);
+  for (zx_u64 offset = 0; offset < debug_info_raw.len();) {
+    zx_u64 unit_length = debug_info_raw.read_unaligned_unsafe<zx_u32>(offset);
+    offset = zx_add_unsafe_u64(offset, 4);
+    if (ZX_U32_MAX == unit_length) {
+      unit_length = debug_info_raw.read_unaligned_unsafe<zx_u64>(offset);
+      offset = zx_add_unsafe_u64(offset, 8);
+    }
+
+    // save this so we can skip whole CU if needed.
+    zx_u64 const skip_offset = offset;
+
+    // check version
+    if (zx_u16{5} != debug_info_raw.read_unaligned_unsafe<zx_u16>(offset)) {
+      zx_err_trace_push(err_trace, ZX_SRC_LOC, 0);
+      return ZXPanicPrintInfoStatus::ParseDwarfFail;
+    }
+    offset = zx_add_unsafe_u64(offset, 2);
+
+    // check unit_type
+    if (zx_u8{0x01} != debug_info_raw.read_unsafe(offset)) {
+      // skip this as it is not a compile unit.
+      offset = zx_add_unsafe_u64(skip_offset, unit_length);
+      continue;
+    }
+    offset = zx_add_unsafe_u64(offset, 1);
+
+    // check address_size
+    if (sizeof(void *) != debug_info_raw.read_unsafe(offset)) {
+      zx_err_trace_push(err_trace, ZX_SRC_LOC, 0);
+      return ZXPanicPrintInfoStatus::ParseDwarfFail;
+    }
+    offset = zx_add_unsafe_u64(offset, 1);
+
+    zx_u64 const abbrev_offset =
+        debug_info_raw.read_unsafe_unaligned<zx_u64>(offset);
+
+    // TODO: read abbrevs and construct a hash table
+    debug_abbrev_raw.offset_unsafe(abbrev_offset);
+
+    // TODO: construct mapping from address range to CU so we can find the CU
+    // that includes
+    //  a given address we are looking for.
+    //  Don't parse all CUs since we probably won't need everything.
+
+    // TODO: read DIEs and construct a map from address ranges to info
+    // this will be queried by an address to find where does that belong to.
+
+    // advance to the next compilation unit
+    offset = zx_add_unsafe_u64(skip_offset, unit_length);
+  }
 
   return ZXPanicPrintInfoStatus::Ok;
 }
