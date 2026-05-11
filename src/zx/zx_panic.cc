@@ -241,12 +241,31 @@ static ZXPanicPrintInfoStatus zx_panic_print_info(ZXErrTrace *err_trace,
       sec_headers.offset_unsafe(ex_header->e_shstrndx);
   ZXSlice<zx_u8> const names = file_buf.as_const().slice_unsafe(
       names_header->sh_offset, names_header->sh_size);
-  for (zx_u64 offset = 0; offset < names.len();) {
-    zx_u64 const len =
-        __builtin_strlen((char const *)names.slice_at_unsafe(offset).ptr());
-    ZX_EPRINT("NEYMXD: ", (char const *)names.offset_unsafe(offset), '\n');
-    offset = zx_add_unsafe_u64(1, zx_add_unsafe_u64(len, offset));
+  Elf64_Shdr const *debug_info_header = nullptr;
+  Elf64_Shdr const *debug_line_header = nullptr;
+  for (zx_u64 offset = 0, idx = 0; offset < names.len(); idx += 1) {
+    ZXSlice<zx_u8> const name =
+        ZXCString::init_unsafe(
+            (char const *)names.slice_at_unsafe(offset).ptr())
+            .slice();
+    if (name.equals(ZXCString::init_unsafe(".debug_info").slice())) {
+      debug_info_header = sec_headers.offset_unsafe(idx);
+    } else if (name.equals(ZXCString::init_unsafe(".debug_line").slice())) {
+      debug_line_header = sec_headers.offset_unsafe(idx);
+    }
+    offset = zx_add_unsafe_u64(1, zx_add_unsafe_u64(name.len(), offset));
   }
+  if (debug_info_header == nullptr) {
+    zx_err_trace_push(err_trace, ZX_SRC_LOC, 0);
+    return ZXPanicPrintInfoStatus::ParseElfFail;
+  }
+  if (debug_line_header == nullptr) {
+    zx_err_trace_push(err_trace, ZX_SRC_LOC, 0);
+    return ZXPanicPrintInfoStatus::ParseElfFail;
+  }
+
+  ZX_EPRINT(".debug_line size: ", debug_line_header->sh_size, '\n',
+            ".debug_info size: ", debug_info_header->sh_size, '\n');
 
   return ZXPanicPrintInfoStatus::Ok;
 }
