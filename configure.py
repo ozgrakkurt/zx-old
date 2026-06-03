@@ -9,7 +9,7 @@ import ninja_syntax
 import proj
 import definition
 import platform
-from definition import Executable, Library, Project, Profile
+from definition import Executable, Library, Project
 
 
 ROOTPATH = os.path.dirname(os.path.abspath(__file__))
@@ -22,9 +22,13 @@ class Config:
     original_cmd: str
     cxx: str
     ar: str
-    objdump: str
+    llvm_config: str
     march: str
     thin_lto: bool
+    opt_level: int
+    dev_mode: bool
+    debug_info: bool
+    fuzz: bool
 
 
 @dataclass
@@ -111,17 +115,13 @@ def validate_project(project: Project) -> None:
     )
 
 
-def validate_profile(profile: Profile) -> None:
-    assert profile.opt_level >= 0 and profile.opt_level <= 3, (
+def validate_config(config: Config) -> None:
+    assert config.opt_level >= 0 and config.opt_level <= 3, (
         "profile optimization level has to be 0, 1, 2 or 3"
     )
 
 
-def validate_config(config: Config) -> None:
-    pass
-
-
-def make_cflags(profile: Profile, config: Config) -> List[str]:
+def make_cflags(config: Config) -> List[str]:
     cflags = [
         # Warnings.
         "-Wall",
@@ -156,18 +156,11 @@ def make_cflags(profile: Profile, config: Config) -> List[str]:
         # ninja docs or ninja repo configure.py say this is better.
         "-pipe",
         # optimization level
-        f"-O{profile.opt_level}",
+        f"-O{config.opt_level}",
         # include dir
         "-I$include_path",
         # this caused compilation errors so is disabled. could be an idea to re-enable it
         "-fno-stack-protector",
-        # disable libc
-        "-nostdlib",
-        # disable default header includes
-        "-nostdinc",
-        # specify nolibc target
-        # this doesn't have any effect as far as I can tell on a x86_64-linux-gnu PC, but do it anyway.
-        "--target=x86_64-linux-none",
         # enable linker garbage collection
         "-ffunction-sections",
         "-fdata-sections",
@@ -185,10 +178,11 @@ def make_cflags(profile: Profile, config: Config) -> List[str]:
         "-fno-rtti",
         "-nostdlib++",
         "-fno-threadsafe-statics",
+        "-fno-asynchronous-unwind-tables",
     ]
 
-    if profile.debug_info:
-        cflags.append("-g")
+    if config.debug_info:
+        cflags.append("-gline-tables-only")
         # Make sure to keep frame pointer because it is useful for debugger on optimized builds.
         # Didn't specifically test this but seems to be the general consensus on the internet.
         cflags.append("-fno-omit-frame-pointer")
@@ -198,10 +192,10 @@ def make_cflags(profile: Profile, config: Config) -> List[str]:
         cflags.append("-fomit-frame-pointer")
         cflags.append("-momit-leaf-frame-pointer")
 
-    if profile.dev:
+    if config.dev_mode:
         cflags.append("-DZX_DEV")
 
-    if profile.fuzz:
+    if config.fuzz:
         cflags.append("-DZX_FUZZ=1")
         cflags.append("-fsanitize-coverage=trace-pc-guard")
 
@@ -221,23 +215,18 @@ def make_ldflags(build_path: str, config: Config) -> List[str]:
         "-Wl,-z,defs",
         # remove unused sections
         "-Wl,--gc-sections",
-        # static link
-        "-static",
-        # disable libc
-        "-nostdlib",
-        # nolibc target
-        "--target=x86_64-linux-none",
         # disable some c++ features
         "-fno-exceptions",
         "-fno-rtti",
         "-nostdlib++",
         "-fno-threadsafe-statics",
+        "-fno-asynchronous-unwind-tables",
         # optimization level
-        f"-O{profile.opt_level}",
+        f"-O{config.opt_level}",
     ]
 
-    if profile.debug_info:
-        ldflags.append("-g")
+    if config.debug_info:
+        ldflags.append("-gline-tables-only")
         # Make sure to keep frame pointer because it is useful for debugger on optimized builds.
         # Didn't specifically test this but seems to be the general consensus on the internet.
         ldflags.append("-fno-omit-frame-pointer")
@@ -347,6 +336,7 @@ def process_exe(
 
 
 def process_library(
+    config: Config,
     artifacts: Artifacts,
     nw: ninja_syntax.Writer,
     libraries: Dict[str, Library],
@@ -369,7 +359,7 @@ def process_library(
     artifacts.lib_files.append(lib_file_path)
     nw.newline()
 
-    if not profile.fuzz:
+    if not config.fuzz:
         # process test targets for this library
         if len(lib.test_targets) > 0:
             nw.comment(f"test targets for library #{lib_name}")
@@ -396,7 +386,7 @@ def process_library(
 
             nw.newline()
 
-    if not profile.fuzz:
+    if not config.fuzz:
         # process the benchmark targets for this library
         if len(lib.bench_targets) > 0:
             nw.comment(f"benchmark targets for library #{lib_name}")
@@ -419,13 +409,14 @@ def process_library(
                 "$build_path",
                 f"{bench_tgt_name}.asm",
             )
-            nw.build(asm_out, "objdump", exe_path)
+            asm_src = os.path.join("$src_path", lib_name, bench_tgt_name + ".cc")
+            nw.build(asm_out, "asmgen", asm_src)
             artifacts.asm_outputs.append(asm_out)
             nw.build(bench_tgt_name + "_asm", "phony", asm_out)
 
             nw.newline()
 
-    if profile.fuzz:
+    if config.fuzz:
         # process fuzz targets for this library
         if len(lib.fuzz_targets) > 0:
             nw.comment(f"fuzz targets for library #{lib_name}")
@@ -459,15 +450,12 @@ def process_library(
     nw.newline()
 
 
-def gen_ninja_build(
-    build_path: str, profile: Profile, config: Config, project: Project
-) -> None:
+def gen_ninja_build(build_path: str, config: Config, project: Project) -> None:
     assert os.path.isabs(build_path), "build_path has to be an absolute path"
-    validate_profile(profile)
     validate_config(config)
     validate_project(project)
 
-    cflags = make_cflags(profile, config)
+    cflags = make_cflags(config)
     ldflags = make_ldflags(build_path, config)
 
     # build_path is required to be absolute (checked in validation)
@@ -491,7 +479,6 @@ def gen_ninja_build(
     nw.comment("tools")
     nw.variable("cxx", config.cxx)
     nw.variable("ar", config.ar)
-    nw.variable("objdump", config.objdump)
 
     nw.newline()
 
@@ -515,9 +502,9 @@ def gen_ninja_build(
         description="LINK $out",
     )
     nw.rule(
-        "objdump",
-        command="$objdump --visualize-jumps --no-show-raw-insn -d -S -C -M intel $in > $out",
-        description="OBJDUMP $in",
+        "asmgen",
+        command="$cxx -S -MMD -MT $out -MF $out.d $cflags -c $in -o $out",
+        description="ASMGEN $out",
     )
 
     nw.newline()
@@ -567,16 +554,16 @@ def gen_ninja_build(
 
     # process libraries
     for lib_name, lib in project.libraries.items():
-        process_library(artifacts, nw, project.libraries, lib_name, lib)
+        process_library(config, artifacts, nw, project.libraries, lib_name, lib)
 
-    if not profile.fuzz:
+    if not config.fuzz:
         # process executables
         for exe_name, exe in project.executables.items():
             process_exe(artifacts, nw, project.libraries, exe_name, exe)
 
         nw.newline()
 
-    if not profile.fuzz:
+    if not config.fuzz:
         nw.comment("Build all libraries")
         nw.build("build_libs", "phony", artifacts.lib_files)
 
@@ -632,9 +619,13 @@ def reconstruct_command(args: argparse.Namespace) -> str:
         "build-dir": args.build_dir,
         "cxx": args.cxx,
         "ar": args.ar,
-        "objdump": args.objdump,
         "march": args.march,
         "thin-lto": args.thin_lto,
+        "llvm_config": args.llvm_config,
+        "opt_level": args.opt_level,
+        "dev_mode": args.dev_mode,
+        "debug_info": args.debug_info,
+        "fuzz": args.fuzz,
     }
 
     out_flags = []
@@ -644,6 +635,8 @@ def reconstruct_command(args: argparse.Namespace) -> str:
                 out_flags.append(f"--{fname}")
             else:
                 out_flags.append(f"--no-{fname}")
+        elif isinstance(flag, int):
+            out_flags.append(f"--{fname}={flag}")
         elif flag is not None:
             assert isinstance(flag, str), "flag has to be string at this point"
             out_flags.append(f'--{fname}="{flag}"')
@@ -675,9 +668,9 @@ if __name__ == "__main__":
         metavar="EXE",
     )
     parser.add_argument(
-        "--objdump",
-        default="objdump",
-        help="objdump executable to use for creating assembly from executable by disassembling.",
+        "--llvm-config",
+        default="llvm-config",
+        help="llvm-config executable to use for linking with LLVM.",
         metavar="EXE",
     )
     parser.add_argument(
@@ -691,6 +684,27 @@ if __name__ == "__main__":
         default=True,
         help="enable LLVM thin-lto",
     )
+    parser.add_argument(
+        "--opt-level", type=int, default=0, help="Optimization level, can be 0, 1, 2, 3"
+    )
+    parser.add_argument(
+        "--dev-mode",
+        action=argparse.BooleanOptionalAction,
+        default=True,
+        help="enable development mode",
+    )
+    parser.add_argument(
+        "--debug-info",
+        action=argparse.BooleanOptionalAction,
+        default=True,
+        help="emit debug information",
+    )
+    parser.add_argument(
+        "--fuzz",
+        action=argparse.BooleanOptionalAction,
+        default=False,
+        help="enable fuzz instrumentation and fuzz targets. also disables test/bench/exe targets.",
+    )
 
     args = parser.parse_args()
 
@@ -700,15 +714,18 @@ if __name__ == "__main__":
         original_cmd=reconstruct_command(args),
         cxx=args.cxx,
         ar=args.ar,
-        objdump=args.objdump,
+        llvm_config=args.llvm_config,
         march=args.march,
         thin_lto=args.thin_lto,
+        opt_level=args.opt_level,
+        dev_mode=args.dev_mode,
+        debug_info=args.debug_info,
+        fuzz=args.fuzz,
     )
 
-    for profile_name, profile in proj.PROFILES.items():
-        build_path = os.path.join(ROOTPATH, args.build_dir, profile_name)
+    build_path = os.path.join(ROOTPATH, args.build_dir)
 
-        if not os.path.exists(build_path):
-            os.makedirs(build_path)
+    if not os.path.exists(build_path):
+        os.makedirs(build_path)
 
-        gen_ninja_build(build_path, profile, cfg, proj.PROJECT)
+    gen_ninja_build(build_path, cfg, proj.PROJECT)

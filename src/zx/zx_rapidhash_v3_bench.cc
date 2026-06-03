@@ -1,6 +1,5 @@
 #include <zx/zx_int.h>
 #include <zx/zx_rapidhash_v3.h>
-#include <zx/zx_rapidhash_v3_bench.h>
 #include <zx/zx_xoshiro256.h>
 
 int main(void) {

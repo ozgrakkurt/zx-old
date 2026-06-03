@@ -26,11 +26,3 @@ class Project:
     include_path: str = os.path.join(ROOTPATH, "include")
     libraries: Dict[str, Library] = field(default_factory=dict)
     executables: Dict[str, Executable] = field(default_factory=dict)
-
-
-@dataclass
-class Profile:
-    opt_level: int
-    dev: bool
-    debug_info: bool
-    fuzz: bool
