@@ -29,6 +29,9 @@ enum class [[nodiscard]] ZXBacktraceStatus : zx_u8_c {
 
 static ZXBacktraceStatus zx_backtrace(ZXErrTrace *err_trace,
                                       ZXArr<zx_u64> *addrs) {
+#ifndef ZX_DEBUG_INFO
+  return ZXBacktraceStatus::Ok;
+#endif
   if (addrs == nullptr) {
     zx_err_trace_push(err_trace, ZX_SRC_LOC, 0);
     return ZXBacktraceStatus::Nullptr;

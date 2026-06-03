@@ -189,6 +189,7 @@ def make_cflags(config: Config) -> List[str]:
         # Didn't specifically test this but seems to be the general consensus on the internet.
         cflags.append("-fno-omit-frame-pointer")
         cflags.append("-mno-omit-leaf-frame-pointer")
+        cflags.append("-DZX_DEBUG_INFO")
     else:
         # Disable frame pointer usage by compiler. it is useless when we are not in debug mode.
         cflags.append("-fomit-frame-pointer")
