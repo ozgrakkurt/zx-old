@@ -23,6 +23,7 @@ class Config:
     original_cmd: str
     cxx: str
     ar: str
+    objdump: str
     llvm_config: str
     march: str
     thin_lto: bool
@@ -410,8 +411,7 @@ def process_library(
                 "$build_path",
                 f"{bench_tgt_name}.asm",
             )
-            asm_src = os.path.join("$src_path", lib_name, bench_tgt_name + ".cc")
-            nw.build(asm_out, "asmgen", asm_src)
+            nw.build(asm_out, "objdump", exe_path)
             artifacts.asm_outputs.append(asm_out)
             nw.build(bench_tgt_name + "_asm", "phony", asm_out)
 
@@ -488,6 +488,7 @@ def gen_ninja_build(build_path: str, config: Config, project: Project) -> None:
     nw.comment("tools")
     nw.variable("cxx", config.cxx)
     nw.variable("ar", config.ar)
+    nw.variable("objdump", config.objdump)
 
     nw.newline()
 
@@ -511,9 +512,9 @@ def gen_ninja_build(build_path: str, config: Config, project: Project) -> None:
         description="LINK $out",
     )
     nw.rule(
-        "asmgen",
-        command="$cxx -S -MMD -MT $out -MF $out.d $cflags -c $in -o $out",
-        description="ASMGEN $out",
+        "objdump",
+        command="$objdump --visualize-jumps --no-show-raw-insn -d -S -C -M intel $in > $out",
+        description="OBJDUMP $in",
     )
 
     nw.newline()
@@ -628,6 +629,7 @@ def reconstruct_command(args: argparse.Namespace) -> str:
         "build-dir": args.build_dir,
         "cxx": args.cxx,
         "ar": args.ar,
+        "objdump": args.objdump,
         "march": args.march,
         "thin-lto": args.thin_lto,
         "llvm-config": args.llvm_config,
@@ -661,7 +663,7 @@ if __name__ == "__main__":
 
     parser.add_argument(
         "--build-dir",
-        default="build",
+        required=True,
         help="Relative path to build directory to store the build.ninja file. Relative to 'configure.py' location.",
     )
     parser.add_argument(
@@ -683,6 +685,11 @@ if __name__ == "__main__":
         metavar="EXE",
     )
     parser.add_argument(
+        "--objdump",
+        default="objdump",
+        help="objdump executable to use for creating assembly from executable by disassembling.",
+    )
+    parser.add_argument(
         "--march",
         default="native",
         help="target CPU micro-architecture to be passed into the compiler",
@@ -694,7 +701,7 @@ if __name__ == "__main__":
         help="enable LLVM thin-lto",
     )
     parser.add_argument(
-        "--opt-level", type=int, default=0, help="Optimization level, can be 0, 1, 2, 3"
+        "--opt-level", type=int, default=2, help="Optimization level, can be 0, 1, 2, 3"
     )
     parser.add_argument(
         "--dev-mode",
@@ -723,6 +730,7 @@ if __name__ == "__main__":
         original_cmd=reconstruct_command(args),
         cxx=args.cxx,
         ar=args.ar,
+        objdump=args.objdump,
         llvm_config=args.llvm_config,
         march=args.march,
         thin_lto=args.thin_lto,

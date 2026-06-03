@@ -315,7 +315,7 @@ static ZXPanicPrintInfoStatus zx_panic_print_info(ZXErrTrace *err_trace,
     offset = zx_add_unsafe_u64(offset, 1);
 
     zx_u64 const abbrev_offset =
-        debug_info_raw.read_unsafe_unaligned<zx_u64>(offset);
+        debug_info_raw.read_unaligned_unsafe<zx_u64>(offset);
 
     // TODO: read abbrevs and construct a hash table
     debug_abbrev_raw.offset_unsafe(abbrev_offset);

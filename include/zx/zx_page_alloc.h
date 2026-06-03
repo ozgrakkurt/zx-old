@@ -69,8 +69,7 @@ zx_page_mmap_(zx_u64 size, zx_i32 huge_page_flags, ZXSliceMut<zx_u8> *out) {
 
   zx_i32 const prot = ZX_SYS_PROT_READ | ZX_SYS_PROT_WRITE;
   zx_i32 const flags = ZX_SYS_MAP_PRIVATE | ZX_SYS_MAP_ANONYMOUS |
-                       ZX_SYS_MAP_LOCKED | ZX_SYS_MAP_POPULATE |
-                       huge_page_flags;
+                       ZX_SYS_MAP_POPULATE | huge_page_flags;
 
   zx_u8 *mem = nullptr;
   ZXSysStatus const sys_status =

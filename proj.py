@@ -5,7 +5,6 @@ from definition import Executable, Library, Project
 ZX: Library = Library(
     source_files=set(
         [
-            "zx_libc",
             "zx_fuzz",
             "zx_panic",
         ]
@@ -14,7 +13,6 @@ ZX: Library = Library(
         [
             "zx_int_test",
             "zx_slice_test",
-            "zx_libc_test",
             "zx_time_test",
             "zx_xoshiro256_test",
             "zx_rapidhash_v3_test",
@@ -28,9 +26,7 @@ ZX: Library = Library(
             "zx_slab_test",
         ]
     ),
-    bench_targets=set(
-        ["zx_rapidhash_v3_bench", "zx_xoshiro256_bench", "zx_libc_bench"]
-    ),
+    bench_targets=set(["zx_rapidhash_v3_bench", "zx_xoshiro256_bench"]),
     fuzz_targets=set(
         [
             "zx_strlen_fuzz",
