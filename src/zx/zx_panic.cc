@@ -27,40 +27,40 @@ enum class [[nodiscard]] ZXBacktraceStatus : zx_u8_c {
   Nullptr,
 };
 
-static ZXBacktraceStatus zx_backtrace(ZXErrTrace *err_trace,
-                                      ZXArr<zx_u64> *addrs) {
-#ifndef ZX_DEBUG_INFO
-  return ZXBacktraceStatus::Ok;
-#endif
-  if (addrs == nullptr) {
-    zx_err_trace_push(err_trace, ZX_SRC_LOC, 0);
-    return ZXBacktraceStatus::Nullptr;
-  }
+// static ZXBacktraceStatus zx_backtrace(ZXErrTrace *err_trace,
+//                                       ZXArr<zx_u64> *addrs) {
+// #ifndef ZX_DEBUG_INFO
+//   return ZXBacktraceStatus::Ok;
+// #endif
+//   if (addrs == nullptr) {
+//     zx_err_trace_push(err_trace, ZX_SRC_LOC, 0);
+//     return ZXBacktraceStatus::Nullptr;
+//   }
 
-  zx_u64 *frame_ptr = (zx_u64 *)__builtin_frame_address(0);
-  while (frame_ptr != nullptr) {
-    zx_u64 const instr_ptr = zx_saturating_sub_u64(frame_ptr[1], 1);
+//   zx_u64 *frame_ptr = (zx_u64 *)__builtin_frame_address(0);
+//   while (frame_ptr != nullptr) {
+//     zx_u64 const instr_ptr = zx_saturating_sub_u64(frame_ptr[1], 1);
 
-    ZXArrPushStatus const push_status = addrs->push(&instr_ptr);
-    switch (push_status) {
-    case ZXArrPushStatus::Ok: {
-      break;
-    }
-    case ZXArrPushStatus::OutOfCapacity: {
-      zx_err_trace_push(err_trace, ZX_SRC_LOC, (zx_u8)push_status);
-      return ZXBacktraceStatus::ArrayOutOfCapacity;
-    }
-    default: {
-      zx_err_trace_push(err_trace, ZX_SRC_LOC, (zx_u8)push_status);
-      return ZXBacktraceStatus::ArrayPushFail;
-    }
-    }
+//     ZXArrPushStatus const push_status = addrs->push(&instr_ptr);
+//     switch (push_status) {
+//     case ZXArrPushStatus::Ok: {
+//       break;
+//     }
+//     case ZXArrPushStatus::OutOfCapacity: {
+//       zx_err_trace_push(err_trace, ZX_SRC_LOC, (zx_u8)push_status);
+//       return ZXBacktraceStatus::ArrayOutOfCapacity;
+//     }
+//     default: {
+//       zx_err_trace_push(err_trace, ZX_SRC_LOC, (zx_u8)push_status);
+//       return ZXBacktraceStatus::ArrayPushFail;
+//     }
+//     }
 
-    frame_ptr = (zx_u64 *)frame_ptr[0];
-  }
+//     frame_ptr = (zx_u64 *)frame_ptr[0];
+//   }
 
-  return ZXBacktraceStatus::Ok;
-}
+//   return ZXBacktraceStatus::Ok;
+// }
 
 enum class [[nodiscard]] ZXPanicReadSelfStatus : zx_u8_c {
   Ok = 0,
@@ -176,22 +176,22 @@ static ZXPanicPrintInfoStatus zx_panic_print_info(ZXErrTrace *err_trace,
     return ZXPanicPrintInfoStatus::AddrsInitFail;
   }
 
-  switch (ZXBacktraceStatus const status = zx_backtrace(err_trace, &addrs);
-          status) {
-  case ZXBacktraceStatus::Ok: {
-    break;
-  }
-  case ZXBacktraceStatus::ArrayOutOfCapacity: {
-    ZX_EPRINT("Backtrace was truncated because it went out of capacity.\n "
-              "Resulting stack trace will be missing some frames.\n");
-    break;
-  }
-  default: {
-    zx_err_trace_push(err_trace, ZX_SRC_LOC, 0);
-    return ZXPanicPrintInfoStatus::BacktraceFail;
-    break;
-  }
-  }
+  // switch (ZXBacktraceStatus const status = zx_backtrace(err_trace, &addrs);
+  //         status) {
+  // case ZXBacktraceStatus::Ok: {
+  //   break;
+  // }
+  // case ZXBacktraceStatus::ArrayOutOfCapacity: {
+  //   ZX_EPRINT("Backtrace was truncated because it went out of capacity.\n "
+  //             "Resulting stack trace will be missing some frames.\n");
+  //   break;
+  // }
+  // default: {
+  //   zx_err_trace_push(err_trace, ZX_SRC_LOC, 0);
+  //   return ZXPanicPrintInfoStatus::BacktraceFail;
+  //   break;
+  // }
+  // }
 
   fmt->reset();
   ZXSlice<zx_u64> const addrs_slice = addrs.slice();
@@ -249,6 +249,7 @@ static ZXPanicPrintInfoStatus zx_panic_print_info(ZXErrTrace *err_trace,
   Elf64_Shdr const *debug_info_header = nullptr;
   Elf64_Shdr const *debug_line_header = nullptr;
   Elf64_Shdr const *debug_abbrev_header = nullptr;
+  Elf64_Shdr const *eh_frame_header = nullptr;
   for (zx_u64 offset = 0, idx = 0; offset < names.len(); idx += 1) {
     ZXSlice<zx_u8> const name =
         ZXCString::init_unsafe(
@@ -260,6 +261,8 @@ static ZXPanicPrintInfoStatus zx_panic_print_info(ZXErrTrace *err_trace,
       debug_line_header = sec_headers.offset_unsafe(idx);
     } else if (name.equals(ZXCString::init_unsafe(".debug_abbrev").slice())) {
       debug_abbrev_header = sec_headers.offset_unsafe(idx);
+    } else if (name.equals(ZXCString::init_unsafe(".eh_frame").slice())) {
+      eh_frame_header = sec_headers.offset_unsafe(idx);
     }
     offset = zx_add_unsafe_u64(1, zx_add_unsafe_u64(name.len(), offset));
   }
@@ -275,10 +278,15 @@ static ZXPanicPrintInfoStatus zx_panic_print_info(ZXErrTrace *err_trace,
     zx_err_trace_push(err_trace, ZX_SRC_LOC, 0);
     return ZXPanicPrintInfoStatus::ParseElfFail;
   }
+  if (eh_frame_header == nullptr) {
+    zx_err_trace_push(err_trace, ZX_SRC_LOC, 0);
+    return ZXPanicPrintInfoStatus::ParseElfFail;
+  }
 
   ZX_EPRINT(".debug_line size: ", debug_line_header->sh_size, '\n',
             ".debug_info size: ", debug_info_header->sh_size, '\n',
-            ".debug_abbrev size: ", debug_abbrev_header->sh_size, '\n');
+            ".debug_abbrev size: ", debug_abbrev_header->sh_size, '\n',
+            ".eh_frame size: ", eh_frame_header->sh_size, '\n');
 
   ZXSlice<zx_u8> const debug_abbrev_raw = file_buf.as_const().slice_unsafe(
       debug_abbrev_header->sh_offset, debug_abbrev_header->sh_size);
@@ -319,9 +327,11 @@ static ZXPanicPrintInfoStatus zx_panic_print_info(ZXErrTrace *err_trace,
 
     zx_u64 const abbrev_offset =
         debug_info_raw.read_unaligned_unsafe<zx_u64>(offset);
+    (void)abbrev_offset;
+    (void)debug_abbrev_raw;
 
     // TODO: read abbrevs and construct a hash table
-    debug_abbrev_raw.offset_unsafe(abbrev_offset);
+    // debug_abbrev_raw.offset_unsafe(abbrev_offset);
 
     // TODO: construct mapping from address range to CU so we can find the CU
     // that includes
@@ -349,14 +359,14 @@ static bool ZX_PANICKING_ = false;
               "could be because of the panic function panicking itself or "
               "multiple threads panicking simultaneously.\n Use a debugger to "
               "find out what is happening.\n");
-    zx_sys_abort();
+    __builtin_trap();
   }
   ZXSliceMut<zx_u8> mem;
   if (ZXPageAllocStatus const status = zx_page_alloc_4kb(1 << 27, &mem);
       ZXPageAllocStatus::Ok != status) {
     ZX_EPRINT("Failed to allocate memory for panic debugging. Error code: ",
               (zx_u8)status, '\n');
-    zx_sys_abort();
+    __builtin_trap();
   }
   ZXAlloc alloc = ZXAlloc::init(mem);
 
@@ -366,13 +376,13 @@ static bool ZX_PANICKING_ = false;
       ZXErrTraceInitStatus::Ok != status) {
     ZX_EPRINT("Failed to create ZXErrTrace for panic debugging. Error code: ",
               (zx_u8)status, '\n');
-    zx_sys_abort();
+    __builtin_trap();
   }
 
   ZXSliceMut<zx_u8> fmt_mem;
   if (ZXAllocStatus::Ok != alloc.alloc<zx_u8>(1 << 14, &fmt_mem)) {
     ZX_EPRINT("Failed to alloc memory for string formatting.\n");
-    zx_sys_abort();
+    __builtin_trap();
   }
   ZXFmt fmt = ZXFmt::init(fmt_mem);
 
@@ -396,8 +406,8 @@ static bool ZX_PANICKING_ = false;
     (void)zx_sys_write(ZX_STDERR, fmt.written(), &n_written);
     (void)n_written;
 
-    zx_sys_abort();
+    __builtin_trap();
   }
 
-  zx_sys_abort();
+  __builtin_trap();
 }
