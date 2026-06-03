@@ -1,6 +1,7 @@
 import argparse
 import os
 import sys
+import subprocess
 import copy
 from dataclasses import dataclass, field
 from typing import Optional, Dict, Set, List
@@ -471,8 +472,16 @@ def gen_ninja_build(build_path: str, config: Config, project: Project) -> None:
     nw.newline()
 
     nw.comment("build flags")
-    nw.variable("cflags", " ".join(cflags))
-    nw.variable("ldflags", " ".join(ldflags))
+
+    result = subprocess.run(
+        ["llvm-config", "--cxxflags"], capture_output=True, text=True, check=True
+    )
+    nw.variable("cflags", " ".join(cflags) + " " + result.stdout.strip())
+
+    result = subprocess.run(
+        ["llvm-config", "--ldflags"], capture_output=True, text=True, check=True
+    )
+    nw.variable("ldflags", " ".join(ldflags) + " " + result.stdout.strip())
 
     nw.newline()
 
@@ -621,10 +630,10 @@ def reconstruct_command(args: argparse.Namespace) -> str:
         "ar": args.ar,
         "march": args.march,
         "thin-lto": args.thin_lto,
-        "llvm_config": args.llvm_config,
-        "opt_level": args.opt_level,
-        "dev_mode": args.dev_mode,
-        "debug_info": args.debug_info,
+        "llvm-config": args.llvm_config,
+        "opt-level": args.opt_level,
+        "dev-mode": args.dev_mode,
+        "debug-info": args.debug_info,
         "fuzz": args.fuzz,
     }
 
