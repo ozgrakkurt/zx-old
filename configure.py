@@ -180,20 +180,19 @@ def make_cflags(config: Config) -> List[str]:
         "-fno-rtti",
         "-nostdlib++",
         "-fno-threadsafe-statics",
-        "-fno-asynchronous-unwind-tables",
+        "-fomit-frame-pointer",
+        "-momit-leaf-frame-pointer",
     ]
 
     if config.debug_info:
         cflags.append("-gline-tables-only")
-        # Make sure to keep frame pointer because it is useful for debugger on optimized builds.
-        # Didn't specifically test this but seems to be the general consensus on the internet.
-        cflags.append("-fno-omit-frame-pointer")
-        cflags.append("-mno-omit-leaf-frame-pointer")
+        cflags.append("-funwind-tables")
+        cflags.append("-fasynchronous-unwind-tables")
         cflags.append("-DZX_DEBUG_INFO")
     else:
-        # Disable frame pointer usage by compiler. it is useless when we are not in debug mode.
-        cflags.append("-fomit-frame-pointer")
-        cflags.append("-momit-leaf-frame-pointer")
+        # Disable unwind tables
+        cflags.append("-fno-unwind-tables")
+        cflags.append("-fno-asynchronous-unwind-tables")
 
     if config.dev_mode:
         cflags.append("-DZX_DEV")
@@ -223,21 +222,20 @@ def make_ldflags(build_path: str, config: Config) -> List[str]:
         "-fno-rtti",
         "-nostdlib++",
         "-fno-threadsafe-statics",
-        "-fno-asynchronous-unwind-tables",
         # optimization level
         f"-O{config.opt_level}",
+        "-fomit-frame-pointer",
+        "-momit-leaf-frame-pointer",
     ]
 
     if config.debug_info:
         ldflags.append("-gline-tables-only")
-        # Make sure to keep frame pointer because it is useful for debugger on optimized builds.
-        # Didn't specifically test this but seems to be the general consensus on the internet.
-        ldflags.append("-fno-omit-frame-pointer")
-        ldflags.append("-mno-omit-leaf-frame-pointer")
+        ldflags.append("-funwind-tables")
+        ldflags.append("-fasynchronous-unwind-tables")
     else:
-        # Disable frame pointer usage by compiler. it is useless when we are not in debug mode.
-        ldflags.append("-fomit-frame-pointer")
-        ldflags.append("-momit-leaf-frame-pointer")
+        # Disable unwind tables
+        ldflags.append("-fno-unwind-tables")
+        ldflags.append("-fno-asynchronous-unwind-tables")
         # tell linker to strip debug info
         ldflags.append("-Wl,-s")
 

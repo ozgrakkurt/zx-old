@@ -292,6 +292,22 @@ static ZXPanicPrintInfoStatus zx_panic_print_info(ZXErrTrace *err_trace,
       debug_abbrev_header->sh_offset, debug_abbrev_header->sh_size);
   ZXSlice<zx_u8> const debug_info_raw = file_buf.as_const().slice_unsafe(
       debug_info_header->sh_offset, debug_info_header->sh_size);
+  ZXSlice<zx_u8> const eh_frame_raw = file_buf.as_const().slice_unsafe(
+      eh_frame_header->sh_offset, eh_frame_header->sh_size);
+
+  // parse eh_frame
+  while (zx_u64 offset = 0; offset < eh_frame_raw.len();) {
+    zx_u64 length = eh_frame_raw.read_unaligned_unsafe<zx_u32>(offset);
+    offset = zx_add_unsafe_u64(offset, sizeof(zx_u32));
+    if (length == 0xffffffff__wbu) {
+      length = eh_frame_raw.read_unaligned_unsafe<zx_u64>(offset);
+      offset = zx_add_unsafe_u64(offset, sizeof(zx_u64));
+    } else if (length == 0) {
+      break;
+    }
+  }
+
+  // parse line info
   for (zx_u64 offset = 0; offset < debug_info_raw.len();) {
     zx_u64 unit_length = debug_info_raw.read_unaligned_unsafe<zx_u32>(offset);
     offset = zx_add_unsafe_u64(offset, 4);
