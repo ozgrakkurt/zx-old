@@ -9,7 +9,7 @@ static void assert(bool test) {
 
 int main(void) {
   // wrapping add
-  assert(12 == zx_wrapping_add_u8(ZX_U8_MAX, 2));
+  assert(1 == zx_wrapping_add_u8(ZX_U8_MAX, 2));
   assert(1 == zx_wrapping_add_u16(ZX_U16_MAX, 2));
   assert(1 == zx_wrapping_add_u32(ZX_U32_MAX, 2));
   assert(1 == zx_wrapping_add_u64(ZX_U64_MAX, 2));
@@ -402,6 +402,22 @@ int main(void) {
   zx_shr_u64(0, 64, &fail);
   assert(fail);
 
+  fail = false;
+  zx_shr_i8(1, 8, &fail);
+  assert(fail);
+
+  fail = false;
+  zx_shr_i16(0, 16, &fail);
+  assert(fail);
+
+  fail = false;
+  zx_shr_i32(1, 32, &fail);
+  assert(fail);
+
+  fail = false;
+  zx_shr_i64(0, 64, &fail);
+  assert(fail);
+
   // shr UB more
   fail = false;
   zx_shr_u8(1, 20, &fail);
@@ -417,6 +433,22 @@ int main(void) {
 
   fail = false;
   zx_shr_u64(1, ZX_U8_MAX, &fail);
+  assert(fail);
+
+  fail = false;
+  zx_shr_i8(1, 20, &fail);
+  assert(fail);
+
+  fail = false;
+  zx_shr_i16(1, 30, &fail);
+  assert(fail);
+
+  fail = false;
+  zx_shr_i32(1, 60, &fail);
+  assert(fail);
+
+  fail = false;
+  zx_shr_i64(1, ZX_U8_MAX, &fail);
   assert(fail);
 
   // shr no UB
@@ -448,6 +480,34 @@ int main(void) {
   assert(0 == zx_shr_unsafe_u64(0, 1));
   assert(1 == zx_shr_unsafe_u64(4, 2));
 
+  fail = false;
+  zx_shr_i8(0, 1, &fail);
+  assert(!fail);
+
+  assert(0 == zx_shr_unsafe_i8(0, 1));
+  assert(1 == zx_shr_unsafe_i8(4, 2));
+
+  fail = false;
+  zx_shr_i16(0, 1, &fail);
+  assert(!fail);
+
+  assert(0 == zx_shr_unsafe_i16(0, 1));
+  assert(1 == zx_shr_unsafe_i16(4, 2));
+
+  fail = false;
+  zx_shr_i32(0, 1, &fail);
+  assert(!fail);
+
+  assert(0 == zx_shr_unsafe_i32(0, 1));
+  assert(1 == zx_shr_unsafe_i32(4, 2));
+
+  fail = false;
+  zx_shr_i64(0, 1, &fail);
+  assert(!fail);
+
+  assert(0 == zx_shr_unsafe_i64(0, 1));
+  assert(-1 == zx_shr_unsafe_i64(-4, 2));
+
   // shl UB
   fail = false;
   zx_shl_u8(1, 8, &fail);
@@ -465,6 +525,22 @@ int main(void) {
   zx_shl_u64(0, 64, &fail);
   assert(fail);
 
+  fail = false;
+  zx_shl_i8(1, 8, &fail);
+  assert(fail);
+
+  fail = false;
+  zx_shl_i16(0, 16, &fail);
+  assert(fail);
+
+  fail = false;
+  zx_shl_i32(1, 32, &fail);
+  assert(fail);
+
+  fail = false;
+  zx_shl_i64(0, 64, &fail);
+  assert(fail);
+
   // shl UB more
   fail = false;
   zx_shl_u8(1, 20, &fail);
@@ -480,6 +556,22 @@ int main(void) {
 
   fail = false;
   zx_shl_u64(1, ZX_U8_MAX, &fail);
+  assert(fail);
+
+  fail = false;
+  zx_shl_i8(1, 20, &fail);
+  assert(fail);
+
+  fail = false;
+  zx_shl_i16(1, 30, &fail);
+  assert(fail);
+
+  fail = false;
+  zx_shl_i32(1, 60, &fail);
+  assert(fail);
+
+  fail = false;
+  zx_shl_i64(1, ZX_U8_MAX, &fail);
   assert(fail);
 
   // shl no UB
@@ -510,6 +602,34 @@ int main(void) {
 
   assert(0 == zx_shl_unsafe_u64(0, 1));
   assert(4 == zx_shl_unsafe_u64(1, 2));
+
+  fail = false;
+  zx_shl_i8(0, 1, &fail);
+  assert(!fail);
+
+  assert(0 == zx_shl_unsafe_i8(0, 1));
+  assert(4 == zx_shl_unsafe_i8(1, 2));
+
+  fail = false;
+  zx_shl_i16(0, 1, &fail);
+  assert(!fail);
+
+  assert(0 == zx_shl_unsafe_i16(0, 1));
+  assert(4 == zx_shl_unsafe_i16(1, 2));
+
+  fail = false;
+  zx_shl_i32(0, 1, &fail);
+  assert(!fail);
+
+  assert(0 == zx_shl_unsafe_i32(0, 1));
+  assert(4 == zx_shl_unsafe_i32(1, 2));
+
+  fail = false;
+  zx_shl_i64(0, 1, &fail);
+  assert(!fail);
+
+  assert(0 == zx_shl_unsafe_i64(0, 1));
+  assert(4 == zx_shl_unsafe_i64(1, 2));
 
   // ctz
   assert(3 == zx_ctz_u8(0b01111000));

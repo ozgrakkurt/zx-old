@@ -713,6 +713,21 @@ constexpr static inline zx_u64 zx_shl_u64(zx_u64 a, zx_u8 amount,
                                           bool *failure) {
   return zx_shl_<zx_u64>(a, amount, failure);
 }
+constexpr static inline zx_i8 zx_shl_i8(zx_i8 a, zx_u8 amount, bool *failure) {
+  return zx_shl_<zx_i8>(a, amount, failure);
+}
+constexpr static inline zx_i16 zx_shl_i16(zx_i16 a, zx_u8 amount,
+                                          bool *failure) {
+  return zx_shl_<zx_i16>(a, amount, failure);
+}
+constexpr static inline zx_i32 zx_shl_i32(zx_i32 a, zx_u8 amount,
+                                          bool *failure) {
+  return zx_shl_<zx_i32>(a, amount, failure);
+}
+constexpr static inline zx_i64 zx_shl_i64(zx_i64 a, zx_u8 amount,
+                                          bool *failure) {
+  return zx_shl_<zx_i64>(a, amount, failure);
+}
 
 template <typename T>
 constexpr static inline T zx_shl_unsafe_(T a, zx_u8 amount) {
@@ -737,6 +752,18 @@ constexpr static inline zx_u32 zx_shl_unsafe_u32(zx_u32 a, zx_u8 amount) {
 }
 constexpr static inline zx_u64 zx_shl_unsafe_u64(zx_u64 a, zx_u8 amount) {
   return zx_shl_unsafe_<zx_u64>(a, amount);
+}
+constexpr static inline zx_i8 zx_shl_unsafe_i8(zx_i8 a, zx_u8 amount) {
+  return zx_shl_unsafe_<zx_i8>(a, amount);
+}
+constexpr static inline zx_i16 zx_shl_unsafe_i16(zx_i16 a, zx_u8 amount) {
+  return zx_shl_unsafe_<zx_i16>(a, amount);
+}
+constexpr static inline zx_i32 zx_shl_unsafe_i32(zx_i32 a, zx_u8 amount) {
+  return zx_shl_unsafe_<zx_i32>(a, amount);
+}
+constexpr static inline zx_i64 zx_shl_unsafe_i64(zx_i64 a, zx_u8 amount) {
+  return zx_shl_unsafe_<zx_i64>(a, amount);
 }
 
 template <typename T>
@@ -769,6 +796,21 @@ constexpr static inline zx_u64 zx_shr_u64(zx_u64 a, zx_u8 amount,
                                           bool *failure) {
   return zx_shr_<zx_u64>(a, amount, failure);
 }
+constexpr static inline zx_i8 zx_shr_i8(zx_i8 a, zx_u8 amount, bool *failure) {
+  return zx_shr_<zx_i8>(a, amount, failure);
+}
+constexpr static inline zx_i16 zx_shr_i16(zx_i16 a, zx_u8 amount,
+                                          bool *failure) {
+  return zx_shr_<zx_i16>(a, amount, failure);
+}
+constexpr static inline zx_i32 zx_shr_i32(zx_i32 a, zx_u8 amount,
+                                          bool *failure) {
+  return zx_shr_<zx_i32>(a, amount, failure);
+}
+constexpr static inline zx_i64 zx_shr_i64(zx_i64 a, zx_u8 amount,
+                                          bool *failure) {
+  return zx_shr_<zx_i64>(a, amount, failure);
+}
 
 template <typename T>
 constexpr static inline T zx_shr_unsafe_(T a, zx_u8 amount) {
@@ -793,6 +835,18 @@ constexpr static inline zx_u32 zx_shr_unsafe_u32(zx_u32 a, zx_u8 amount) {
 }
 constexpr static inline zx_u64 zx_shr_unsafe_u64(zx_u64 a, zx_u8 amount) {
   return zx_shr_unsafe_<zx_u64>(a, amount);
+}
+constexpr static inline zx_i8 zx_shr_unsafe_i8(zx_i8 a, zx_u8 amount) {
+  return zx_shr_unsafe_<zx_i8>(a, amount);
+}
+constexpr static inline zx_i16 zx_shr_unsafe_i16(zx_i16 a, zx_u8 amount) {
+  return zx_shr_unsafe_<zx_i16>(a, amount);
+}
+constexpr static inline zx_i32 zx_shr_unsafe_i32(zx_i32 a, zx_u8 amount) {
+  return zx_shr_unsafe_<zx_i32>(a, amount);
+}
+constexpr static inline zx_i64 zx_shr_unsafe_i64(zx_i64 a, zx_u8 amount) {
+  return zx_shr_unsafe_<zx_i64>(a, amount);
 }
 
 template <typename T>

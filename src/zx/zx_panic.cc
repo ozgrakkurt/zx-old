@@ -296,7 +296,7 @@ static ZXPanicPrintInfoStatus zx_panic_print_info(ZXErrTrace *err_trace,
       eh_frame_header->sh_offset, eh_frame_header->sh_size);
 
   // parse eh_frame
-  while (zx_u64 offset = 0; offset < eh_frame_raw.len();) {
+  for (zx_u64 offset = 0; offset < eh_frame_raw.len();) {
     zx_u64 length = eh_frame_raw.read_unaligned_unsafe<zx_u32>(offset);
     offset = zx_add_unsafe_u64(offset, sizeof(zx_u32));
     if (length == 0xffffffff__wbu) {
