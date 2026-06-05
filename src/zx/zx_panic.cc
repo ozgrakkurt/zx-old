@@ -7,13 +7,13 @@
 #endif
 
 #include <zx/zx_alloc.h>
-#include <zx/zx_arr.h>
 #include <zx/zx_assert.h>
 #include <zx/zx_dwarf_c.h>
 #include <zx/zx_elf_c.h>
 #include <zx/zx_err_trace.h>
 #include <zx/zx_fmt.h>
 #include <zx/zx_int.h>
+#include <zx/zx_list.h>
 #include <zx/zx_page_alloc.h>
 #include <zx/zx_print.h>
 #include <zx/zx_slice.h>
@@ -22,8 +22,8 @@
 
 enum class [[nodiscard]] ZXBacktraceStatus : zx_u8_c {
   Ok = 0,
-  ArrayPushFail,
-  ArrayOutOfCapacity,
+  ListPushFail,
+  ListOutOfCapacity,
   Nullptr,
 };
 
@@ -48,7 +48,7 @@ enum class [[nodiscard]] ZXBacktraceStatus : zx_u8_c {
 //     }
 //     case ZXArrPushStatus::OutOfCapacity: {
 //       zx_err_trace_push(err_trace, ZX_SRC_LOC, (zx_u8)push_status);
-//       return ZXBacktraceStatus::ArrayOutOfCapacity;
+//       return ZXBacktraceStatus::OutOfCapacity;
 //     }
 //     default: {
 //       zx_err_trace_push(err_trace, ZX_SRC_LOC, (zx_u8)push_status);
@@ -169,9 +169,9 @@ static ZXPanicPrintInfoStatus zx_panic_print_info(ZXErrTrace *err_trace,
   }
   }
 
-  ZXArr<zx_u64> addrs;
-  if (ZXArrInitStatus const status = ZXArr<zx_u64>::init(alloc, 64, &addrs);
-      ZXArrInitStatus::Ok != status) {
+  ZXList<zx_u64> addrs;
+  if (ZXListInitStatus const status = ZXList<zx_u64>::init(alloc, 64, &addrs);
+      ZXListInitStatus::Ok != status) {
     zx_err_trace_push(err_trace, ZX_SRC_LOC, (zx_u8)status);
     return ZXPanicPrintInfoStatus::AddrsInitFail;
   }

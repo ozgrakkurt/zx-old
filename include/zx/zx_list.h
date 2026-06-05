@@ -1,30 +1,30 @@
-#ifndef ZX_ARR_H
-#define ZX_ARR_H
+#ifndef ZX_LIST_H
+#define ZX_LIST_H
 
 #include <zx/zx_int.h>
 #include <zx/zx_slice.h>
 
-enum class [[nodiscard]] ZXArrInitStatus : zx_u8_c {
+enum class [[nodiscard]] ZXListInitStatus : zx_u8_c {
   Ok = 0,
   OutOfMemory,
   AllocFail,
   Nullptr,
 };
 
-enum class [[nodiscard]] ZXArrPushStatus : zx_u8_c {
+enum class [[nodiscard]] ZXListPushStatus : zx_u8_c {
   Ok = 0,
   OutOfCapacity,
   Nullptr,
 };
 
-template <typename T> struct ZXArr {
+template <typename T> struct ZXList {
   ZXSliceMut<T> m_entries;
   zx_u64 m_offset;
 
-  static inline ZXArrInitStatus init(ZXAlloc *alloc, zx_u64 capacity,
-                                     ZXArr<T> *out) {
+  static inline ZXListInitStatus init(ZXAlloc *alloc, zx_u64 capacity,
+                                      ZXList<T> *out) {
     if (alloc == nullptr || out == nullptr) {
-      return ZXArrInitStatus::Nullptr;
+      return ZXListInitStatus::Nullptr;
     }
 
     ZXSliceMut<T> entries;
@@ -34,20 +34,20 @@ template <typename T> struct ZXArr {
       break;
     }
     case ZXAllocStatus::OutOfMemory: {
-      return ZXArrInitStatus::OutOfMemory;
+      return ZXListInitStatus::OutOfMemory;
       break;
     }
     default: {
-      return ZXArrInitStatus::AllocFail;
+      return ZXListInitStatus::AllocFail;
       break;
     }
     }
 
-    *out = ZXArr{
+    *out = ZXList{
         .m_entries = entries,
         .m_offset = 0,
     };
-    return ZXArrInitStatus::Ok;
+    return ZXListInitStatus::Ok;
   }
 
   inline zx_u64 capacity() const { return this->m_entries.len(); }
@@ -74,20 +74,20 @@ template <typename T> struct ZXArr {
     this->m_offset = zx_add_unsafe_u64(offset, 1);
   }
 
-  inline ZXArrPushStatus push(T const *entry) {
+  inline ZXListPushStatus push(T const *entry) {
     if (entry == nullptr) {
-      return ZXArrPushStatus::Nullptr;
+      return ZXListPushStatus::Nullptr;
     }
 
     if (this->capacity_left() == 0) {
-      return ZXArrPushStatus::OutOfCapacity;
+      return ZXListPushStatus::OutOfCapacity;
     }
 
     zx_u64 const offset = this->m_offset;
     this->m_entries.write_unsafe(offset, *entry);
     this->m_offset = zx_add_unsafe_u64(offset, 1);
 
-    return ZXArrPushStatus::Ok;
+    return ZXListPushStatus::Ok;
   }
 };
 
