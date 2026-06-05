@@ -70,10 +70,6 @@ static inline ZXLeb128Status zx_uleb128_to_u64(ZXSlice<zx_u8> in,
       *num = out;
       *offset = offs;
       return ZXLeb128Status::Ok;
-    } else if (zx_leb128_getval_(byte) == 0) {
-      *num = 0;
-      *offset = offs;
-      return ZXLeb128Status::InvalidInput;
     }
   }
 
@@ -142,10 +138,6 @@ static inline ZXLeb128Status zx_sleb128_to_i64(ZXSlice<zx_u8> in,
       *num = (zx_i64)out;
       *offset = offs;
       return ZXLeb128Status::Ok;
-    } else if (zx_leb128_getval_(byte) == 0) {
-      *num = 0;
-      *offset = offs;
-      return ZXLeb128Status::InvalidInput;
     }
   }
 

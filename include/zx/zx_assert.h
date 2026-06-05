@@ -5,7 +5,8 @@
 
 static inline void zx_assert_always(bool cond) {
   if (!cond) [[unlikely]] {
-    zx_panic();
+    // zx_panic();
+    __builtin_trap();
   }
 }
 
