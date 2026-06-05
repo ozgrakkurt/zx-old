@@ -25,6 +25,7 @@ ZX: Library = Library(
             "zx_queue_test",
             "zx_slab_test",
             "zx_leb128_test",
+            "zx_list_test",
         ]
     ),
     bench_targets=set(["zx_rapidhash_v3_bench", "zx_xoshiro256_bench"]),

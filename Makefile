@@ -1,9 +1,9 @@
 cfmt:
 	clang-format -i -style=file src/*/*.cc src/*/*.h include/*/*.h
 pfmt:
-	uvx ruff format *.py
+	uvx --offline ruff format *.py
 pchk: pfmt
-	uvx ty check *.py
+	uvx --offline ty check *.py
 git_repack:
 	git repack -a -d -f --depth=250 --window=250
 cfg: pfmt pchk

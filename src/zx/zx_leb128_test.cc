@@ -3,10 +3,4 @@
 #include <zx/zx_leb128.h>
 #include <zx/zx_slice.h>
 
-static void test_read_multiple_with_overflow() {}
-
-int main(void) {
-  test_read_multiple_with_overflow();
-
-  return 0;
-}
+int main(void) { return 0; }
