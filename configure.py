@@ -25,6 +25,9 @@ class Config:
     ar: str
     objdump: str
     llvm_config: str
+    link_llvm: bool
+    link_libc: bool
+    static_link: bool
     march: str
     thin_lto: bool
     opt_level: int
@@ -123,6 +126,13 @@ def validate_config(config: Config) -> None:
     )
 
 
+def run_llvm_config(args: List[str]) -> str:
+    result = subprocess.run(
+        ["llvm-config"] + args, capture_output=True, text=True, check=True
+    )
+    return result.stdout.strip()
+
+
 def make_cflags(config: Config) -> List[str]:
     cflags = [
         # Warnings.
@@ -184,6 +194,17 @@ def make_cflags(config: Config) -> List[str]:
         "-momit-leaf-frame-pointer",
     ]
 
+    if config.link_llvm:
+        cflags.append(run_llvm_config(["-cxxflags"]))
+        cflags.append("-DZX_LINK_LLVM")
+
+    if not config.link_libc:
+        cflags.append("-nostdlib")
+        cflags.append("-nostdinc")
+        cflags.append("--target=x86_64-linux-none")
+    else:
+        cflags.append("-DZX_LINK_LIBC")
+
     if config.debug_info:
         cflags.append("-gline-tables-only")
         cflags.append("-funwind-tables")
@@ -227,6 +248,17 @@ def make_ldflags(build_path: str, config: Config) -> List[str]:
         "-fomit-frame-pointer",
         "-momit-leaf-frame-pointer",
     ]
+
+    if config.link_llvm:
+        ldflags.append(run_llvm_config(["-ldflags"]))
+
+    if config.static_link:
+        ldflags.append("-static")
+
+    if not config.link_libc:
+        ldflags.append("-nostdlib")
+        ldflags.append("-nostdinc")
+        ldflags.append("--target=x86_64-linux-none")
 
     if config.debug_info:
         ldflags.append("-gline-tables-only")
@@ -472,15 +504,8 @@ def gen_ninja_build(build_path: str, config: Config, project: Project) -> None:
 
     nw.comment("build flags")
 
-    result = subprocess.run(
-        ["llvm-config", "--cxxflags"], capture_output=True, text=True, check=True
-    )
-    nw.variable("cflags", " ".join(cflags) + " " + result.stdout.strip())
-
-    result = subprocess.run(
-        ["llvm-config", "--ldflags"], capture_output=True, text=True, check=True
-    )
-    nw.variable("ldflags", " ".join(ldflags) + " " + result.stdout.strip())
+    nw.variable("cflags", " ".join(cflags))
+    nw.variable("ldflags", " ".join(ldflags))
 
     nw.newline()
 
@@ -636,6 +661,9 @@ def reconstruct_command(args: argparse.Namespace) -> str:
         "dev-mode": args.dev_mode,
         "debug-info": args.debug_info,
         "fuzz": args.fuzz,
+        "link-llvm": args.link_llvm,
+        "link-libc": args.link_libc,
+        "static-link": args.static_link,
     }
 
     out_flags = []
@@ -720,6 +748,24 @@ if __name__ == "__main__":
         default=False,
         help="enable fuzz instrumentation and fuzz targets. also disables test/bench/exe targets.",
     )
+    parser.add_argument(
+        "--link-libc",
+        action=argparse.BooleanOptionalAction,
+        default=False,
+        help="Link with libc",
+    )
+    parser.add_argument(
+        "--link-llvm",
+        action=argparse.BooleanOptionalAction,
+        default=False,
+        help="Link with llvm",
+    )
+    parser.add_argument(
+        "--static-link",
+        action=argparse.BooleanOptionalAction,
+        default=True,
+        help="Use static linking",
+    )
 
     args = parser.parse_args()
 
@@ -737,6 +783,9 @@ if __name__ == "__main__":
         dev_mode=args.dev_mode,
         debug_info=args.debug_info,
         fuzz=args.fuzz,
+        link_libc=args.link_libc,
+        link_llvm=args.link_llvm,
+        static_link=args.static_link,
     )
 
     build_path = os.path.join(ROOTPATH, args.build_dir)

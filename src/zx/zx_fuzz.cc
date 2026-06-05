@@ -11,8 +11,9 @@
 // CONFIG
 constexpr zx_u64 ZX_FUZZ_INPUT_CAP = zx_u64{1} << 14;
 constexpr zx_u64 ZX_FUZZ_SIGNATURE_DEDUP_CAP = 4096;
-constexpr zx_u64 ZX_FUZZ_MAX_SECONDS = 30;
 constexpr zx_u64 ZX_FUZZ_MAGIC[] = {0, ZX_U64_MAX};
+constexpr zx_u64 ZX_FUZZ_DEFAULT_ITER_LIMIT = zx_u64{1__wbu} << 18;
+constexpr zx_u64 ZX_FUZZ_DEFAULT_TIME_LIMIT_SECS = 30;
 constexpr zx_u64 ZX_FUZZ_N_MAGIC =
     sizeof(ZX_FUZZ_MAGIC) / sizeof(ZX_FUZZ_MAGIC[0]);
 // CONFIG
@@ -205,7 +206,7 @@ static bool zx_fuzz_push_signature(ZXSliceMut<zx_u32> signature_dedup,
 
 static ZXFuzzResult zx_fuzz_wrapper(ZXFuzzCtx *ctx, zx_u64 base_score,
                                     zx_u64 mut_idx, void *usr_ctx,
-                                    zx_fuzz_one_fn fuzz_one, zx_u64* iter_no) {
+                                    zx_fuzz_one_fn fuzz_one, zx_u64 *iter_no) {
   ZXFuzzInput fuzz_input = ZXFuzzInput::init_(ctx->fuzz_input.as_const());
   zx_u32 *coverage = ctx->coverage.ptr();
   zx_u64 coverage_len = ctx->coverage.len();
@@ -234,7 +235,7 @@ static ZXFuzzResult zx_fuzz_wrapper(ZXFuzzCtx *ctx, zx_u64 base_score,
   }
 
   zx_fuzz_assert(iter_no != nullptr);
-  *iter_no = zx_add_unsafe_u64(iter_no, 1);
+  *iter_no = zx_add_unsafe_u64(*iter_no, 1);
 
   return ZXFuzzResult{
       .score = score,
@@ -243,7 +244,8 @@ static ZXFuzzResult zx_fuzz_wrapper(ZXFuzzCtx *ctx, zx_u64 base_score,
   };
 }
 
-void zx_fuzz(zx_u64 max_n_iter, ZXAlloc *alloc, void *usr_ctx, zx_fuzz_one_fn fuzz_one) {
+void zx_fuzz_with_cfg(ZXAlloc *alloc, void *usr_ctx, zx_fuzz_one_fn fuzz_one,
+                      ZXFuzzConfig const *cfg) {
   ZXXoshiro256 rand = ZXXoshiro256::init(0);
 
   ZXFuzzCtx ctx = zx_fuzz_ctx_alloc(alloc);
@@ -254,8 +256,18 @@ void zx_fuzz(zx_u64 max_n_iter, ZXAlloc *alloc, void *usr_ctx, zx_fuzz_one_fn fu
 
   zx_u64 mut_idx = 0;
 
+  zx_u64 const iter_limit = cfg->iter_limit;
+  zx_u64 const time_limit_secs = cfg->time_limit_secs;
+
+  zx_u64 const time_limit_ns =
+      zx_mul_unsafe_u64(time_limit_secs, zx_u64{1'000'000'000__wbu});
+
+  ZXTimeInfo time_info;
+  zx_fuzz_assert(ZXTimeStatus::Ok == ZXTimeInfo::init(&time_info));
+  ZXTimer timer = ZXTimer::init(time_info);
+
   zx_u64 iter_no = 0;
-  while (iter_no < max_n_iter) {
+  while (iter_no < iter_limit && timer.elapsed() < time_limit_ns) {
     zx_fuzz_assert(mut_idx < ctx.fuzz_input.len());
 
     // do a baseline run
@@ -267,14 +279,16 @@ void zx_fuzz(zx_u64 max_n_iter, ZXAlloc *alloc, void *usr_ctx, zx_fuzz_one_fn fu
     // try magic values
     for (zx_u64 i = 0; i < ZX_FUZZ_N_MAGIC; i++) {
       ctx.fuzz_input.write_unsafe(mut_idx, ZX_FUZZ_MAGIC[i]);
-      zx_fuzz_wrapper(&ctx, baseline_result.score, mut_idx, usr_ctx, fuzz_one, &iter_no);
+      zx_fuzz_wrapper(&ctx, baseline_result.score, mut_idx, usr_ctx, fuzz_one,
+                      &iter_no);
     }
 
     // try previous interesting values for this mut_idx
     ZXFuzzSlotSet const *slot_set = ctx.slot_sets.offset_unsafe(mut_idx);
     for (zx_u32 i = 0; i < slot_set->n_filled; i++) {
       ctx.fuzz_input.write_unsafe(mut_idx, slot_set->values[i]);
-      zx_fuzz_wrapper(&ctx, baseline_result.score, mut_idx, usr_ctx, fuzz_one, &iter_no);
+      zx_fuzz_wrapper(&ctx, baseline_result.score, mut_idx, usr_ctx, fuzz_one,
+                      &iter_no);
     }
 
     // try some random values in this position
@@ -287,8 +301,8 @@ void zx_fuzz(zx_u64 max_n_iter, ZXAlloc *alloc, void *usr_ctx, zx_fuzz_one_fn fu
       zx_u64 const new_val = rand.next();
       ctx.fuzz_input.write_unsafe(mut_idx, new_val);
 
-      ZXFuzzResult const result = zx_fuzz_wrapper(&ctx, baseline_result.score,
-                                                  mut_idx, usr_ctx, fuzz_one, &iter_no);
+      ZXFuzzResult const result = zx_fuzz_wrapper(
+          &ctx, baseline_result.score, mut_idx, usr_ctx, fuzz_one, &iter_no);
       if (result.improvement) {
         stall = 0;
       } else {
@@ -304,6 +318,14 @@ void zx_fuzz(zx_u64 max_n_iter, ZXAlloc *alloc, void *usr_ctx, zx_fuzz_one_fn fu
       ctx.fuzz_input.write_unsafe(mut_idx, rand.next());
     }
   }
+}
+
+void zx_fuzz(ZXAlloc *alloc, void *usr_ctx, zx_fuzz_one_fn fuzz_one) {
+  ZXFuzzConfig const config = ZXFuzzConfig{
+      .time_limit_secs = ZX_FUZZ_DEFAULT_TIME_LIMIT_SECS,
+      .iter_limit = ZX_FUZZ_DEFAULT_ITER_LIMIT,
+  };
+  zx_fuzz_with_cfg(alloc, usr_ctx, fuzz_one, &config);
 }
 
 #endif // #ifdef ZX_FUZZ

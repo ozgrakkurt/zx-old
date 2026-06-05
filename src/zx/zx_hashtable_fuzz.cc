@@ -306,6 +306,6 @@ int main(void) {
   Ctx ctx = Ctx{
       .alloc = op_alloc,
   };
-  zx_fuzz(1 << 18, &fuzz_alloc, (void *)&ctx, fuzz_one);
+  zx_fuzz(&fuzz_alloc, (void *)&ctx, fuzz_one);
   return 0;
 }

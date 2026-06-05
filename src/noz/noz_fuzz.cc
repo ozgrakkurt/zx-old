@@ -110,6 +110,6 @@ int main(void) {
       .compressed = make_alloc(8192),
       .compressed_copy = make_alloc(8192),
   };
-  zx_fuzz(1 << 18, &alloc, (void *)&ctx, fuzz_one);
+  zx_fuzz(&alloc, (void *)&ctx, fuzz_one);
   return 0;
 }
