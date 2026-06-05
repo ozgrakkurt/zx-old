@@ -122,6 +122,6 @@ int main(void) {
   Ctx const ctx = Ctx{
       .mem = make_alloc(8192),
   };
-  zx_fuzz(&alloc, (void *)&ctx, fuzz_one);
+  zx_fuzz(1 << 18, &alloc, (void *)&ctx, fuzz_one);
   return 0;
 }

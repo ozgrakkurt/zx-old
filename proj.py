@@ -7,6 +7,7 @@ ZX: Library = Library(
         [
             "zx_fuzz",
             "zx_panic",
+            "zx_libc",
         ]
     ),
     test_targets=set(
@@ -26,9 +27,10 @@ ZX: Library = Library(
             "zx_slab_test",
             "zx_leb128_test",
             "zx_list_test",
+            "zx_libc_test",
         ]
     ),
-    bench_targets=set(["zx_rapidhash_v3_bench", "zx_xoshiro256_bench"]),
+    bench_targets=set(["zx_rapidhash_v3_bench", "zx_xoshiro256_bench", "zx_libc_bench"]),
     fuzz_targets=set(
         [
             "zx_strlen_fuzz",
@@ -40,6 +42,7 @@ ZX: Library = Library(
             "zx_queue_fuzz",
             "zx_slab_fuzz",
             "zx_alloc_fuzz",
+            "zx_leb128_fuzz",
         ]
     ),
 )

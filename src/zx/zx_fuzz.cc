@@ -12,7 +12,6 @@
 constexpr zx_u64 ZX_FUZZ_INPUT_CAP = zx_u64{1} << 14;
 constexpr zx_u64 ZX_FUZZ_SIGNATURE_DEDUP_CAP = 4096;
 constexpr zx_u64 ZX_FUZZ_MAX_SECONDS = 30;
-constexpr zx_u64 ZX_FUZZ_MAX_N_ITER = zx_u64{1} << 18;
 constexpr zx_u64 ZX_FUZZ_MAGIC[] = {0, ZX_U64_MAX};
 constexpr zx_u64 ZX_FUZZ_N_MAGIC =
     sizeof(ZX_FUZZ_MAGIC) / sizeof(ZX_FUZZ_MAGIC[0]);
@@ -206,7 +205,7 @@ static bool zx_fuzz_push_signature(ZXSliceMut<zx_u32> signature_dedup,
 
 static ZXFuzzResult zx_fuzz_wrapper(ZXFuzzCtx *ctx, zx_u64 base_score,
                                     zx_u64 mut_idx, void *usr_ctx,
-                                    zx_fuzz_one_fn fuzz_one) {
+                                    zx_fuzz_one_fn fuzz_one, zx_u64* iter_no) {
   ZXFuzzInput fuzz_input = ZXFuzzInput::init_(ctx->fuzz_input.as_const());
   zx_u32 *coverage = ctx->coverage.ptr();
   zx_u64 coverage_len = ctx->coverage.len();
@@ -234,6 +233,9 @@ static ZXFuzzResult zx_fuzz_wrapper(ZXFuzzCtx *ctx, zx_u64 base_score,
                           ctx->fuzz_input.read_unsafe(mut_idx));
   }
 
+  zx_fuzz_assert(iter_no != nullptr);
+  *iter_no = zx_add_unsafe_u64(iter_no, 1);
+
   return ZXFuzzResult{
       .score = score,
       .improvement = improvement,
@@ -241,7 +243,7 @@ static ZXFuzzResult zx_fuzz_wrapper(ZXFuzzCtx *ctx, zx_u64 base_score,
   };
 }
 
-void zx_fuzz(ZXAlloc *alloc, void *usr_ctx, zx_fuzz_one_fn fuzz_one) {
+void zx_fuzz(zx_u64 max_n_iter, ZXAlloc *alloc, void *usr_ctx, zx_fuzz_one_fn fuzz_one) {
   ZXXoshiro256 rand = ZXXoshiro256::init(0);
 
   ZXFuzzCtx ctx = zx_fuzz_ctx_alloc(alloc);
@@ -252,32 +254,27 @@ void zx_fuzz(ZXAlloc *alloc, void *usr_ctx, zx_fuzz_one_fn fuzz_one) {
 
   zx_u64 mut_idx = 0;
 
-  ZXTimeInfo time_info;
-  zx_fuzz_assert(ZXTimeStatus::Ok == ZXTimeInfo::init(&time_info));
-  ZXTimer timer = ZXTimer::init(time_info);
-  for (zx_u64 iter_no = 0;
-       iter_no < ZX_FUZZ_MAX_N_ITER &&
-       timer.elapsed() < zx_mul_unsafe_u64(ZX_FUZZ_MAX_SECONDS, 1'000'000'000);
-       iter_no++) {
+  zx_u64 iter_no = 0;
+  while (iter_no < max_n_iter) {
     zx_fuzz_assert(mut_idx < ctx.fuzz_input.len());
 
     // do a baseline run
     ZXFuzzResult const baseline_result =
-        zx_fuzz_wrapper(&ctx, ZX_U64_MAX, mut_idx, usr_ctx, fuzz_one);
+        zx_fuzz_wrapper(&ctx, ZX_U64_MAX, mut_idx, usr_ctx, fuzz_one, &iter_no);
     // select a random position to mutate
     mut_idx = zx_rand_mod_u64(rand.next(), baseline_result.consumed_count);
 
     // try magic values
     for (zx_u64 i = 0; i < ZX_FUZZ_N_MAGIC; i++) {
       ctx.fuzz_input.write_unsafe(mut_idx, ZX_FUZZ_MAGIC[i]);
-      zx_fuzz_wrapper(&ctx, baseline_result.score, mut_idx, usr_ctx, fuzz_one);
+      zx_fuzz_wrapper(&ctx, baseline_result.score, mut_idx, usr_ctx, fuzz_one, &iter_no);
     }
 
     // try previous interesting values for this mut_idx
     ZXFuzzSlotSet const *slot_set = ctx.slot_sets.offset_unsafe(mut_idx);
     for (zx_u32 i = 0; i < slot_set->n_filled; i++) {
       ctx.fuzz_input.write_unsafe(mut_idx, slot_set->values[i]);
-      zx_fuzz_wrapper(&ctx, baseline_result.score, mut_idx, usr_ctx, fuzz_one);
+      zx_fuzz_wrapper(&ctx, baseline_result.score, mut_idx, usr_ctx, fuzz_one, &iter_no);
     }
 
     // try some random values in this position
@@ -291,7 +288,7 @@ void zx_fuzz(ZXAlloc *alloc, void *usr_ctx, zx_fuzz_one_fn fuzz_one) {
       ctx.fuzz_input.write_unsafe(mut_idx, new_val);
 
       ZXFuzzResult const result = zx_fuzz_wrapper(&ctx, baseline_result.score,
-                                                  mut_idx, usr_ctx, fuzz_one);
+                                                  mut_idx, usr_ctx, fuzz_one, &iter_no);
       if (result.improvement) {
         stall = 0;
       } else {

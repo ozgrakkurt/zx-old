@@ -34,6 +34,6 @@ struct ZXFuzzInput {
 };
 
 typedef void (*zx_fuzz_one_fn)(void *usr_ctx, ZXFuzzInput *fuzz_input);
-void zx_fuzz(ZXAlloc *alloc, void *usr_ctx, zx_fuzz_one_fn fuzz_one);
+void zx_fuzz(zx_u64 max_n_iter, ZXAlloc *alloc, void *usr_ctx, zx_fuzz_one_fn fuzz_one);
 
 #endif
