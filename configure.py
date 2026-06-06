@@ -206,7 +206,9 @@ def make_cflags(config: Config) -> List[str]:
         cflags.append("-DZX_LINK_LIBC")
 
     if config.debug_info:
-        cflags.append("-gline-tables-only")
+        cflags.append("-g1")
+        cflags.append("-gdwarf64")
+        cflags.append("-gdwarf-5")
         cflags.append("-funwind-tables")
         cflags.append("-fasynchronous-unwind-tables")
         cflags.append("-DZX_DEBUG_INFO")
@@ -261,7 +263,9 @@ def make_ldflags(build_path: str, config: Config) -> List[str]:
         ldflags.append("--target=x86_64-linux-none")
 
     if config.debug_info:
-        ldflags.append("-gline-tables-only")
+        ldflags.append("-g1")
+        ldflags.append("-gdwarf64")
+        ldflags.append("-gdwarf-5")
         ldflags.append("-funwind-tables")
         ldflags.append("-fasynchronous-unwind-tables")
     else:
@@ -728,7 +732,7 @@ if __name__ == "__main__":
         help="enable LLVM thin-lto",
     )
     parser.add_argument(
-        "--opt-level", type=int, default=2, help="Optimization level, can be 0, 1, 2, 3"
+        "--opt-level", type=int, default=0, help="Optimization level, can be 0, 1, 2, 3"
     )
     parser.add_argument(
         "--dev-mode",

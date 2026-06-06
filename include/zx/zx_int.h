@@ -1005,4 +1005,23 @@ constexpr static inline zx_i64 zx_cast_unsafe_to_i64(T a) {
   return zx_int_cast_unsafe_<zx_i64, T>(a);
 }
 
+template <typename T> constexpr static inline zx_u8 zx_ilog2_(T num) {
+  if (num == 0) {
+    return 1;
+  }
+  return zx_sub_unsafe_u8(zx_bit_width_<T>(num), 1);
+}
+constexpr static inline zx_u8 zx_ilog2_u8(zx_u8 num) {
+  return zx_ilog2_<zx_u8>(num);
+}
+constexpr static inline zx_u8 zx_ilog2_u16(zx_u16 num) {
+  return zx_ilog2_<zx_u16>(num);
+}
+constexpr static inline zx_u8 zx_ilog2_u32(zx_u32 num) {
+  return zx_ilog2_<zx_u32>(num);
+}
+constexpr static inline zx_u8 zx_ilog2_u64(zx_u64 num) {
+  return zx_ilog2_<zx_u64>(num);
+}
+
 #endif
