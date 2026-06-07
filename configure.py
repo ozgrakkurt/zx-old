@@ -121,9 +121,7 @@ def validate_project(project: Project) -> None:
 
 
 def validate_config(config: Config) -> None:
-    assert config.opt_level >= 0 and config.opt_level <= 3, (
-        "profile optimization level has to be 0, 1, 2 or 3"
-    )
+    pass
 
 
 def run_llvm_config(args: List[str]) -> str:
@@ -732,7 +730,7 @@ if __name__ == "__main__":
         help="enable LLVM thin-lto",
     )
     parser.add_argument(
-        "--opt-level", type=int, default=0, help="Optimization level, can be 0, 1, 2, 3"
+        "--opt-level", default="g", help="Optimization level, can be 0, 1, 2, 3, g, fast etc."
     )
     parser.add_argument(
         "--dev-mode",

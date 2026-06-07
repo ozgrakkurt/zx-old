@@ -133,6 +133,286 @@ cleanup:
   return out_status;
 }
 
+struct ZXPanicEhFrame {
+  ZXSlice<zx_u8> m_eh_frame_hdr_table;
+  ZXSlice<zx_u8> m_eh_frame;
+  zx_u64 m_fde_count;
+  zx_u8 m_table_ptr_enc;
+
+  constexpr zx_u8 EH_VALUE_MASK = 0x0f;
+  constexpr zx_u8 EH_APP_MASK = 0xf0;
+
+  enum EH_Value : zx_u8_c {
+    EH_Value_Omit = 0xff,
+    EH_Value_Uleb128 = 0x01,
+    EH_Value_Udata2 = 0x02,
+    EH_Value_Udata4 = 0x03,
+    EH_Value_Udata8 = 0x04,
+    EH_Value_Sleb128 = 0x09,
+    EH_Value_Sdata2 = 0x0A,
+    EH_Value_Sdata4 = 0x0B,
+    EH_Value_Sdata8 = 0x0C,
+  };
+
+  enum EH_App : zx_u8_c {
+    EH_App_Absptr = 0x00,
+    EH_App_Pcrel = 0x10,
+    EH_App_Datarel = 0x30,
+    EH_App_Omit = 0xff,
+  };
+
+  enum class [[nodiscard]] InitStatus : zx_u8_c {
+    Ok = 0,
+    Nullptr,
+    InvalidInput,
+  };
+
+  static inline InitStatus init(ZXErrTrace *err_trace,
+                                ZXSlice<zx_u8> eh_frame_hdr_raw,
+                                ZXSlice<zx_u8> eh_frame_raw,
+                                ZXPanicEhFrame *out) {
+    if (out == nullptr) {
+      return InitStatus::Nullptr;
+    }
+
+    if (eh_frame_hdr_raw.len() < 4) {
+      zx_err_trace_push(err_trace, ZX_SRC_LOC, 0);
+      return InitStatus::InvalidInput;
+    }
+    zx_u8 const version = eh_frame_hdr_raw.read_unsafe(0);
+    zx_u8 const eh_frame_ptr_enc = eh_frame_hdr_raw.read_unsafe(1);
+    zx_u8 const fde_count_enc = eh_frame_hdr_raw.read_unsafe(2);
+    zx_u8 const table_enc = eh_frame_hdr_raw.read_unsafe(3);
+
+    if (version != 1) {
+      zx_err_trace_push(err_trace, ZX_SRC_LOC, 0);
+      return InitStatus::InvalidInput;
+    }
+
+    // start from 4 since we already read 4 bytes.
+    zx_u64 offset = 4;
+    // SKIP EH_FRAME_PTR
+    switch (eh_frame_ptr_enc & EH_VALUE_MASK) {
+    case EH_Value_Omit: {
+      break;
+    }
+    case EH_Value_Uleb128: {
+      zx_u64 val = 0;
+      if (ZXLeb128Status::Ok !=
+          zx_uleb128_to_u64(eh_frame_hdr_raw, &offset, &val)) {
+        zx_err_trace_push(err_trace, ZX_SRC_LOC, 0);
+        return InitStatus::InvalidInput;
+      }
+      break;
+    }
+    case EH_Value_Sleb128: {
+      zx_i64 val = 0;
+      if (ZXLeb128Status::Ok !=
+          zx_sleb128_to_i64(eh_frame_hdr_raw, &offset, &val)) {
+        zx_err_trace_push(err_trace, ZX_SRC_LOC, 0);
+        return InitStatus::InvalidInput;
+      }
+      break;
+    }
+    // doesn't matter if it is signed or unsigned, we discard the actual value
+    // anyways.
+    case EH_Value_Sdata2:
+    case EH_Value_Udata2: {
+      offset = zx_add_unsafe_u64(offset, 2);
+      if (offset > eh_frame_hdr_raw.len()) {
+        zx_err_trace_push(err_trace, ZX_SRC_LOC, 0);
+        return InitStatus::InvalidInput;
+      }
+      break;
+    }
+    case EH_Value_Sdata4:
+    case EH_Value_Udata4: {
+      offset = zx_add_unsafe_u64(offset, 4);
+      if (offset > eh_frame_hdr_raw.len()) {
+        zx_err_trace_push(err_trace, ZX_SRC_LOC, 0);
+        return InitStatus::InvalidInput;
+      }
+      break;
+    }
+    case EH_Value_Sdata8:
+    case EH_Value_Udata8: {
+      offset = zx_add_unsafe_u64(offset, 8);
+      if (offset > eh_frame_hdr_raw.len()) {
+        zx_err_trace_push(err_trace, ZX_SRC_LOC, 0);
+        return InitStatus::InvalidInput;
+      }
+      break;
+    }
+    default: {
+      zx_err_trace_push(err_trace, ZX_SRC_LOC, 0);
+      return InitStatus::InvalidInput;
+    }
+    }
+
+    if ((fde_count_enc & EH_APP_MASK) != EH_App_Absptr) {
+      zx_err_trace_push(err_trace, ZX_SRC_LOC, 0);
+      return InitStatus::InvalidInput;
+    }
+
+    // READ FDE_COUNT
+    zx_u64 const fde_count = 0;
+    switch (fde_count_enc & EH_VALUE_MASK) {
+    case EH_Value_Uleb128: {
+      zx_u64 val = 0;
+      if (ZXLeb128Status::Ok !=
+          zx_uleb128_to_u64(eh_frame_hdr_raw, &offset, &val)) {
+        zx_err_trace_push(err_trace, ZX_SRC_LOC, 0);
+        return InitStatus::InvalidInput;
+      }
+      fde_count = val;
+      break;
+    }
+    case EH_Value_Sleb128: {
+      zx_i64 val = 0;
+      if (ZXLeb128Status::Ok !=
+          zx_sleb128_to_i64(eh_frame_hdr_raw, &offset, &val)) {
+        zx_err_trace_push(err_trace, ZX_SRC_LOC, 0);
+        return InitStatus::InvalidInput;
+      }
+      bool failure = false;
+      fde_count = zx_cast_to_u64<zx_i64>(val, &failure);
+      if (failure) {
+        zx_err_trace_push(err_trace, ZX_SRC_LOC, 0);
+        return InitStatus::InvalidInput;
+      }
+      break;
+    }
+    case EH_Value_Udata2: {
+      zx_u16 val = 0;
+      if (ZXSliceStatus::Ok !=
+          eh_frame_hdr_raw.read_unaligned<zx_u16>(offset, &val)) {
+        zx_err_trace_push(err_trace, ZX_SRC_LOC, 0);
+        return InitStatus::InvalidInput;
+      }
+      offset = zx_add_unsafe_u64(offset, sizeof(zx_u16));
+      fde_count = val;
+      break;
+    }
+    case EH_Value_Udata4: {
+      zx_u32 val = 0;
+      if (ZXSliceStatus::Ok !=
+          eh_frame_hdr_raw.read_unaligned<zx_u32>(offset, &val)) {
+        zx_err_trace_push(err_trace, ZX_SRC_LOC, 0);
+        return InitStatus::InvalidInput;
+      }
+      offset = zx_add_unsafe_u64(offset, sizeof(zx_u32));
+      fde_count = val;
+      break;
+    }
+    case EH_Value_Udata8: {
+      zx_u64 val = 0;
+      if (ZXSliceStatus::Ok !=
+          eh_frame_hdr_raw.read_unaligned<zx_u64>(offset, &val)) {
+        zx_err_trace_push(err_trace, ZX_SRC_LOC, 0);
+        return InitStatus::InvalidInput;
+      }
+      offset = zx_add_unsafe_u64(offset, sizeof(zx_u64));
+      fde_count = val;
+      break;
+    }
+    case EH_Value_Sdata2: {
+      zx_i16 val = 0;
+      if (ZXSliceStatus::Ok !=
+          eh_frame_hdr_raw.read_unaligned<zx_i16>(offset, &val)) {
+        zx_err_trace_push(err_trace, ZX_SRC_LOC, 0);
+        return InitStatus::InvalidInput;
+      }
+      offset = zx_add_unsafe_u64(offset, sizeof(zx_i16));
+      bool failure = false;
+      fde_count = zx_cast_to_u64(val, &failure);
+      if (failure) {
+        zx_err_trace_push(err_trace, ZX_SRC_LOC, 0);
+        return InitStatus::InvalidInput;
+      }
+      break;
+    }
+    case EH_Value_Sdata4: {
+      zx_i32 val = 0;
+      if (ZXSliceStatus::Ok !=
+          eh_frame_hdr_raw.read_unaligned<zx_i32>(offset, &val)) {
+        zx_err_trace_push(err_trace, ZX_SRC_LOC, 0);
+        return InitStatus::InvalidInput;
+      }
+      offset = zx_add_unsafe_u64(offset, sizeof(zx_i32));
+      bool failure = false;
+      fde_count = zx_cast_to_u64(val, &failure);
+      if (failure) {
+        zx_err_trace_push(err_trace, ZX_SRC_LOC, 0);
+        return InitStatus::InvalidInput;
+      }
+      break;
+    }
+    case EH_Value_Sdata8: {
+      zx_i64 val = 0;
+      if (ZXSliceStatus::Ok !=
+          eh_frame_hdr_raw.read_unaligned<zx_i64>(offset, &val)) {
+        zx_err_trace_push(err_trace, ZX_SRC_LOC, 0);
+        return InitStatus::InvalidInput;
+      }
+      offset = zx_add_unsafe_u64(offset, sizeof(zx_i64));
+      bool failure = false;
+      fde_count = zx_cast_to_u64(val, &failure);
+      if (failure) {
+        zx_err_trace_push(err_trace, ZX_SRC_LOC, 0);
+        return InitStatus::InvalidInput;
+      }
+      break;
+    }
+    default: {
+      zx_err_trace_push(err_trace, ZX_SRC_LOC, 0);
+      return InitStatus::InvalidInput;
+    }
+    }
+
+    zx_u64 entry_size = 0;
+    switch (table_enc & EH_VALUE_MASK) {
+    case EH_Value_Udata2:
+    case EH_Value_Sdata2: {
+      entry_size = 2;
+      break;
+    }
+    case EH_Value_Udata4:
+    case EH_Value_Sdata4: {
+      entry_size = 4;
+      break;
+    }
+    case EH_Value_Udata8:
+    case EH_Value_Sdata8: {
+      entry_size = 8;
+      break;
+    }
+    default: {
+      zx_err_trace_push(err_trace, ZX_SRC_LOC, 0);
+      return InitStatus::InvalidInput;
+    }
+    }
+    zx_assert_always(entry_size > 0);
+    zx_u64 row_size = zx_mul_unsafe_u64(entry_size, 2);
+    zx_u64 total_size = zx_mul_unsafe_u64(row_size, fde_count);
+
+    *out = ZXPanicEhFrame{
+
+    };
+    return InitStatus::Ok;
+  }
+
+  enum class [[nodiscard]] LookupStatus : zx_u8_c {
+    Found = 0,
+    NotFound,
+    Nullptr,
+  };
+
+  // outputs offset into the
+  inline LookupStatus lookup(zx_u64 addr, zx_u64 *out) const {
+    return LookupStatus::Found;
+  }
+};
+
 enum class [[nodiscard]] ZXPanicPrintInfoStatus : zx_u8_c {
   Ok = 0,
   OutOfMemory,
@@ -219,15 +499,10 @@ static ZXPanicPrintInfoStatus zx_panic_print_info(ZXErrTrace *err_trace,
     return ZXPanicPrintInfoStatus::ReadSelfFail;
   }
 
-  ZX_EPRINT("Length of self exe: ", self_exe_size, '\n');
-
   Elf64_Ehdr const *ex_header = file_buf.as_const()
                                     .slice_unsafe(0, sizeof(Elf64_Ehdr))
                                     .cast_unsafe<Elf64_Ehdr>()
                                     .offset_unsafe(0);
-  ZX_EPRINT("etype: ", ex_header->e_type, '\n');
-  ZX_EPRINT("e_shoff: ", ex_header->e_shoff, '\n');
-
   if (ex_header->e_shentsize != sizeof(Elf64_Shdr)) {
     zx_err_trace_push(err_trace, ZX_SRC_LOC, 0);
     return ZXPanicPrintInfoStatus::ParseElfFail;
@@ -240,8 +515,6 @@ static ZXPanicPrintInfoStatus zx_panic_print_info(ZXErrTrace *err_trace,
           .slice_unsafe(ex_header->e_shoff, sec_headers_nbytes)
           .cast_unsafe<Elf64_Shdr>();
 
-  ZX_EPRINT("n_headers: ", sec_headers.len(), '\n');
-
   Elf64_Shdr const *names_header =
       sec_headers.offset_unsafe(ex_header->e_shstrndx);
   ZXSlice<zx_u8> const names = file_buf.as_const().slice_unsafe(
@@ -250,6 +523,7 @@ static ZXPanicPrintInfoStatus zx_panic_print_info(ZXErrTrace *err_trace,
   Elf64_Shdr const *debug_line_header = nullptr;
   Elf64_Shdr const *debug_abbrev_header = nullptr;
   Elf64_Shdr const *eh_frame_header = nullptr;
+  Elf64_Shdr const *eh_frame_hdr_header = nullptr;
   for (zx_u64 offset = 0, idx = 0; offset < names.len(); idx += 1) {
     ZXSlice<zx_u8> const name =
         ZXCString::init_unsafe(
@@ -263,6 +537,8 @@ static ZXPanicPrintInfoStatus zx_panic_print_info(ZXErrTrace *err_trace,
       debug_abbrev_header = sec_headers.offset_unsafe(idx);
     } else if (name.equals(ZXCString::init_unsafe(".eh_frame").slice())) {
       eh_frame_header = sec_headers.offset_unsafe(idx);
+    } else if (name.equals(ZXCString::init_unsafe(".eh_frame_hdr").slice())) {
+      eh_frame_hdr_header = sec_headers.offset_unsafe(idx);
     }
     offset = zx_add_unsafe_u64(1, zx_add_unsafe_u64(name.len(), offset));
   }
@@ -282,11 +558,16 @@ static ZXPanicPrintInfoStatus zx_panic_print_info(ZXErrTrace *err_trace,
     zx_err_trace_push(err_trace, ZX_SRC_LOC, 0);
     return ZXPanicPrintInfoStatus::ParseElfFail;
   }
+  if (eh_frame_hdr_header == nullptr) {
+    zx_err_trace_push(err_trace, ZX_SRC_LOC, 0);
+    return ZXPanicPrintInfoStatus::ParseElfFail;
+  }
 
   ZX_EPRINT(".debug_line size: ", debug_line_header->sh_size, '\n',
             ".debug_info size: ", debug_info_header->sh_size, '\n',
             ".debug_abbrev size: ", debug_abbrev_header->sh_size, '\n',
-            ".eh_frame size: ", eh_frame_header->sh_size, '\n');
+            ".eh_frame size: ", eh_frame_header->sh_size, '\n',
+            ".eh_frame_hdr size: ", eh_frame_hdr_header->sh_size, '\n');
 
   ZXSlice<zx_u8> const debug_abbrev_raw = file_buf.as_const().slice_unsafe(
       debug_abbrev_header->sh_offset, debug_abbrev_header->sh_size);
@@ -294,6 +575,11 @@ static ZXPanicPrintInfoStatus zx_panic_print_info(ZXErrTrace *err_trace,
       debug_info_header->sh_offset, debug_info_header->sh_size);
   ZXSlice<zx_u8> const eh_frame_raw = file_buf.as_const().slice_unsafe(
       eh_frame_header->sh_offset, eh_frame_header->sh_size);
+  ZXSlice<zx_u8> const eh_frame_hdr_raw = file_buf.as_const().slice_unsafe(
+      eh_frame_hdr_header->sh_offset, eh_frame_hdr_header->sh_size);
+
+  // parse eh_frame_hdr
+  (void)eh_frame_hdr_raw;
 
   // parse eh_frame
   for (zx_u64 offset = 0; offset < eh_frame_raw.len();) {

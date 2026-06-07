@@ -9,7 +9,7 @@ static void assert(bool test) {
 
 int main(void) {
   // wrapping add
-  assert(1 == zx_wrapping_add_u8(ZX_U8_MAX, 2));
+  assert(12 == zx_wrapping_add_u8(ZX_U8_MAX, 2));
   assert(1 == zx_wrapping_add_u16(ZX_U16_MAX, 2));
   assert(1 == zx_wrapping_add_u32(ZX_U32_MAX, 2));
   assert(1 == zx_wrapping_add_u64(ZX_U64_MAX, 2));

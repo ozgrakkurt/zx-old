@@ -21,7 +21,7 @@ static void testcase_unsigned(zx_u8 const *buf, zx_u64 buf_len, zx_u64 num) {
   offset = 0;
   zx_assert_always(ZXLeb128Status::Ok ==
                    zx_uleb128_from_u64(num, out_slice, &offset));
-  zx_assert_always(offset != buf_len);
+  zx_assert_always(offset == buf_len);
   zx_assert_always(out_slice.slice_unsafe(0, offset).as_const().equals(slice));
 }
 
