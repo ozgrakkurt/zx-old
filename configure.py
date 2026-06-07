@@ -731,7 +731,7 @@ if __name__ == "__main__":
     )
     parser.add_argument(
         "--opt-level",
-        default="g",
+        default="0",
         help="Optimization level, can be 0, 1, 2, 3, g, fast etc.",
     )
     parser.add_argument(
