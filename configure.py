@@ -730,7 +730,9 @@ if __name__ == "__main__":
         help="enable LLVM thin-lto",
     )
     parser.add_argument(
-        "--opt-level", default="g", help="Optimization level, can be 0, 1, 2, 3, g, fast etc."
+        "--opt-level",
+        default="g",
+        help="Optimization level, can be 0, 1, 2, 3, g, fast etc.",
     )
     parser.add_argument(
         "--dev-mode",

@@ -13,6 +13,7 @@
 #include <zx/zx_err_trace.h>
 #include <zx/zx_fmt.h>
 #include <zx/zx_int.h>
+#include <zx/zx_leb128.h>
 #include <zx/zx_list.h>
 #include <zx/zx_page_alloc.h>
 #include <zx/zx_print.h>
@@ -135,12 +136,12 @@ cleanup:
 
 struct ZXPanicEhFrame {
   ZXSlice<zx_u8> m_eh_frame_hdr_table;
-  ZXSlice<zx_u8> m_eh_frame;
+  ZXSlice<zx_u8> m_eh_frame_raw;
   zx_u64 m_fde_count;
-  zx_u8 m_table_ptr_enc;
+  zx_u8 m_table_enc;
 
-  constexpr zx_u8 EH_VALUE_MASK = 0x0f;
-  constexpr zx_u8 EH_APP_MASK = 0xf0;
+  static constexpr zx_u8 EH_VALUE_MASK = 0x0f;
+  static constexpr zx_u8 EH_APP_MASK = 0xf0;
 
   enum EH_Value : zx_u8_c {
     EH_Value_Omit = 0xff,
@@ -166,6 +167,11 @@ struct ZXPanicEhFrame {
     Nullptr,
     InvalidInput,
   };
+
+  inline void print() const {
+    ZX_EPRINT("fde_count = ", this->m_fde_count, '\n',
+              "table_enc = ", this->m_table_enc, '\n', );
+  }
 
   static inline InitStatus init(ZXErrTrace *err_trace,
                                 ZXSlice<zx_u8> eh_frame_hdr_raw,
@@ -255,7 +261,7 @@ struct ZXPanicEhFrame {
     }
 
     // READ FDE_COUNT
-    zx_u64 const fde_count = 0;
+    zx_u64 fde_count = 0;
     switch (fde_count_enc & EH_VALUE_MASK) {
     case EH_Value_Uleb128: {
       zx_u64 val = 0;
@@ -395,9 +401,20 @@ struct ZXPanicEhFrame {
     zx_u64 row_size = zx_mul_unsafe_u64(entry_size, 2);
     zx_u64 total_size = zx_mul_unsafe_u64(row_size, fde_count);
 
-    *out = ZXPanicEhFrame{
+    ZXSlice<zx_u8> eh_frame_hdr_table;
+    if (ZXSliceStatus::Ok !=
+        eh_frame_hdr_raw.slice(offset, total_size, &eh_frame_hdr_table)) {
+      zx_err_trace_push(err_trace, ZX_SRC_LOC, 0);
+      return InitStatus::InvalidInput;
+    }
 
+    *out = ZXPanicEhFrame{
+        .m_eh_frame_hdr_table = eh_frame_hdr_table,
+        .m_eh_frame_raw = eh_frame_raw,
+        .m_fde_count = fde_count,
+        .m_table_enc = table_enc,
     };
+
     return InitStatus::Ok;
   }
 
@@ -409,6 +426,8 @@ struct ZXPanicEhFrame {
 
   // outputs offset into the
   inline LookupStatus lookup(zx_u64 addr, zx_u64 *out) const {
+    (void)addr;
+    (void)out;
     return LookupStatus::Found;
   }
 };
@@ -579,7 +598,14 @@ static ZXPanicPrintInfoStatus zx_panic_print_info(ZXErrTrace *err_trace,
       eh_frame_hdr_header->sh_offset, eh_frame_hdr_header->sh_size);
 
   // parse eh_frame_hdr
-  (void)eh_frame_hdr_raw;
+  ZXPanicEhFrame eh_frame;
+  if (ZXPanicEhFrame::InitStatus::Ok !=
+      ZXPanicEhFrame::init(err_trace, eh_frame_hdr_raw, eh_frame_raw,
+                           &eh_frame)) {
+    zx_err_trace_push(err_trace, ZX_SRC_LOC, 0);
+    return ZXPanicPrintInfoStatus::ParseElfFail;
+  }
+  eh_frame.print();
 
   // parse eh_frame
   for (zx_u64 offset = 0; offset < eh_frame_raw.len();) {
