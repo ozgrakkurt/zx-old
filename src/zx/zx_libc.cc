@@ -4,8 +4,6 @@
 // also the compiler sometimes inserts calls to these functions implicitly as an
 // optimization.
 
-#ifndef ZX_LINK_LIBC
-
 #ifndef __x86_64__
 #error "only x86_64 is supported"
 #endif
@@ -52,5 +50,3 @@ __attribute__((no_builtin)) zx_u64_c strlen(char const *str) {
 }
 
 } // extern "C"
-
-#endif // ifndef ZX_LINK_LIBC

@@ -1,72 +1,8 @@
 #ifndef ZX_INT_H
 #define ZX_INT_H
 
+#include <zx/zx_def.h>
 #include <zx/zx_panic.h>
-
-typedef unsigned char zx_u8_c;
-static_assert(sizeof(zx_u8_c) == 1);
-static_assert(alignof(zx_u8_c) == 1);
-
-typedef unsigned short zx_u16_c;
-static_assert(sizeof(zx_u16_c) == 2);
-static_assert(alignof(zx_u16_c) == 2);
-
-typedef unsigned int zx_u32_c;
-static_assert(sizeof(zx_u32_c) == 4);
-static_assert(alignof(zx_u32_c) == 4);
-
-typedef unsigned long zx_u64_c;
-static_assert(sizeof(zx_u64_c) == 8);
-static_assert(alignof(zx_u64_c) == 8);
-
-typedef char zx_i8_c;
-static_assert(sizeof(zx_i8_c) == 1);
-static_assert(alignof(zx_i8_c) == 1);
-
-typedef short zx_i16_c;
-static_assert(sizeof(zx_i16_c) == 2);
-static_assert(alignof(zx_i16_c) == 2);
-
-typedef int zx_i32_c;
-static_assert(sizeof(zx_i32_c) == 4);
-static_assert(alignof(zx_i32_c) == 4);
-
-typedef long zx_i64_c;
-static_assert(sizeof(zx_i64_c) == 8);
-static_assert(alignof(zx_i64_c) == 8);
-
-typedef unsigned _BitInt(8) zx_u8;
-typedef unsigned _BitInt(16) zx_u16;
-typedef unsigned _BitInt(32) zx_u32;
-typedef unsigned _BitInt(64) zx_u64;
-typedef unsigned _BitInt(128) zx_u128;
-typedef unsigned _BitInt(256) zx_u256;
-typedef _BitInt(8) zx_i8;
-typedef _BitInt(16) zx_i16;
-typedef _BitInt(32) zx_i32;
-typedef _BitInt(64) zx_i64;
-typedef _BitInt(128) zx_i128;
-typedef _BitInt(256) zx_i256;
-
-constexpr zx_u8 ZX_U8_MAX = ~(zx_u8){0};
-constexpr zx_u16 ZX_U16_MAX = ~(zx_u16){0};
-constexpr zx_u32 ZX_U32_MAX = ~(zx_u32){0};
-constexpr zx_u64 ZX_U64_MAX = ~(zx_u64){0};
-constexpr zx_u128 ZX_U128_MAX = ~(zx_u128){0};
-constexpr zx_u256 ZX_U256_MAX = ~(zx_u256){0};
-
-constexpr zx_i8 ZX_I8_MAX = (zx_i8)(ZX_U8_MAX >> 1);
-constexpr zx_i16 ZX_I16_MAX = (zx_i16)(ZX_U16_MAX >> 1);
-constexpr zx_i32 ZX_I32_MAX = (zx_i32)(ZX_U32_MAX >> 1);
-constexpr zx_i64 ZX_I64_MAX = (zx_i64)(ZX_U64_MAX >> 1);
-constexpr zx_i128 ZX_I128_MAX = (zx_i128)(ZX_U128_MAX >> 1);
-constexpr zx_i256 ZX_I256_MAX = (zx_i256)(ZX_U256_MAX >> 1);
-constexpr zx_i8 ZX_I8_MIN = ~ZX_I8_MAX;
-constexpr zx_i16 ZX_I16_MIN = ~ZX_I16_MAX;
-constexpr zx_i32 ZX_I32_MIN = ~ZX_I32_MAX;
-constexpr zx_i64 ZX_I64_MIN = ~ZX_I64_MAX;
-constexpr zx_i128 ZX_I128_MIN = ~ZX_I128_MAX;
-constexpr zx_i256 ZX_I256_MIN = ~ZX_I256_MAX;
 
 template <typename T> constexpr static inline T zx_wrapping_add_(T a, T b) {
   return a + b;
@@ -1022,6 +958,45 @@ constexpr static inline zx_u8 zx_ilog2_u32(zx_u32 num) {
 }
 constexpr static inline zx_u8 zx_ilog2_u64(zx_u64 num) {
   return zx_ilog2_<zx_u64>(num);
+}
+
+// TODO TODO: add failure flag for overflow checks and add unsafe variants
+static_assert(sizeof(void*) == sizeof(u64));
+static_assert(alignof(void*) == sizeof(u64));
+template <typename T, u16 ALIGN>
+constexpr static inline bool is_aligned(T v) {
+  static_assert(sizeof(void*) == sizeof(T));
+  static_assert(alignof(void*) == alignof(T));
+
+  static_assert(is_pow_two_u16(ALIGN));
+  static_assert(ALIGN > 0);
+
+  u64 const addr = (u64)v;
+  return (addr & (ALIGN - 1));
+}
+
+template <typename T, u16 ALIGN>
+constexpr static inline T align_up(T v) {
+  static_assert(sizeof(void*) == sizeof(T));
+  static_assert(alignof(void*) == alignof(T));
+
+  static_assert(is_pow_two_u16(ALIGN));
+  static_assert(ALIGN > 0);
+
+  u64 const addr = (u64)v;
+  return (T)((addr + ALIGN - 1__wbu) & ~(u64{ALIGN} - 1__wbu));
+}
+
+template <typename T, u16 ALIGN>
+constexpr static inline T align_down(T v) {
+  static_assert(sizeof(void*) == sizeof(T));
+  static_assert(alignof(void*) == alignof(T));
+
+  static_assert(is_pow_two_u16(ALIGN));
+  static_assert(ALIGN > 0);
+
+  u64 const addr = (u64)v;
+  return (T)(addr & ~(u64{ALIGN} - 1));
 }
 
 #endif

@@ -24,16 +24,13 @@ class Config:
     cxx: str
     ar: str
     objdump: str
-    llvm_config: str
-    link_llvm: bool
-    link_libc: bool
-    static_link: bool
     march: str
     thin_lto: bool
     opt_level: int
     dev_mode: bool
     debug_info: bool
     fuzz: bool
+    cxx_time_trace: bool
 
 
 @dataclass
@@ -124,13 +121,6 @@ def validate_config(config: Config) -> None:
     pass
 
 
-def run_llvm_config(args: List[str]) -> str:
-    result = subprocess.run(
-        ["llvm-config"] + args, capture_output=True, text=True, check=True
-    )
-    return result.stdout.strip()
-
-
 def make_cflags(config: Config) -> List[str]:
     cflags = [
         # Warnings.
@@ -190,18 +180,14 @@ def make_cflags(config: Config) -> List[str]:
         "-fno-threadsafe-statics",
         "-fomit-frame-pointer",
         "-momit-leaf-frame-pointer",
+        # disable libc
+        "-nostdlib",
+        "-nostdinc",
+        "--target=x86_64-linux-none",
     ]
 
-    if config.link_llvm:
-        cflags.append(run_llvm_config(["-cxxflags"]))
-        cflags.append("-DZX_LINK_LLVM")
-
-    if not config.link_libc:
-        cflags.append("-nostdlib")
-        cflags.append("-nostdinc")
-        cflags.append("--target=x86_64-linux-none")
-    else:
-        cflags.append("-DZX_LINK_LIBC")
+    if config.cxx_time_trace:
+        cflags.append("-ftime-trace")
 
     if config.debug_info:
         cflags.append("-g1")
@@ -243,22 +229,22 @@ def make_ldflags(build_path: str, config: Config) -> List[str]:
         "-fno-rtti",
         "-nostdlib++",
         "-fno-threadsafe-statics",
+        # Use pipes instead of temporary files in compilation.
+        # ninja docs or ninja repo configure.py say this is better.
+        "-pipe",
         # optimization level
         f"-O{config.opt_level}",
         "-fomit-frame-pointer",
         "-momit-leaf-frame-pointer",
+        "-static",
+        # disable libc
+        "-nostdlib",
+        "-nostdinc",
+        "--target=x86_64-linux-none",
     ]
 
-    if config.link_llvm:
-        ldflags.append(run_llvm_config(["-ldflags"]))
-
-    if config.static_link:
-        ldflags.append("-static")
-
-    if not config.link_libc:
-        ldflags.append("-nostdlib")
-        ldflags.append("-nostdinc")
-        ldflags.append("--target=x86_64-linux-none")
+    if config.cxx_time_trace:
+        ldflags.append("-ftime-trace")
 
     if config.debug_info:
         ldflags.append("-g1")
@@ -658,14 +644,11 @@ def reconstruct_command(args: argparse.Namespace) -> str:
         "objdump": args.objdump,
         "march": args.march,
         "thin-lto": args.thin_lto,
-        "llvm-config": args.llvm_config,
         "opt-level": args.opt_level,
         "dev-mode": args.dev_mode,
         "debug-info": args.debug_info,
         "fuzz": args.fuzz,
-        "link-llvm": args.link_llvm,
-        "link-libc": args.link_libc,
-        "static-link": args.static_link,
+        "cxx-time-trace": args.cxx_time_trace,
     }
 
     out_flags = []
@@ -708,14 +691,8 @@ if __name__ == "__main__":
         metavar="EXE",
     )
     parser.add_argument(
-        "--llvm-config",
-        default="llvm-config",
-        help="llvm-config executable to use for linking with LLVM.",
-        metavar="EXE",
-    )
-    parser.add_argument(
         "--objdump",
-        default="objdump",
+        default="llvm-objdump",
         help="objdump executable to use for creating assembly from executable by disassembling.",
     )
     parser.add_argument(
@@ -726,13 +703,13 @@ if __name__ == "__main__":
     parser.add_argument(
         "--thin-lto",
         action=argparse.BooleanOptionalAction,
-        default=True,
-        help="enable LLVM thin-lto",
+        default=False,
+        help="enable clang thin-lto",
     )
     parser.add_argument(
         "--opt-level",
         default="0",
-        help="Optimization level, can be 0, 1, 2, 3, g, fast etc.",
+        help="Optimization level, can bea anything the c++ compiler supports.  0, 1, 2, 3, g, fast etc.",
     )
     parser.add_argument(
         "--dev-mode",
@@ -753,22 +730,10 @@ if __name__ == "__main__":
         help="enable fuzz instrumentation and fuzz targets. also disables test/bench/exe targets.",
     )
     parser.add_argument(
-        "--link-libc",
+        "--cxx-time-trace",
         action=argparse.BooleanOptionalAction,
         default=False,
-        help="Link with libc",
-    )
-    parser.add_argument(
-        "--link-llvm",
-        action=argparse.BooleanOptionalAction,
-        default=False,
-        help="Link with llvm",
-    )
-    parser.add_argument(
-        "--static-link",
-        action=argparse.BooleanOptionalAction,
-        default=True,
-        help="Use static linking",
+        help="enable compilation profiling output from clang using -ftime-trace flag.",
     )
 
     args = parser.parse_args()
@@ -780,16 +745,13 @@ if __name__ == "__main__":
         cxx=args.cxx,
         ar=args.ar,
         objdump=args.objdump,
-        llvm_config=args.llvm_config,
         march=args.march,
         thin_lto=args.thin_lto,
         opt_level=args.opt_level,
         dev_mode=args.dev_mode,
         debug_info=args.debug_info,
         fuzz=args.fuzz,
-        link_libc=args.link_libc,
-        link_llvm=args.link_llvm,
-        static_link=args.static_link,
+        cxx_time_trace=args.cxx_time_trace,
     )
 
     build_path = os.path.join(ROOTPATH, args.build_dir)

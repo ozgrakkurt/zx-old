@@ -56,10 +56,6 @@ NOZ: Library = Library(
     bench_targets=set(["noz_bench"]),
 )
 
-ZIO: Library = Library(
-    source_files=set(["zio"]),
-)
-
 PROJECT: Project = Project(
     libraries={
         "zx": ZX,
