@@ -9,15 +9,15 @@ import (
 	"os"
 	"os/exec"
 	"path"
-	"strings"
 	"runtime"
+	"strings"
 )
 
 type FlagConfig struct {
-	optLevel string
-	devMode bool
+	optLevel  string
+	devMode   bool
 	debugInfo bool
-	fuzz bool
+	fuzz      bool
 }
 
 func makeCflags(cfg FlagConfig) []string {
@@ -151,8 +151,8 @@ type Config struct {
 	clangScanDeps string
 	cflags        []string
 	ldflags       []string
-	buildDirPath      string
-	srcDirPath        string
+	buildDirPath  string
+	srcDirPath    string
 }
 
 // Convert a path (`pathval`) to an absolute path using `defaultBase`.
@@ -177,11 +177,11 @@ func readConfig() Config {
 
 	flag.Parse()
 
-	flagCfg := FlagConfig {
-		optLevel: *optLevel,
-		devMode: *devMode,
+	flagCfg := FlagConfig{
+		optLevel:  *optLevel,
+		devMode:   *devMode,
 		debugInfo: *debugInfo,
-		fuzz: *fuzz,
+		fuzz:      *fuzz,
 	}
 
 	cflags := makeCflags(flagCfg)
@@ -198,10 +198,10 @@ func readConfig() Config {
 	cfg := Config{
 		cxx:           *cxx,
 		clangScanDeps: *clangScanDeps,
-		cflags: cflags,
-		ldflags: ldflags,
-		buildDirPath: buildDirPath,
-		srcDirPath: srcDirPath,
+		cflags:        cflags,
+		ldflags:       ldflags,
+		buildDirPath:  buildDirPath,
+		srcDirPath:    srcDirPath,
 	}
 
 	return cfg
@@ -237,7 +237,7 @@ func parseSrcFileName(name string) SourceFile {
 		log.Fatalf("Empty name in: %v", name)
 	}
 
-	isTest := "test" == nameParts[len(nameParts) - 1]
+	isTest := "test" == nameParts[len(nameParts)-1]
 
 	if ext == "cppm" {
 		if isTest {
@@ -245,13 +245,13 @@ func parseSrcFileName(name string) SourceFile {
 		}
 
 		if len(nameParts) == 1 {
-			return SourceFile {
+			return SourceFile{
 				name: nameParts[0],
 				deps: make([]string, 0),
 				kind: Module,
 			}
 		} else if len(nameParts) == 2 {
-			return SourceFile {
+			return SourceFile{
 				name: nameParts[0] + ":" + nameParts[1],
 				deps: make([]string, 0),
 				kind: Module,
@@ -261,13 +261,13 @@ func parseSrcFileName(name string) SourceFile {
 		}
 	} else if ext == "cc" {
 		if isTest {
-			return SourceFile {
+			return SourceFile{
 				name: fileName,
 				deps: make([]string, 0),
 				kind: Test,
 			}
 		} else {
-			return SourceFile {
+			return SourceFile{
 				name: fileName,
 				deps: make([]string, 0),
 				kind: Bin,
@@ -359,10 +359,10 @@ func goProcessSrcDir(cfg Config, srcChannel chan SourceFile) {
 
 		for _, entry := range entries {
 			if nParseRunning >= parseConcurrency {
-				<- finish
+				<-finish
 				nParseRunning -= 1
 			}
-			
+
 			go goParseSrcDeps(cfg, entry.Name(), finish, srcChannel)
 			nParseRunning += 1
 		}
@@ -373,7 +373,7 @@ func goProcessSrcDir(cfg Config, srcChannel chan SourceFile) {
 	}
 
 	for nParseRunning > 0 {
-		<- finish
+		<-finish
 		nParseRunning -= 1
 	}
 }
