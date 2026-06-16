@@ -289,7 +289,7 @@ type DepsOutProvides struct {
 }
 
 type DepsOutRule struct {
-	Requires []DepsOutReq `json:"requires"`
+	Requires []DepsOutReq      `json:"requires"`
 	Provides []DepsOutProvides `json:"provides"`
 }
 
@@ -332,13 +332,11 @@ func goParseSrcDeps(cfg Config, srcFileName string, finish chan bool, srcChannel
 	srcAbsPath := path.Join(cfg.srcDirPath, srcFileName)
 	src := parseSrcFileName(srcFileName)
 	src.deps = parseSrcDeps(cfg, srcAbsPath)
-	finish <- true
 	srcChannel <- src
+	finish <- true
 }
 
 func goProcessSrcDir(cfg Config, srcChannel chan SourceFile) {
-	defer close(srcChannel)
-
 	srcDir, err := os.Open(cfg.srcDirPath)
 	if err != nil {
 		log.Fatalf("Failed to open source directory: %v", err)
@@ -384,10 +382,14 @@ func goProcessSrcDir(cfg Config, srcChannel chan SourceFile) {
 		<-finish
 		nParseRunning -= 1
 	}
+
+	srcChannel <- SourceFile{}
 }
 
 func goCompile(cfg Config, src SourceFile, compiledChannel chan string) {
-	args := cfg.cflags
+	args := []string{}
+
+	args = append(args, cfg.cflags...)
 
 	srcAbsPath := ""
 
@@ -395,9 +397,9 @@ func goCompile(cfg Config, src SourceFile, compiledChannel chan string) {
 		outFileName := strings.Join(strings.Split(src.name, ":"), "-") + ".pcm"
 		outAbsPath := path.Join(cfg.buildDirPath, outFileName)
 
-		inFileName := strings.Join(strings.Split(src.name, ":"), "_")
+		inFileName := strings.Join(strings.Split(src.name, ":"), "_") + ".cppm"
 		srcAbsPath = path.Join(cfg.srcDirPath, inFileName)
-		
+
 		args = append(args, srcAbsPath)
 		args = append(args, "--precompile")
 		args = append(args, "-o")
@@ -408,14 +410,14 @@ func goCompile(cfg Config, src SourceFile, compiledChannel chan string) {
 
 		inFileName := src.name + ".cc"
 		srcAbsPath = path.Join(cfg.srcDirPath, inFileName)
-		
+
 		args = append(args, srcAbsPath)
 		args = append(args, "-o")
 		args = append(args, outAbsPath)
 		args = append(args, cfg.ldflags...)
 	}
 
-	args = append(args, "-fprebuilt-module-path=" + cfg.buildDirPath)
+	args = append(args, "-fprebuilt-module-path="+cfg.buildDirPath)
 
 	cmd := exec.Command(cfg.cxx, args...)
 	output, err := cmd.CombinedOutput()
@@ -434,12 +436,12 @@ func goTest(cfg Config, name string, testedChannel chan string) {
 	if err != nil {
 		log.Fatalf("Failed to run test %v: %v: %s", filePath, err, output)
 	}
-	
+
 	testedChannel <- name
 }
 
 type CompileStatus struct {
-	src SourceFile
+	src  SourceFile
 	deps map[string]struct{}
 }
 
@@ -468,25 +470,35 @@ func compileTestAll(cfg Config, srcChannel chan SourceFile) {
 	nToCompile := 0
 	nToTest := 0
 
+	srcChannelDone := false
+
 	for {
 		select {
-			case src := <- srcChannel:
-				nToCompile += 1
+		case src := <-srcChannel:
+			if src.name == "" {
+				srcChannelDone = true
+				continue
+			}
 
-				if src.kind == Test {
-					nToTest += 1
-				}
-				
-				deps := make(map[string]struct{})
-				for _, dep := range src.deps {
-					deps[dep] = struct{}{}
-				}
-			
-				status[src.name] = CompileStatus {
-					src: src,
-					deps: deps,
-				}
-			
+			nToCompile += 1
+
+			if src.kind == Test {
+				nToTest += 1
+			}
+
+			deps := make(map[string]struct{})
+			for _, dep := range src.deps {
+				deps[dep] = struct{}{}
+			}
+
+			status[src.name] = CompileStatus{
+				src:  src,
+				deps: deps,
+			}
+
+			if len(src.deps) == 0 {
+				toCompile = append(toCompile, src.name)
+			} else {
 				// insert dependencies to reversed index
 				for _, dependency := range src.deps {
 					entry, exists := reverseDependencyMap[dependency]
@@ -496,32 +508,33 @@ func compileTestAll(cfg Config, srcChannel chan SourceFile) {
 						reverseDependencyMap[dependency] = []string{src.name}
 					}
 				}
-			case name := <- compiledChannel:
-				nToCompile -= 1
-				// remove reverse dependencies since this module is now ready
-				entry, exists := reverseDependencyMap[name]
-				if exists {
-					for _, dependant := range entry {
-						delete(status[dependant].deps, name)
+			}
+		case name := <-compiledChannel:
+			nToCompile -= 1
+			// remove reverse dependencies since this module is now ready
+			entry, exists := reverseDependencyMap[name]
+			if exists {
+				for _, dependant := range entry {
+					delete(status[dependant].deps, name)
 
-						// add to compile queue if ready to compile
-						if len(status[dependant].deps) == 0 {
-							toCompile = append(toCompile, dependant)
-						}
+					// add to compile queue if ready to compile
+					if len(status[dependant].deps) == 0 {
+						toCompile = append(toCompile, dependant)
 					}
-					delete(reverseDependencyMap, name)
 				}
+				delete(reverseDependencyMap, name)
+			}
 
-				// add to test queue if the compiled item is a test
-				if status[name].src.kind == Test {
-					toTest = append(toTest, name)
-				}
-		
-				nCompiling -= 1
-			case name := <- testedChannel:
-				nToTest -= 1
-				_ = name
-				nTesting -= 1
+			// add to test queue if the compiled item is a test
+			if status[name].src.kind == Test {
+				toTest = append(toTest, name)
+			}
+
+			nCompiling -= 1
+		case name := <-testedChannel:
+			nToTest -= 1
+			_ = name
+			nTesting -= 1
 		}
 
 		// start new compilations if there is room
@@ -538,13 +551,7 @@ func compileTestAll(cfg Config, srcChannel chan SourceFile) {
 			nTesting += 1
 		}
 
-		srcRunning := true
-		select {
-			case _, srcRunning = <-srcChannel:
-			default:
-		}
-
-		if !srcRunning && nToCompile == 0 && nToTest == 0 {
+		if srcChannelDone && nToCompile == 0 && nToTest == 0 {
 			break
 		}
 	}
@@ -556,6 +563,11 @@ func main() {
 	err := os.RemoveAll(cfg.buildDirPath)
 	if err != nil {
 		log.Fatalf("Failed to clean the build directory: %v", err)
+	}
+
+	err = os.MkdirAll(cfg.buildDirPath, os.ModePerm)
+	if err != nil {
+		log.Fatalf("Failed to create build directory: %v", err)
 	}
 
 	srcChannel := make(chan SourceFile, 100)
