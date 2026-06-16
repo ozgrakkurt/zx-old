@@ -221,27 +221,27 @@ type SourceFile struct {
 	kind SrcKind
 }
 
-func parseSrcFileName(name string) SourceFile {
-	extParts := strings.Split(name, ".")
+func parseSrcFileName(fileName string) SourceFile {
+	extParts := strings.Split(fileName, ".")
 
 	if len(extParts) != 2 {
-		log.Fatalf("Failed to parse filename: '%v'. It has to have a single dot ('.') character.", name)
+		log.Fatalf("Failed to parse filename: '%v'. It has to have a single dot ('.') character.", fileName)
 	}
 
-	fileName := extParts[0]
+	name := extParts[0]
 	ext := extParts[1]
 
-	nameParts := strings.Split(fileName, "_")
+	nameParts := strings.Split(name, "_")
 
 	if len(nameParts) == 0 {
-		log.Fatalf("Empty name in: %v", name)
+		log.Fatalf("Empty name in: %v", fileName)
 	}
 
 	isTest := "test" == nameParts[len(nameParts)-1]
 
 	if ext == "cppm" {
 		if isTest {
-			log.Fatalf("Module file ('.cppm') name can't end with 'test' suffix.")
+			log.Fatalf("Module file ('.cppm') name can't end with 'test' suffix: %v", fileName)
 		}
 
 		if len(nameParts) == 1 {
@@ -262,13 +262,13 @@ func parseSrcFileName(name string) SourceFile {
 	} else if ext == "cc" {
 		if isTest {
 			return SourceFile{
-				name: fileName,
+				name: name,
 				deps: make([]string, 0),
 				kind: Test,
 			}
 		} else {
 			return SourceFile{
-				name: fileName,
+				name: name,
 				deps: make([]string, 0),
 				kind: Bin,
 			}
@@ -284,8 +284,13 @@ type DepsOutReq struct {
 	LogicalName string `json:"logical-name"`
 }
 
+type DepsOutProvides struct {
+	LogicalName string `json:"logical-name"`
+}
+
 type DepsOutRule struct {
 	Requires []DepsOutReq `json:"requires"`
+	Provides []DepsOutProvides `json:"provides"`
 }
 
 type DepsOut struct {
@@ -315,6 +320,9 @@ func parseSrcDeps(cfg Config, srcAbsPath string) []string {
 		for _, req := range rule.Requires {
 			deps = append(deps, req.LogicalName)
 		}
+
+		// for _, req := range rule.Provides {
+		// }
 	}
 
 	return deps
@@ -378,6 +386,170 @@ func goProcessSrcDir(cfg Config, srcChannel chan SourceFile) {
 	}
 }
 
+func goCompile(cfg Config, src SourceFile, compiledChannel chan string) {
+	args := cfg.cflags
+
+	srcAbsPath := ""
+
+	if src.kind == Module {
+		outFileName := strings.Join(strings.Split(src.name, ":"), "-") + ".pcm"
+		outAbsPath := path.Join(cfg.buildDirPath, outFileName)
+
+		inFileName := strings.Join(strings.Split(src.name, ":"), "_")
+		srcAbsPath = path.Join(cfg.srcDirPath, inFileName)
+		
+		args = append(args, srcAbsPath)
+		args = append(args, "--precompile")
+		args = append(args, "-o")
+		args = append(args, outAbsPath)
+	} else {
+		outFileName := src.name
+		outAbsPath := path.Join(cfg.buildDirPath, outFileName)
+
+		inFileName := src.name + ".cc"
+		srcAbsPath = path.Join(cfg.srcDirPath, inFileName)
+		
+		args = append(args, srcAbsPath)
+		args = append(args, "-o")
+		args = append(args, outAbsPath)
+		args = append(args, cfg.ldflags...)
+	}
+
+	args = append(args, "-fprebuilt-module-path=" + cfg.buildDirPath)
+
+	cmd := exec.Command(cfg.cxx, args...)
+	output, err := cmd.CombinedOutput()
+	if err != nil {
+		log.Fatalf("Failed to compile %v: %v: %s", srcAbsPath, err, output)
+	}
+
+	compiledChannel <- src.name
+}
+
+func goTest(cfg Config, name string, testedChannel chan string) {
+	filePath := path.Join(cfg.buildDirPath, name)
+
+	cmd := exec.Command(filePath)
+	output, err := cmd.CombinedOutput()
+	if err != nil {
+		log.Fatalf("Failed to run test %v: %v: %s", filePath, err, output)
+	}
+	
+	testedChannel <- name
+}
+
+type CompileStatus struct {
+	src SourceFile
+	deps map[string]struct{}
+}
+
+func compileTestAll(cfg Config, srcChannel chan SourceFile) {
+	compiledChannel := make(chan string, 100)
+	testedChannel := make(chan string, 100)
+
+	// status per artifact
+	status := make(map[string]CompileStatus, 0)
+
+	// maps the name of a module to the names of things that depend on it
+	reverseDependencyMap := make(map[string][]string, 0)
+
+	// ready to compile but waiting
+	toCompile := make([]string, 0)
+
+	// ready to test but waiting
+	toTest := make([]string, 0)
+
+	// concurrency limit for compilations and tests.
+	concurrency := runtime.NumCPU()
+
+	nCompiling := 0
+	nTesting := 0
+
+	nToCompile := 0
+	nToTest := 0
+
+	for {
+		select {
+			case src := <- srcChannel:
+				nToCompile += 1
+
+				if src.kind == Test {
+					nToTest += 1
+				}
+				
+				deps := make(map[string]struct{})
+				for _, dep := range src.deps {
+					deps[dep] = struct{}{}
+				}
+			
+				status[src.name] = CompileStatus {
+					src: src,
+					deps: deps,
+				}
+			
+				// insert dependencies to reversed index
+				for _, dependency := range src.deps {
+					entry, exists := reverseDependencyMap[dependency]
+					if exists {
+						reverseDependencyMap[dependency] = append(entry, src.name)
+					} else {
+						reverseDependencyMap[dependency] = []string{src.name}
+					}
+				}
+			case name := <- compiledChannel:
+				nToCompile -= 1
+				// remove reverse dependencies since this module is now ready
+				entry, exists := reverseDependencyMap[name]
+				if exists {
+					for _, dependant := range entry {
+						delete(status[dependant].deps, name)
+
+						// add to compile queue if ready to compile
+						if len(status[dependant].deps) == 0 {
+							toCompile = append(toCompile, dependant)
+						}
+					}
+					delete(reverseDependencyMap, name)
+				}
+
+				// add to test queue if the compiled item is a test
+				if status[name].src.kind == Test {
+					toTest = append(toTest, name)
+				}
+		
+				nCompiling -= 1
+			case name := <- testedChannel:
+				nToTest -= 1
+				_ = name
+				nTesting -= 1
+		}
+
+		// start new compilations if there is room
+		for nCompiling < concurrency && len(toCompile) > 0 {
+			go goCompile(cfg, status[toCompile[len(toCompile)-1]].src, compiledChannel)
+			toCompile = toCompile[:len(toCompile)-1]
+			nCompiling += 1
+		}
+
+		// start new tests if there is room
+		for nTesting < concurrency && len(toTest) > 0 {
+			go goTest(cfg, toTest[len(toTest)-1], testedChannel)
+			toTest = toTest[:len(toTest)-1]
+			nTesting += 1
+		}
+
+		srcRunning := true
+		select {
+			case _, srcRunning = <-srcChannel:
+			default:
+		}
+
+		if !srcRunning && nToCompile == 0 && nToTest == 0 {
+			break
+		}
+	}
+}
+
 func main() {
 	cfg := readConfig()
 
@@ -389,16 +561,5 @@ func main() {
 	srcChannel := make(chan SourceFile, 100)
 	go goProcessSrcDir(cfg, srcChannel)
 
-	// main loop
-	for {
-		srcFile, more := <-srcChannel
-		if !more {
-			log.Fatalf("Finished")
-		} else {
-			fmt.Printf("%#v\n", srcFile)
-		}
-	}
-
-	// map out module dependencies per module
-	// compile everything in parallel and run what user requested in parallel too
+	compileTestAll(cfg, srcChannel)
 }
