@@ -174,6 +174,7 @@ func readConfig() Config {
 	var fuzz = flag.Bool("fuzz", false, "enable fuzz testing instrumentation")
 	var buildDir = flag.String("build-dir", "build", "directory for outputting build artifacts")
 	var srcDir = flag.String("src-dir", "src", "source code directory")
+	var libDir = flag.String("lib-dir", "lib", "library code directory")
 
 	flag.Parse()
 
@@ -332,8 +333,8 @@ func goParseSrcDeps(cfg Config, srcFileName string, finish chan bool, srcChannel
 	srcAbsPath := path.Join(cfg.srcDirPath, srcFileName)
 	src := parseSrcFileName(srcFileName)
 	src.deps = parseSrcDeps(cfg, srcAbsPath)
-	srcChannel <- src
 	finish <- true
+	srcChannel <- src
 }
 
 func goProcessSrcDir(cfg Config, srcChannel chan SourceFile) {
@@ -411,6 +412,7 @@ func goCompile(cfg Config, src SourceFile, compiledChannel chan string) {
 		inFileName := src.name + ".cc"
 		srcAbsPath = path.Join(cfg.srcDirPath, inFileName)
 
+		args = append(args, path.Join(cfg.srcDirPath, "start.S"))
 		args = append(args, srcAbsPath)
 		args = append(args, "-o")
 		args = append(args, outAbsPath)
@@ -477,6 +479,15 @@ func compileTestAll(cfg Config, srcChannel chan SourceFile) {
 		case src := <-srcChannel:
 			if src.name == "" {
 				srcChannelDone = true
+				// check that all dependencies are actually found
+				for _, entry := range status {
+					for _, dep := range entry.src.deps {
+						_, has := status[dep]
+						if !has {
+							log.Fatalf("The dependency '%s' for '%s' wasn't found.", dep, entry.src.name)
+						}
+					}
+				}
 				continue
 			}
 
