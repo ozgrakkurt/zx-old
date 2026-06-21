@@ -4,7 +4,6 @@ import (
 	"encoding/json"
 	"flag"
 	"fmt"
-	"io"
 	"log"
 	"os"
 	"os/exec"
@@ -204,7 +203,7 @@ func readConfig() Config {
 		devMode:        *devMode,
 		debugInfo:      *debugInfo,
 		fuzz:           *fuzz,
-		includeDirPath: *includeDirPath,
+		includeDirPath: includeDirPath,
 	}
 
 	cflags := makeCflags(flagCfg)
@@ -410,6 +409,8 @@ func parseModuleFile(params ParseModuleFile) {
 	params.wg.Done()
 }
 
+type CCKind int
+
 const (
 	CCKindLib CCKind = iota
 	CCKindBin
@@ -444,20 +445,20 @@ func parseCCFile(ParseCCFile params) {
 	filePath := ""
 	if params.kind == CCKindLib {
 		filePath = filepath.Join(params.cfg.libDirPath, params.baseName, "src", params.fileName)
-		outPath = filepath.Join(cfg.libDirPath, ccFile.baseName, "obj", outFileName)
+		outPath = filepath.Join(params.cfg.libDirPath, params.baseName, "obj", outFileName)
 	} else if params.kind == CCKindLibTest {
 		filePath = filepath.Join(params.cfg.libDirPath, params.baseName, "test", params.fileName)
-		outPath = filepath.Join(cfg.libDirPath, ccFile.baseName, "test", outFileName)
+		outPath = filepath.Join(params.cfg.libDirPath, params.baseName, "test", outFileName)
 	} else if params.kind == CCKindBin {
 		filePath = filepath.Join(params.cfg.binDirPath, params.baseName, "src", params.fileName)
-		outPath = filepath.Join(cfg.binDirPath, ccFile.baseName, "obj", outFileName)
+		outPath = filepath.Join(params.cfg.binDirPath, params.baseName, "obj", outFileName)
 	} else if params.kind == CCKindModTest {
 		filePath = filepath.Join(params.cfg.moduleDirPath, params.baseName, "test", params.fileName)
-		outPath = filepath.Join(cfg.moduleDirPath, ccFile.baseName, "test", outFileName)
+		outPath = filepath.Join(params.cfg.moduleDirPath, params.baseName, "test", outFileName)
 	} else {
 		log.Fatalf("Unimplemented CCKind while parsing CC File: %s %s", params.baseName, params.fileName)
 	}
-	dependencies := parseCCDependencies(params.cfg, params.filePath)
+	dependencies := parseCCDependencies(params.cfg, filePath)
 	_ <- params.semaphore
 	params.ccFileSend <- CCFile{
 		filePath:     filePath,
@@ -585,7 +586,9 @@ func parseModFolders(ParseModFolders params) {
 		log.Fatalf("Failed to list entries in modules directory.")
 	}
 
-	params.wg.Add(len(entries))
+	var subWg sync.WaitGroup
+
+	subWg.Add(len(entries))
 	for _, entry := range entries {
 		params.folderSemaphore <- struct{}{}
 		go parseModFolder(ParseModFolder{
@@ -594,11 +597,12 @@ func parseModFolders(ParseModFolders params) {
 			folderSemaphore: params.folderSemaphore,
 			modFileSend:     params.modFileSend,
 			ccFileSend:      params.ccFileSend,
-			wg:              params.wg,
+			wg:              subWg,
 			modSend:         params.modSend,
 		})
 	}
 
+	subWg.Wait()
 	params.wg.Done()
 }
 
@@ -625,7 +629,7 @@ func parseLibFolder(ParseLibFolder params) {
 
 	parts := []string{}
 
-	subWg.add(len(srcEntries))
+	subWg.Add(len(srcEntries))
 	for _, srcEntry := range srcEntries {
 		partName := parseCCName(srcEntry.Name())
 		parts = append(parts, partName)
@@ -646,7 +650,7 @@ func parseLibFolder(ParseLibFolder params) {
 
 	testEntries, err := os.ReadDir(testFolderPath)
 	if err == nil {
-		subWg.add(len(testEntries))
+		subWg.Add(len(testEntries))
 		for _, testEntry := range testEntries {
 			testName := parseCCName(testEntry.Name())
 			tests = append(tests, testName)
@@ -664,7 +668,7 @@ func parseLibFolder(ParseLibFolder params) {
 		}
 	}
 
-	depsFile := parseDepsFile(filepath.Join(params.cfg.libDirPath, baseName, "deps.json"))
+	depsFile := parseDepsFile(filepath.Join(params.cfg.libDirPath, params.baseName, "deps.json"))
 
 	params.libSend <- Library{
 		name:             params.baseName,
@@ -694,7 +698,9 @@ func parseLibFolders(params ParseLibFolders) {
 		log.Fatalf("Failed to list libraries directory: %s, %v", params.cfg.libDirPath, err)
 	}
 
-	params.wg.Add(len(entries))
+	var subWg sync.WaitGroup
+
+	subWg.Add(len(entries))
 	for _, entry := range entries {
 		params.folderSemaphore <- struct{}{}
 		go parseLibFolder(ParseLibFolder{
@@ -703,11 +709,12 @@ func parseLibFolders(params ParseLibFolders) {
 			folderSemaphore: params.folderSemaphore,
 			fileSemaphore:   params.fileSemaphore,
 			ccFileSend:      params.ccFileSend,
-			wg:              params.wg,
+			wg:              subWg,
 			libSend:         params.libSend,
 		})
 	}
 
+	subWg.Wait()
 	params.wg.Done()
 }
 
@@ -733,7 +740,7 @@ func parseBinFolder(params ParseBinFolder) {
 
 	parts := []string{}
 
-	subWg.add(len(srcEntries))
+	subWg.Add(len(srcEntries))
 	for _, srcEntry := range srcEntries {
 		ccName := parseCCName(srcEntry.Name())
 		parts = append(parts, ccName)
@@ -780,7 +787,9 @@ func parseBinFolders(params ParseBinFolders) {
 		log.Fatalf("Failed to list binaries directory: %s, %v", params.cfg.binDirPath, err)
 	}
 
-	params.wg.Add(len(entries))
+	var subWg sync.WaitGroup
+
+	subWg.Add(len(entries))
 	for _, entry := range entries {
 		params.folderSemaphore <- struct{}{}
 		go parseBinFolder(ParseBinFolder{
@@ -789,11 +798,12 @@ func parseBinFolders(params ParseBinFolders) {
 			folderSemaphore: params.folderSemaphore,
 			fileSemaphore:   params.fileSemaphore,
 			ccFileSend:      params.ccFileSend,
-			wg:              params.wg,
+			wg:              subWg,
 			binSend:         params.binSend,
 		})
 	}
 
+	subWg.Wait()
 	params.wg.Done()
 }
 
@@ -910,7 +920,7 @@ type LinkAndRunTest struct {
 func linkAndRunTest(params LinkAndRunTest) {
 	args := []string{}
 
-	args = append(args, cfg.ldflags...)
+	args = append(args, params.cfg.ldflags...)
 
 	args = append(args, "-o")
 	args = append(args, params.outPath)
@@ -918,10 +928,10 @@ func linkAndRunTest(params LinkAndRunTest) {
 	args = append(args, params.objPath)
 
 	for _, lib_name := range params.dependencies {
-		args = append(args, filepath.Join(cfg.buildDirPath, "lib", lib_name, lib_name+".a"))
+		args = append(args, filepath.Join(params.cfg.buildDirPath, "lib", lib_name, lib_name+".a"))
 	}
 
-	cmd := exec.Command(cfg.cxx, args...)
+	cmd := exec.Command(params.cfg.cxx, args...)
 	output, err := cmd.CombinedOutput()
 	if err != nil {
 		log.Fatalf("Failed to link test %v: %v\n %s", params.outPath, err, output)
