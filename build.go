@@ -179,11 +179,8 @@ func readConfig() Config {
 	var devMode = flag.Bool("dev-mode", true, "enable development mode or not")
 	var debugInfo = flag.Bool("debug-info", true, "include debug info in the output executables")
 	var fuzz = flag.Bool("fuzz", false, "enable fuzz testing instrumentation")
+	var projDir = flag.String("proj-dir", ".", "project directory")
 	var buildDir = flag.String("build-dir", "build", "directory for outputting build artifacts")
-	var moduleDir = flag.String("module-dir", "module", "directory for modules")
-	var libDir = flag.String("lib-dir", "lib", "directory for libraries")
-	var binDir = flag.String("bin-dir", "bin", "directory for binary targets")
-	var includeDir = flag.String("include-dir", "include", "directory for header include path")
 
 	flag.Parse()
 
@@ -192,11 +189,13 @@ func readConfig() Config {
 		log.Fatalf("Failed to get current working directory: %v", err)
 	}
 
+	projDirPath := makePathAbsolute(currentPath, *projDir)
 	buildDirPath := makePathAbsolute(currentPath, *buildDir)
-	moduleDirPath := makePathAbsolute(currentPath, *moduleDir)
-	libDirPath := makePathAbsolute(currentPath, *libDir)
-	binDirPath := makePathAbsolute(currentPath, *binDir)
-	includeDirPath := makePathAbsolute(currentPath, *includeDir)
+
+	moduleDirPath := filepath.Join(projDirPath, "mod")
+	libDirPath := filepath.Join(projDirPath, "lib")
+	binDirPath := filepath.Join(projDirPath, "bin")
+	includeDirPath := filepath.Join(projDirPath, "include")
 
 	flagCfg := FlagConfig{
 		optLevel:       *optLevel,
@@ -263,8 +262,8 @@ func parseModuleName(baseName string, fileName string) string {
 		log.Fatalf("Module file name can't contain ':'. Found ':' character in this name: %s", fileName)
 	}
 
-	if ext != "cppm" {
-		log.Fatalf("File on module folder has an unexpected extension: %v. Expected it to have '.cppm'", fileName)
+	if ext != "ccm" {
+		log.Fatalf("File on module folder has an unexpected extension: %v. Expected it to have '.ccm'", fileName)
 	}
 
 	if name == "" {
@@ -283,7 +282,7 @@ type DepsFile struct {
 	TestDependencies []string `json:"test_dependencies"`
 }
 
-func parseDepsFile(filePath string) DepsFile {
+func parseDepsFile(filePath string, send chan DepsFile) {
 	content, err := os.ReadFile(filePath)
 	if err != nil {
 		log.Fatalf("Failed to read deps file: %s, %v", filePath, err)
@@ -293,7 +292,7 @@ func parseDepsFile(filePath string) DepsFile {
 	if err != nil {
 		log.Fatalf("Failed to parse dependency file: %s: %v", filePath, err)
 	}
-	return out
+	send <- out
 }
 
 type ModDepsReq struct {
@@ -382,7 +381,6 @@ func parseModuleDependencies(cfg Config, filePath string, moduleName string) []s
 }
 
 type ModuleFile struct {
-	filePath     string
 	moduleName   string
 	dependencies []string
 }
@@ -402,95 +400,45 @@ func parseModuleFile(params ParseModuleFile) {
 	dependencies := parseModuleDependencies(params.cfg, filePath, params.moduleName)
 	_ <- params.semaphore
 	params.modFileSend <- ModuleFile{
-		filePath:     filePath,
 		moduleName:   params.moduleName,
 		dependencies: dependencies,
 	}
 	params.wg.Done()
 }
 
-type CCKind int
-
-const (
-	CCKindLib CCKind = iota
-	CCKindBin
-	CCKindModTest
-	CCKindLibTest
-)
-
 type CCFile struct {
-	filePath     string
-	outPath      string
-	kind         CCKind
-	baseName     string
-	ccName       string
+	inputPath    string
+	outputPath   string
 	dependencies []string
 }
 
 type ParseCCFile struct {
 	cfg        Config
-	kind       CCKind
-	ccName     string
-	baseName   string
-	fileName   string
+	inputPath  string
+	outputPath string
 	semaphore  chan struct{}
 	ccFileSend chan CCFile
 	wg         sync.WaitGroup
 }
 
 func parseCCFile(ParseCCFile params) {
-	outFileName := params.ccName + ".o"
-
-	outPath := ""
-	filePath := ""
-	if params.kind == CCKindLib {
-		filePath = filepath.Join(params.cfg.libDirPath, params.baseName, "src", params.fileName)
-		outPath = filepath.Join(params.cfg.libDirPath, params.baseName, "obj", outFileName)
-	} else if params.kind == CCKindLibTest {
-		filePath = filepath.Join(params.cfg.libDirPath, params.baseName, "test", params.fileName)
-		outPath = filepath.Join(params.cfg.libDirPath, params.baseName, "test", outFileName)
-	} else if params.kind == CCKindBin {
-		filePath = filepath.Join(params.cfg.binDirPath, params.baseName, "src", params.fileName)
-		outPath = filepath.Join(params.cfg.binDirPath, params.baseName, "obj", outFileName)
-	} else if params.kind == CCKindModTest {
-		filePath = filepath.Join(params.cfg.moduleDirPath, params.baseName, "test", params.fileName)
-		outPath = filepath.Join(params.cfg.moduleDirPath, params.baseName, "test", outFileName)
-	} else {
-		log.Fatalf("Unimplemented CCKind while parsing CC File: %s %s", params.baseName, params.fileName)
-	}
-	dependencies := parseCCDependencies(params.cfg, filePath)
+	dependencies := parseCCDependencies(params.cfg, params.inputPath)
 	_ <- params.semaphore
 	params.ccFileSend <- CCFile{
-		filePath:     filePath,
-		outPath:      outPath,
-		kind:         params.kind,
-		baseName:     params.baseName,
-		ccName:       params.ccName,
+		inputPath:    params.inputPath,
+		outputPath:   params.outputPath,
 		dependencies: dependencies,
 	}
 	params.wg.Done()
 }
 
 type Module struct {
-	name             string
-	parts            [][]string
-	tests            []string
-	dependencies     []string
-	testDependencies []string
-}
-
-type Library struct {
-	name             string
+	moduleName       string
 	parts            []string
-	tests            []string
+	testInputPaths   []string
+	testOutputPaths  []string
 	dependencies     []string
 	testDependencies []string
-}
-
-type Binary struct {
-	name         string
-	parts        []string
-	dependencies []string
 }
 
 type ParseModFolder struct {
@@ -505,8 +453,13 @@ type ParseModFolder struct {
 }
 
 func parseModFolder(params ParseModFolder) {
-	srcFolderPath := filepath.Join(params.cfg.moduleDirPath, params.baseName, "src")
-	testFolderPath := filepath.Join(params.cfg.moduleDirPath, params.baseName, "test")
+	basePath := filepathJoin(params.cfg.moduleDirPath, params.baseName)
+
+	srcFolderPath := filepath.Join(basePath, "src")
+	testFolderPath := filepath.Join(basePath, "test")
+
+	depsChan = make(chan DepsFile, 1)
+	go parseDepsFile(filepath.Join(basePath, "deps.json"), depsChan)
 
 	var subWg sync.WaitGroup
 
@@ -515,7 +468,7 @@ func parseModFolder(params ParseModFolder) {
 		log.Fatalf("Failed to list entries in mod directory: %s: %v", srcFolderPath, err)
 	}
 
-	parts := [][]string{}
+	parts := []string{}
 
 	subWg.Add(len(srcEntries))
 	for _, srcEntry := range srcEntries {
@@ -533,21 +486,23 @@ func parseModFolder(params ParseModFolder) {
 		})
 	}
 
-	tests := []string{}
+	testInputPaths := []string{}
+	testOutputPaths := []string{}
 
 	testEntries, err := os.ReadDir(testFolderPath)
 	if err == nil {
 		subWg.Add(len(testEntries))
 		for _, testEntry := range testEntries {
+			inputPath := filepath.Join(testFolderPath, testEntry.Name())
 			testName := parseCCName(testEntry.Name())
-			tests = append(tests, testName)
+			outputPath := filepath.Join(params.cfg.buildDirPath, "mod", params.baseName, "test", testName+".o")
+			testInputPaths = append(testInputPaths, inputPath)
+			testOutputPaths = append(testOutputPath, outputPath)
 			fileSemaphore <- struct{}{}
 			go parseCCFile(ParseCCFile{
 				cfg:        params.cfg,
-				kind:       CCKindModTest,
-				ccName:     testName,
-				baseName:   params.baseName,
-				fileName:   testEntry.Name(),
+				inputPath:  inputPath,
+				outputPath: outputPath,
 				semaphore:  params.fileSemaphore,
 				ccFileSend: params.ccFileSend,
 				wg:         subWg,
@@ -555,12 +510,12 @@ func parseModFolder(params ParseModFolder) {
 		}
 	}
 
-	depFile := parseDepsFile(filepath.Join(params.cfg.moduleDirPath, params.baseName, "deps.json"))
-
+	depFile := <-depsChan
 	params.modSend <- Module{
-		name:             params.baseName,
+		moduleName:       params.baseName,
 		parts:            parts,
-		tests:            tests,
+		testInputPaths:   testInputPaths,
+		testOutputPaths:  testOutputPaths,
 		dependencies:     depFile.Dependencies,
 		testDependencies: depFile.TestDependencies,
 	}
@@ -606,6 +561,16 @@ func parseModFolders(ParseModFolders params) {
 	params.wg.Done()
 }
 
+type Library struct {
+	libName          string
+	srcInputPaths    []string
+	srcOutputPaths   []string
+	testInputPaths   []string
+	testOutputPaths  []string
+	dependencies     []string
+	testDependencies []string
+}
+
 type ParseLibFolder struct {
 	cfg             Config
 	baseName        string
@@ -617,8 +582,12 @@ type ParseLibFolder struct {
 }
 
 func parseLibFolder(ParseLibFolder params) {
-	srcFolderPath := filepath.Join(params.cfg.libDirPath, params.baseName, "src")
-	testFolderPath := filepath.Join(params.cfg.libDirPath, params.baseName, "test")
+	basePath := filepath.Join(params.cfg.libDirPath, params.baseName)
+	srcFolderPath := filepath.Join(basePath, "src")
+	testFolderPath := filepath.Join(basePath, "test")
+
+	depsChan = make(chan DepsFile, 1)
+	go parseDepsFile(filepath.Join(basePath, "deps.json"), depsChan)
 
 	var subWg sync.WaitGroup
 
@@ -627,40 +596,48 @@ func parseLibFolder(ParseLibFolder params) {
 		log.Fatalf("Failed to list entries in lib directory: %s: %v", srcFolderPath, err)
 	}
 
-	parts := []string{}
+	srcInputPaths := []string{}
+	srcOutputPaths := []string{}
 
 	subWg.Add(len(srcEntries))
 	for _, srcEntry := range srcEntries {
+		inputPath := filepath.Join(srcFolderPath, srcEntry.Name())
 		partName := parseCCName(srcEntry.Name())
-		parts = append(parts, partName)
+		outputPath := filepath.Join(params.cfg.buildDirPath, "lib", params.baseName, "src", partName+".o")
+
+		srcInputPaths := append(srcInputPaths, inputPath)
+		srcOutputPaths := append(srcOutputPaths, outputPath)
+
 		fileSemaphore <- struct{}{}
 		go parseCCFile(ParseCCFile{
 			cfg:        params.cfg,
-			kind:       CCKindLib,
-			ccName:     partName,
-			baseName:   params.baseName,
-			fileName:   srcEntry.Name(),
+			inputPath:  inputPath,
+			outputPath: outputPath,
 			semaphore:  params.fileSemaphore,
 			ccFileSend: params.ccFileSend,
 			wg:         subWg,
 		})
 	}
 
-	tests := []string{}
+	testInputPaths := []string{}
+	testOutputPaths := []string{}
 
 	testEntries, err := os.ReadDir(testFolderPath)
 	if err == nil {
 		subWg.Add(len(testEntries))
 		for _, testEntry := range testEntries {
+			inputPath := filepath.Join(testFolderPath, testEntry.Name())
 			testName := parseCCName(testEntry.Name())
-			tests = append(tests, testName)
+			outputPath := filepath.Join(params.cfg.buildDirPath, "lib", params.baseName, "test", testName+".o")
+
+			testInputPaths := append(testInputPaths, inputPath)
+			testOutputPaths := append(testOutputPaths, outputPath)
+
 			fileSemaphore <- struct{}{}
 			go parseCCFile(ParseCCFile{
 				cfg:        params.cfg,
-				kind:       CCKindLibTest,
-				ccName:     testName,
-				baseName:   params.baseName,
-				fileName:   testEntry.Name(),
+				inputPath:  inputPath,
+				outputPath: outputPath,
 				semaphore:  params.fileSemaphore,
 				ccFileSend: params.ccFileSend,
 				wg:         subWg,
@@ -668,12 +645,13 @@ func parseLibFolder(ParseLibFolder params) {
 		}
 	}
 
-	depsFile := parseDepsFile(filepath.Join(params.cfg.libDirPath, params.baseName, "deps.json"))
-
+	depsFile := <-depsChan
 	params.libSend <- Library{
-		name:             params.baseName,
-		parts:            parts,
-		tests:            tests,
+		libName:          params.baseName,
+		srcInputPaths:    srcInputPaths,
+		srcOutputPaths:   srcOutputPaths,
+		testInputPaths:   testInputPaths,
+		testOutputPaths:  testOutputPaths,
 		dependencies:     depsFile.Dependencies,
 		testDependencies: depsFile.TestDependencies,
 	}
@@ -718,6 +696,13 @@ func parseLibFolders(params ParseLibFolders) {
 	params.wg.Done()
 }
 
+type Binary struct {
+	binName        string
+	srcInputPaths  []string
+	srcOutputPaths []string
+	dependencies   []string
+}
+
 type ParseBinFolder struct {
 	cfg             Config
 	baseName        string
@@ -729,7 +714,11 @@ type ParseBinFolder struct {
 }
 
 func parseBinFolder(params ParseBinFolder) {
-	srcFolderPath := filepath.Join(params.cfg.binDirPath, params.baseName, "src")
+	basePath := filepath.Join(params.cfg.binDirPath, params.baseName)
+	srcFolderPath := filepath.Join(basePath, "src")
+
+	depsChan = make(chan DepsFile, 1)
+	go parseDepsFile(filepath.Join(basePath, "deps.json"), depsChan)
 
 	var subWg sync.WaitGroup
 
@@ -738,33 +727,35 @@ func parseBinFolder(params ParseBinFolder) {
 		log.Fatalf("Failed to list entries in bin directory: %s: %v", srcFolderPath, err)
 	}
 
-	parts := []string{}
+	srcInputPaths := []string{}
+	srcOutputPaths := []string{}
 
 	subWg.Add(len(srcEntries))
 	for _, srcEntry := range srcEntries {
+		inputPath := filepath.Join(srcFolderPath, srcEntry.Name())
 		ccName := parseCCName(srcEntry.Name())
-		parts = append(parts, ccName)
+		outputPath := filepath.Join(params.buildDirPath, "bin", params.baseName, "src", ccName+".o")
 		fileSemaphore <- struct{}{}
 		go parseCCFile(ParseCCFile{
 			cfg:        params.cfg,
-			kind:       CCKindBin,
-			baseName:   params.baseName,
-			fileName:   srcEntry.Name(),
+			inputPath:  inputPath,
+			outputPath: outputPath,
 			semaphore:  params.fileSemaphore,
 			ccFileSend: params.ccFileSend,
 			wg:         subWg,
 		})
 	}
 
-	depsFile := parseDepsFile(filepath.Join(params.cfg.binDirPath, params.baseName, "deps.json"))
+	depsFile := <-depsChan
 	if len(depsFile.testDependencies) > 0 {
 		log.Fatalf("The binary %s can't have test dependencies in it's deps.json file", params.baseName)
 	}
 
 	params.binSend <- Binary{
-		name:         params.baseName,
-		parts:        parts,
-		dependencies: depsFile.Dependencies,
+		binName:        params.baseName,
+		srcInputPaths:  srcInputPaths,
+		srcOutputPaths: srcOutputPaths,
+		dependencies:   depsFile.Dependencies,
 	}
 
 	_ <- params.folderSemaphore
@@ -819,8 +810,8 @@ type ParseFolders struct {
 
 func parseFolders(params ParseFolders) {
 	concurrency := runtime.NumCPU()
-	folderSemaphore := make(chan struct{}, concurrency*2)
-	fileSemaphore := make(chan struct{}, concurrency*2)
+	folderSemaphore := make(chan struct{}, concurrency)
+	fileSemaphore := make(chan struct{}, concurrency)
 
 	var wg sync.WaitGroup
 
@@ -880,41 +871,49 @@ func archiveLib(cfg Config, lib Library, libArchived chan string, semaphore chan
 	libArchived <- lib.name
 }
 
-func linkBinary(cfg Config, bin Binary, semaphore chan struct{}, wg sync.WaitGroup) {
-	binPath := filepath.Join(cfg.buildDirPath, "bin", bin.name, bin.name)
+type LinkBinary struct {
+	cfg          Config
+	bin          Binary
+	dependencies map[string]struct{}
+	semaphore    chan struct{}
+	binaryLinked chan string
+}
+
+func linkBinary(params LinkBinary) {
+	binPath := filepath.Join(params.cfg.buildDirPath, "bin", params.bin.binName, params.bin.binName)
 
 	args := []string{}
 
-	args = append(args, cfg.ldflags...)
+	args = append(args, params.cfg.ldflags...)
 
 	args = append(args, "-o")
 	args = append(args, binPath)
 
-	for _, obj_name := range bin.parts {
-		args = append(args, filepath.Join(cfg.buildDirPath, "bin", bin.name, "obj", obj_name+".o"))
+	for _, objPath := range params.bin.srcOutputPaths {
+		args = append(args, objPath)
 	}
 
-	for _, lib_name := range bin.dependencies {
-		args = append(args, filepath.Join(cfg.buildDirPath, "lib", lib_name, lib_name+".a"))
+	for lib_name, _ := range params.dependencies {
+		args = append(args, filepath.Join(params.cfg.buildDirPath, "lib", lib_name, lib_name+".a"))
 	}
 
-	cmd := exec.Command(cfg.cxx, args...)
+	cmd := exec.Command(params.cfg.cxx, args...)
 	output, err := cmd.CombinedOutput()
 	if err != nil {
 		log.Fatalf("Failed to link binary %v: %v\n %s", binPath, err, output)
 	}
 
-	<-semaphore
-	wg.Done()
+	params.binaryLinked <- bin.binName
+	<-params.semaphore
 }
 
 type LinkAndRunTest struct {
 	cfg          Config
-	dependencies []string
-	objPath      string
-	outPath      string
+	dependencies map[string]struct{}
+	objPath string
+	outputPath string
 	semaphore    chan struct{}
-	wg           sync.WaitGroup
+	testFinished chan string
 }
 
 func linkAndRunTest(params LinkAndRunTest) {
@@ -923,11 +922,11 @@ func linkAndRunTest(params LinkAndRunTest) {
 	args = append(args, params.cfg.ldflags...)
 
 	args = append(args, "-o")
-	args = append(args, params.outPath)
+	args = append(args, params.outputPath)
 
 	args = append(args, params.objPath)
 
-	for _, lib_name := range params.dependencies {
+	for lib_name, _ := range.params.dependencies {
 		args = append(args, filepath.Join(params.cfg.buildDirPath, "lib", lib_name, lib_name+".a"))
 	}
 
@@ -938,14 +937,14 @@ func linkAndRunTest(params LinkAndRunTest) {
 	}
 
 	// run the test
-	cmd := exec.Command(params.outPath)
+	cmd := exec.Command(params.outputPath)
 	output, err := cmd.CombinedOutput()
 	if err != nil {
 		log.Fatalf("Failed to run test %v: %v\n %s", params.outPath, err, output)
 	}
 
+	params.testFinished <- params.outputPath
 	<-params.semaphore
-	params.wg.Done()
 }
 
 func compileModuleFile(cfg Config, modFile ModuleFile, modCompiled chan string, semaphore chan struct{}) {
@@ -953,10 +952,14 @@ func compileModuleFile(cfg Config, modFile ModuleFile, modCompiled chan string, 
 
 	args = append(args, cfg.cflags...)
 
-	outFileName := strings.Join(strings.Split(modFile.moduleName, ":"), "-") + ".pcm"
+	nameParts := strings.Split(modFile.moduleName, ":")
+
+	outFileName := strings.Join(nameParts, "-") + ".pcm"
 	outPath := filepath.Join(cfg.buildDirPath, "module", outFileName)
 
-	args = append(args, modFile.filePath)
+	filePath := filepath.Join(cfg.moduleDirPath, nameParts[0], "src", nameParts[len(nameParts)-1] + ".ccm")
+
+	args = append(args, filePath)
 	args = append(args, "--precompile")
 	args = append(args, "-o")
 	args = append(args, outPath)
@@ -966,7 +969,7 @@ func compileModuleFile(cfg Config, modFile ModuleFile, modCompiled chan string, 
 	cmd := exec.Command(cfg.cxx, args...)
 	output, err := cmd.CombinedOutput()
 	if err != nil {
-		log.Fatalf("Failed to compile %v: %v\n %s", modFile.filePath, err, output)
+		log.Fatalf("Failed to compile %v: %v\n %s", filePath, err, output)
 	}
 
 	<-semaphore
@@ -979,160 +982,23 @@ func compileCCFile(cfg Config, ccFile CCFile, ccCompiled chan string, semaphore 
 	args = append(args, cfg.cflags...)
 
 	args = append(args, "-c")
-	args = append(args, ccFile.filePath)
+	args = append(args, ccFile.inputPath)
 	args = append(args, "-o")
-	args = append(args, ccFile.outPath)
+	args = append(args, ccFile.outputPath)
 
 	args = append(args, "-fprebuilt-module-path="+filepath.Join(cfg.buildDirPath, "module"))
 
 	cmd := exec.Command(cfg.cxx, args...)
 	output, err := cmd.CombinedOutput()
 	if err != nil {
-		log.Fatalf("Failed to compile %v: %v\n %s", ccFile.filePath, err, output)
+		log.Fatalf("Failed to compile %v: %v\n %s", ccFile.inputPath, err, output)
 	}
 
 	<-semaphore
-	ccCompiled <- ccFile.filePath
+	ccCompiled <- ccFile.inputPath
 }
 
-func compileTestAll() {
-
-}
-
-type CompileStatus struct {
-	src  SourceFile
-	deps map[string]struct{}
-}
-
-func compileTestAll(cfg Config, srcChannel chan SourceFile) {
-	compiledChannel := make(chan string, 100)
-	testedChannel := make(chan string, 100)
-
-	// status per artifact
-	status := make(map[string]CompileStatus, 0)
-
-	// maps the name of a module to the names of things that depend on it
-	reverseDependencyMap := make(map[string][]string, 0)
-
-	// ready to compile but waiting
-	toCompile := make([]string, 0)
-
-	// ready to test but waiting
-	toTest := make([]string, 0)
-
-	// concurrency limit for compilations and tests.
-	concurrency := runtime.NumCPU()
-
-	nCompiling := 0
-	nTesting := 0
-
-	nToCompile := 0
-	nToTest := 0
-
-	srcChannelDone := false
-
-	for {
-		select {
-		case src := <-srcChannel:
-			if src.name == "" {
-				srcChannelDone = true
-				// check that all dependencies are actually found
-				for _, entry := range status {
-					for _, dep := range entry.src.deps {
-						_, has := status[dep]
-						if !has {
-							log.Fatalf("The dependency '%s' for '%s' wasn't found.", dep, entry.src.name)
-						}
-					}
-				}
-				continue
-			}
-
-			_, alreadyExists := status[src.name]
-			if alreadyExists {
-				log.Fatalf("Duplicate name: %v", src.name)
-			}
-
-			nToCompile += 1
-
-			if src.kind == Test {
-				nToTest += 1
-			}
-
-			deps := make(map[string]struct{})
-			for _, dep := range src.deps {
-				deps[dep] = struct{}{}
-			}
-
-			status[src.name] = CompileStatus{
-				src:  src,
-				deps: deps,
-			}
-
-			if len(src.deps) == 0 {
-				toCompile = append(toCompile, src.name)
-			} else {
-				// insert dependencies to reversed index
-				for _, dependency := range src.deps {
-					entry, exists := reverseDependencyMap[dependency]
-					if exists {
-						reverseDependencyMap[dependency] = append(entry, src.name)
-					} else {
-						reverseDependencyMap[dependency] = []string{src.name}
-					}
-				}
-			}
-		case name := <-compiledChannel:
-			nToCompile -= 1
-			// remove reverse dependencies since this module is now ready
-			entry, exists := reverseDependencyMap[name]
-			if exists {
-				for _, dependant := range entry {
-					delete(status[dependant].deps, name)
-
-					// add to compile queue if ready to compile
-					if len(status[dependant].deps) == 0 {
-						toCompile = append(toCompile, dependant)
-					}
-				}
-				delete(reverseDependencyMap, name)
-			}
-
-			// add to test queue if the compiled item is a test
-			if status[name].src.kind == Test {
-				toTest = append(toTest, name)
-			}
-
-			nCompiling -= 1
-		case name := <-testedChannel:
-			nToTest -= 1
-			_ = name
-			nTesting -= 1
-		}
-
-		// start new compilations if there is room
-		for nCompiling < concurrency && len(toCompile) > 0 {
-			go goCompile(cfg, status[toCompile[len(toCompile)-1]].src, compiledChannel)
-			toCompile = toCompile[:len(toCompile)-1]
-			nCompiling += 1
-		}
-
-		// start new tests if there is room
-		for nTesting < concurrency && len(toTest) > 0 {
-			go goTest(cfg, toTest[len(toTest)-1], testedChannel)
-			toTest = toTest[:len(toTest)-1]
-			nTesting += 1
-		}
-
-		if srcChannelDone && nToCompile == 0 && nToTest == 0 {
-			break
-		}
-	}
-}
-
-func main() {
-	cfg := readConfig()
-
+func build(cfg Config) {
 	err := os.RemoveAll(cfg.buildDirPath)
 	if err != nil {
 		log.Fatalf("Failed to clean the build directory: %v", err)
@@ -1143,20 +1009,110 @@ func main() {
 		log.Fatalf("Failed to create build directory: %v", err)
 	}
 
-	modFileSend := make(chan ModuleFile)
-	ccFileSend := make(chan CCFile)
+	modFileChan := make(chan ModuleFile)
+	ccFileChan := make(chan CCFile)
 	parseFinished := make(chan struct{}, 1)
-	modSend := make(chan Module)
-	libSend := make(chan Library)
-	binSend := make(chan Binary)
+	modChan := make(chan Module)
+	libChan := make(chan Library)
+	binChan := make(chan Binary)
 
 	go parseFolders(ParseFolders{
 		cfg:         cfg,
-		modFileSend: modFileSend,
-		ccFileSend:  ccFileSend,
+		modFileSend: modFileChan,
+		ccFileSend:  ccFileChan,
 		finished:    parseFinished,
-		modSend:     modSend,
-		libSend:     libSend,
-		binSend:     binSend,
+		modSend:     modChan,
+		libSend:     libChan,
+		binSend:     binChan,
 	})
+	
+	libArchived := make(chan string)
+	modCompiled := make(chan string)
+	ccCompiled := make(chan string)
+	testFinished := make(chan string)
+	binaryBuilt := make(chan string)
+
+	parsingIsFinished := false
+	nPending := 0
+
+	compileTestAll(CompileTestAll{
+		modFileRecv:   modFileSend,
+		ccFileRecv:    ccFileSend,
+		parseFinished: parseFinished,
+		moduleRecv:    modSend,
+		libraryRecv:   libSend,
+		binaryRecv:    binSend,
+	})
+
+	for {
+		select {
+			
+		}
+	}
+}
+
+func compileTestAll(params CompileTestAll) {
+	finished := make(map[string]struct{})
+	dependencies := make(map[string]map[string]struct{})
+	reverseDependencies := make(map[string][]string)
+
+	// maps filePaths
+	ccCompiled := make(map[string]struct{})
+	// maps moduleNames
+	modCompiled := make(map[string]struct{})
+
+	// moduleName -> set of module deps
+	modDeps := make(map[string]map[string]struct{})
+	// ccFilePath -> set of module deps
+	ccDeps := make(map[string]map[string]struct{})
+
+	// moduleName -> list of modules that depend on this one
+	modRevDeps := make(map[string][]string)
+	// moduleName -> list of cc file paths that depend on this one
+	ccRevDeps := make(map[string][]string)
+
+	// libraryName -> set of ccFilePath deps
+	libDeps := make(map[string]map[string]struct{})
+
+	// binaryName -> set of ccFilePath deps
+	binDeps := make(map[string]map[string]struct{})
+
+	for {
+		select {
+		case modFile <- params.modFileRecv:
+			// trigger objects that depend on this
+			// trigger modules that depend on this
+		case ccFile <- params.ccFileRecv:
+			// trigger libraries that depend on this
+			// trigger binaries that depend on this
+			// trigger tests that depend on this
+		case _ <- params.parseFinished:
+			parsingIsFinished = true
+			// do dependency integrity check. all pending dependencies should
+			// also exist in the pipeline
+		case module <- params.moduleRecv:
+			// register module into map
+		case lib <- params.libraryRecv:
+			// register library into map, also create dependency info for lib
+			// check which dependencies are already ready and remove them
+			// trigger if possible
+		case bin <- params.binaryRecv:
+		case libName <- libArchived:
+		case modName <- modCompiled:
+		case ccFilePath <- ccCompiled:
+		case _ <- testFinished:
+			nPending -= 1
+		case _ <- binaryBuilt:
+			nPending -= 1
+		}
+
+		if parsingIsFinished && nPending == 0 {
+			break
+		}
+	}
+}
+
+func main() {
+	cfg := readConfig()
+	build(cfg)
 }
