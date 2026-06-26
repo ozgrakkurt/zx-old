@@ -192,7 +192,7 @@ func readConfig() Config {
 	projDirPath := makePathAbsolute(currentPath, *projDir)
 	buildDirPath := makePathAbsolute(currentPath, *buildDir)
 
-	moduleDirPath := filepath.Join(projDirPath, "mod")
+	moduleDirPath := filepath.Join(projDirPath, "module")
 	libDirPath := filepath.Join(projDirPath, "lib")
 	binDirPath := filepath.Join(projDirPath, "bin")
 	includeDirPath := filepath.Join(projDirPath, "include")
@@ -910,8 +910,8 @@ func linkBinary(params LinkBinary) {
 type LinkAndRunTest struct {
 	cfg          Config
 	dependencies map[string]struct{}
-	objPath string
-	outputPath string
+	objPath      string
+	outputPath   string
 	semaphore    chan struct{}
 	testFinished chan string
 }
@@ -926,7 +926,7 @@ func linkAndRunTest(params LinkAndRunTest) {
 
 	args = append(args, params.objPath)
 
-	for lib_name, _ := range.params.dependencies {
+	for lib_name, _ := range params.dependencies {
 		args = append(args, filepath.Join(params.cfg.buildDirPath, "lib", lib_name, lib_name+".a"))
 	}
 
@@ -957,7 +957,7 @@ func compileModuleFile(cfg Config, modFile ModuleFile, modCompiled chan string, 
 	outFileName := strings.Join(nameParts, "-") + ".pcm"
 	outPath := filepath.Join(cfg.buildDirPath, "module", outFileName)
 
-	filePath := filepath.Join(cfg.moduleDirPath, nameParts[0], "src", nameParts[len(nameParts)-1] + ".ccm")
+	filePath := filepath.Join(cfg.moduleDirPath, nameParts[0], "src", nameParts[len(nameParts)-1]+".ccm")
 
 	args = append(args, filePath)
 	args = append(args, "--precompile")
@@ -1025,7 +1025,7 @@ func build(cfg Config) {
 		libSend:     libChan,
 		binSend:     binChan,
 	})
-	
+
 	libArchived := make(chan string)
 	modCompiled := make(chan string)
 	ccCompiled := make(chan string)
@@ -1045,9 +1045,7 @@ func build(cfg Config) {
 	})
 
 	for {
-		select {
-			
-		}
+		select {}
 	}
 }
 
