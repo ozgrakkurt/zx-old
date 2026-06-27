@@ -174,15 +174,15 @@ fn make_ldflags(cfg: &FlagCfg) -> Vec<&'static str> {
 
 #[derive(Debug)]
 struct Config {
-    cxx: String,
-    ar: String,
-    clang_scan_deps: String,
-    cflags: Vec<&'static str>,
-    ldflags: Vec<&'static str>,
-    build_path: PathBuf,
-    module_path: PathBuf,
-    lib_path: PathBuf,
-    bin_path: PathBuf,
+    cxx: &'static str,
+    ar: &'static str,
+    clang_scan_deps: &'static str,
+    cflags: &'static [&'static str],
+    ldflags: &'static [&'static str],
+    build_path: &'static Path,
+    module_path: &'static Path,
+    lib_path: &'static Path,
+    bin_path: &'static Path,
 }
 
 fn parse_args() -> Config {
@@ -211,29 +211,26 @@ fn parse_args() -> Config {
         }
     }
 
-    let cxx = args.get("--cxx").map(|s| s.as_str()).unwrap_or("clang++");
-    let ar = args.get("--ar").map(|s| s.as_str()).unwrap_or("llvm-ar");
+    let cxx = args.get("--cxx").map(|s| s.leak()).unwrap_or("clang++");
+    let ar = args.get("--ar").map(|s| s.leak()).unwrap_or("llvm-ar");
     let clang_scan_deps = args
         .get("--clang-scan-deps")
-        .map(|s| s.as_str())
+        .map(|s| s.leak())
         .unwrap_or("clang-scan-deps");
-    let opt_level = args.get("--opt-level").map(|s| s.as_str()).unwrap_or("2");
+    let opt_level = args.get("--opt-level").map(|s| s.leak()).unwrap_or("2");
     let dev_mode = get_bool_arg(&args, "dev-mode", true);
     let debug_info = get_bool_arg(&args, "debug-info", true);
     let fuzz = get_bool_arg(&args, "fuzz", false);
-    let proj_dir = args.get("--proj-dir").map(|s| s.as_str()).unwrap_or(".");
-    let build_dir = args
-        .get("--build-dir")
-        .map(|s| s.as_str())
-        .unwrap_or("build");
+    let proj_dir = args.get("--proj-dir").map(|s| s.leak()).unwrap_or(".");
+    let build_dir = args.get("--build-dir").map(|s| s.leak()).unwrap_or("build");
 
     let current_path = std::env::current_dir().unwrap();
     let proj_path = make_path_absolute(&current_path, Path::new(proj_dir));
     let build_path = make_path_absolute(&current_path, Path::new(build_dir));
     let include_path = proj_path.join("include");
-    let module_path = proj_path.join("module");
-    let lib_path = proj_path.join("lib");
-    let bin_path = proj_path.join("bin");
+    let module_path = proj_path.join("module").leak();
+    let lib_path = proj_path.join("lib").leak();
+    let bin_path = proj_path.join("bin").leak();
 
     let flag_cfg = FlagCfg {
         opt_level: opt_level.to_owned(),
@@ -242,8 +239,8 @@ fn parse_args() -> Config {
         fuzz,
         include_path,
     };
-    let cflags = make_cflags(&flag_cfg);
-    let ldflags = make_ldflags(&flag_cfg);
+    let cflags = make_cflags(&flag_cfg).leak();
+    let ldflags = make_ldflags(&flag_cfg).leak();
 
     return Config {
         cxx: cxx.to_owned(),
@@ -297,16 +294,13 @@ struct ModuleName {
     partition_name: &'static str,
 }
 
-fn parse_module_name(file_name: &str) -> ModuleName {
-}
+fn parse_module_name(file_name: &str) -> ModuleName {}
 
 async fn parse_module_file(local_ex: LocalExRef, state: StateRef) {}
 
 async fn parse_module_test(local_ex: LocalExRef, state: StateRef) {}
 
 async fn parse_modules(local_ex: LocalExRef, state: StateRef) {
-    let state = state.borrow();
-
     let mut mods_dir = smol::fs::read_dir(state.cfg.module_path).await.unwrap();
 
     let concurrency = num_cpus::get();
@@ -321,7 +315,7 @@ async fn parse_modules(local_ex: LocalExRef, state: StateRef) {
 
         futs.push(local_ex.spawn(parse_module_deps_json));
 
-        let mut src_dir = smol::fs:read_dir(src_path).await.unwrap();
+        let mut src_dir = smol::fs::read_dir(src_path).await.unwrap();
 
         while let Some(entry) = dir.next().await {
             if futs.len() >= concurrency {
@@ -340,7 +334,9 @@ async fn parse_modules(local_ex: LocalExRef, state: StateRef) {
         }
     }
 
-    w
+    while futs.len() > 0 {
+        futs.next().await.unwrap();
+    }
 }
 
 async fn run(local_ex: LocalExRef, state: StateRef) {
