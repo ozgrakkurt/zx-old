@@ -290,13 +290,25 @@ struct State {
 type StateRef = &'static RefCell<State>;
 type LocalExRef = &'static smol::LocalExecutor<'static>;
 
-struct ModuleName {
-    partition_name: &'static str,
+fn parse_module_name(base_name: &'static str, file_path: &Path) -> &'static str {
+    let ext = file_path.extension().unwrap();
+    assert_eq!(ext, "ccm");
+
+    let name = file_path.file_prefix().unwrap();
+
+    if name == base_name {
+        base_name
+    } else {
+        format!("{}:{}", base_name, name).leak()
+    }
 }
 
-fn parse_module_name(file_name: &str) -> ModuleName {}
-
-async fn parse_module_file(local_ex: LocalExRef, state: StateRef) {}
+async fn parse_module_file(local_ex: LocalExRef, state: StateRef) {
+    parse_module_name();
+    run_clang_deps();
+    parse_clang_deps();
+    calculate_paths();
+}
 
 async fn parse_module_test(local_ex: LocalExRef, state: StateRef) {}
 
