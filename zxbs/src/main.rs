@@ -1,9 +1,8 @@
 #![allow(clippy::single_match)]
 
-use serde::Deserialize;
 use smol::prelude::*;
 use std::cell::RefCell;
-use std::collections::HashMap;
+use std::collections::{HashMap, HashSet};
 use std::path::{Path, PathBuf};
 
 fn get_bool_arg(args: &HashMap<String, String>, name: &str, default: bool) -> bool {
@@ -43,7 +42,6 @@ struct FlagCfg {
     dev_mode: bool,
     debug_info: bool,
     fuzz: bool,
-    include_path: PathBuf,
 }
 
 fn make_cflags(cfg: &FlagCfg) -> Vec<&'static str> {
@@ -105,8 +103,6 @@ fn make_cflags(cfg: &FlagCfg) -> Vec<&'static str> {
     ];
 
     cflags.push(format!("-O{}", &cfg.opt_level).leak());
-
-    cflags.push(format!("-I{}", &cfg.include_path.display()).leak());
 
     if cfg.debug_info {
         cflags.push("-g1");
@@ -181,9 +177,7 @@ struct Config {
     cflags: &'static [&'static str],
     ldflags: &'static [&'static str],
     build_path: &'static Path,
-    module_path: &'static Path,
-    lib_path: &'static Path,
-    bin_path: &'static Path,
+    src_path: &'static Path,
 }
 
 fn parse_args() -> Config {
@@ -212,7 +206,10 @@ fn parse_args() -> Config {
         }
     }
 
-    let cxx = args.get("--cxx").map(|s| s.leak()).unwrap_or("clang++");
+    let cxx = args
+        .get("--cxx")
+        .map(|s| -> &'static str { s.leak() })
+        .unwrap_or("clang++");
     let ar = args.get("--ar").map(|s| s.leak()).unwrap_or("llvm-ar");
     let clang_scan_deps = args
         .get("--clang-scan-deps")
@@ -222,95 +219,94 @@ fn parse_args() -> Config {
     let dev_mode = get_bool_arg(&args, "dev-mode", true);
     let debug_info = get_bool_arg(&args, "debug-info", true);
     let fuzz = get_bool_arg(&args, "fuzz", false);
-    let proj_dir = args.get("--proj-dir").map(|s| s.leak()).unwrap_or(".");
-    let build_dir = args.get("--build-dir").map(|s| s.leak()).unwrap_or("build");
+    let src_dir = args.get("--src-dir").map(|s| s.leak()).unwrap_or("src");
+    let build_dir: &'static str = args.get("--build-dir").map(|s| s.leak()).unwrap_or("build");
 
     let current_path = std::env::current_dir().unwrap();
-    let proj_path = make_path_absolute(&current_path, Path::new(proj_dir));
-    let build_path = make_path_absolute(&current_path, Path::new(build_dir));
-    let include_path = proj_path.join("include");
-    let module_path = proj_path.join("module").leak();
-    let lib_path = proj_path.join("lib").leak();
-    let bin_path = proj_path.join("bin").leak();
+    let src_path = make_path_absolute(&current_path, Path::new(src_dir)).leak();
+    let build_path = make_path_absolute(&current_path, Path::new(build_dir)).leak();
 
     let flag_cfg = FlagCfg {
         opt_level: opt_level.to_owned(),
         dev_mode,
         debug_info,
         fuzz,
-        include_path,
     };
     let cflags = make_cflags(&flag_cfg).leak();
     let ldflags = make_ldflags(&flag_cfg).leak();
 
     return Config {
-        cxx: cxx.to_owned(),
-        ar: ar.to_owned(),
-        clang_scan_deps: clang_scan_deps.to_owned(),
+        cxx: cxx.to_owned().leak(),
+        ar: ar.to_owned().leak(),
+        clang_scan_deps: clang_scan_deps.to_owned().leak(),
         build_path,
-        module_path,
-        lib_path,
-        bin_path,
+        src_path,
         cflags,
         ldflags,
     };
 }
 
-trait Target {}
-
-struct Module {}
-impl Target for Module {}
-
-struct ModuleFile {
-    module_name: &'static str,
+struct Mod {
+    name: &'static str,
+    cppm: Vec<String>,
+    cpp: Vec<String>,
+    bin: Vec<String>,
+    test: Vec<String>,
+    deps: Vec<u32>,
+    bin_deps: Vec<u32>,
+    test_deps: Vec<u32>,
 }
-impl Target for ModuleFile {}
-
-struct ModuleTest {}
-impl Target for ModuleTest {}
-
-struct Lib {}
-impl Target for Lib {}
-
-struct LibFile {}
-impl Target for LibFile {}
-
-struct LibTest {}
-
-struct Bin {}
-struct BinFile {}
 
 struct State {
     cfg: Config,
-    path_intern_set: HashSet<&'static str>,
-    path_map: HashMap<&'static str, u32>,
-    targets: Vec<Option<&'static dyn Target>>,
+    name_map: HashTable<&'static str, u32>,
+    mods: Vec<Mod>,
     deps: Vec<Vec<u32>>,
     rev_deps: Vec<Vec<u32>>,
-    is_ready: Vec<bool>,
-    path: Vec<&'static str>,
+    is_built: Vec<bool>,
+    is_discovered: Vec<bool>,
 }
 
 impl State {
-    fn push_or_get_path(&mut self, path: &'static str) -> u32 {
-        if let Some(id) = self.path_map.get(path) {
-            return *id;
+    fn get_or_push_mod(&mut self, name: &str) -> u32 {
+        if let Some(index) = self.name_map.get(name) {
+            return *index;
         }
-        let id = u32::try_from(self.targets.len()).unwrap();
-        self.path_map.insert(path, id);
-        self.targets.push(None);
+        let index = u32::try_from(self.mods.len()).unwrap();
+        let name = name.to_owned().leak();
+        self.name_map.insert(name, id);
+        self.mods.push(Mod {
+            name: name,
+            cppm: Vec::new(),
+            cpp: Vec::new(),
+            asm: Vec::new(),
+            bin: Vec::new(),
+            test: Vec::new(),
+            deps: Vec::new(),
+            test_deps: Vec::new(),
+        });
+
         self.deps.push(Vec::new());
         self.rev_deps.push(Vec::new());
-        self.is_ready.push(false);
-        self.path.push(path);
-        return id;
+        self.is_built.push(false);
+        self.is_discovered.push(false);
+        return index;
     }
 
-    fn push_target(&mut self, tgt: &'static dyn Target, path: &'static str, deps: Vec<u32>) -> u32 {
-        let id = self.push_or_get_path(path);
-        assert!(self.targets[id].is_none());
-        self.targets[id] = Some(tgt);
-        self.deps[id] = deps;
+    fn push_mod(&mut self, module: Mod) -> u32 {
+        let id = self.get_or_push_mod(module.name);
+        let idx = usize::try_from(id).unwrap();
+        assert!(!self.is_discovered[idx]);
+        self.is_discovered[idx] = true;
+
+        let mut deps = Vec::<u32>::with_capacity(
+            module.deps.len() + module.bin_deps.len() + module.test_deps.len(),
+        );
+        deps.extend_from_slice(module.deps.as_slice());
+        deps.extend_from_slice(module.bin_deps.as_slice());
+        deps.extend_from_slice(module.test_deps.as_slice());
+        self.deps[idx] = deps;
+
         return id;
     }
 }
@@ -319,36 +315,50 @@ type StateRef = &'static RefCell<State>;
 type LocalExRef = &'static smol::LocalExecutor<'static>;
 
 #[derive(Deserialize)]
-struct DepsFile {
-    dependencies: Vec<String>,
-    test_dependencies: Vec<String>,
+struct ZXJson {
+    deps: Vec<u32>,
+    bin_deps: Vec<u32>,
+    test_deps: Vec<u32>,
 }
 
-async fn read_deps_file(file_path: &Path) -> DepsFile {
+async fn read_and_parse_zx_json(state: StateRef, file_path: &Path) -> ZXJson {
     let contents = smol::fs::read(file_path).await.unwrap();
     let val = serde_json::from_slice::<serde_json::Value>(&contents).unwrap();
     let obj = val.as_obj().unwrap();
-    let mut dependencies = Vec::<String>::new();
-    let mut test_dependencies = Vec::<String>::new();
-    for val in obj.get("dependencies").unwrap().as_array().unwrap() {
-        dependencies.push(val.as_str().unwrap().to_owned());
+    let mut deps = Vec::<u32>::new();
+    let mut bin_deps = Vec::<u32>::new();
+    let mut test_deps = Vec::<u32>::new();
+
+    let state = state.borrow().unwrap();
+
+    for val in obj.get("deps").unwrap().as_array().unwrap() {
+        let name = val.as_str().unwrap();
+        deps.push(state.get_or_push_mod(name));
     }
 
-    for val in obj.get("test_dependencies").unwrap().as_array().unwrap() {
-        test_dependencies.push(val.as_str().unwrap().to_owned());
+    for val in obj.get("bin_deps").unwrap().as_array().unwrap() {
+        let name = val.as_str().unwrap();
+        bin_deps.push(state.get_or_push_mod(name));
     }
 
-    return DepsFile {
-        dependencies,
-        test_dependencies,
+    for val in obj.get("test_deps").unwrap().as_array().unwrap() {
+        let name = val.as_str().unwrap();
+        test_deps.push(state.get_or_push_mod(name));
+    }
+
+    return ZXJson {
+        deps,
+        bin_deps,
+        test_deps,
     };
 }
 
-async fn parse_dependencies(
+async fn scan_mod_deps(
     state: StateRef,
-    file_path: &Path,
-    expected_to_provide: Option<&str>,
-) -> Vec<String> {
+    index: usize,
+    file_path: PathBuf,
+    expected_to_provide: Option<String>,
+) -> (usize, Vec<String>) {
     let cmd = {
         let state = state.borrow().unwrap();
         let mut cmd = smol::process::Command::new(state.cfg.clang_scan_deps);
@@ -407,58 +417,63 @@ async fn parse_dependencies(
         }
     }
 
-    return deps;
+    (index, deps)
 }
 
-fn parse_cc_name(file_path: &Path) -> &'static str {
+fn parse_cpp_name(file_path: &Path) -> String {
     let ext = file_path.extension().unwrap();
-    assert_eq!(ext, "cc");
-    file_path.file_prefix().unwrap().to_owned().leak()
-}
+    assert_eq!(ext, "cpp");
 
-fn parse_module_name(base_name: &'static str, file_path: &Path) -> &'static str {
-    let ext = file_path.extension().unwrap();
-    assert_eq!(ext, "ccm");
-
-    let name = file_path.file_prefix().unwrap();
+    let name = file_path.file_prefix().unwrap().to_str().unwrap();
 
     assert!(!name.contains(':'));
     assert!(!name.contains('-'));
     assert!(!name.is_empty());
 
-    if name == base_name {
-        base_name
-    } else {
-        format!("{}:{}", base_name, name).leak()
-    }
+    name.to_owned()
 }
 
-async fn parse_and_register__module_file(
+fn parse_cppm_name(base_name: &'static str, file_path: &Path) -> String {
+    let ext = file_path.extension().unwrap();
+    assert_eq!(ext, "cppm");
+
+    let name = file_path.file_prefix().unwrap().to_str().unwrap();
+
+    assert!(!name.contains(':'));
+    assert!(!name.contains('-'));
+    assert!(!name.is_empty());
+
+    name.to_owned()
+}
+
+async fn parse_and_register_bin_file() {}
+
+async fn parse_and_register_test_file() {}
+
+async fn parse_and_register_mod_file(
     local_ex: LocalExRef,
     state: StateRef,
+    id: u32,
     base_name: &'static str,
-    path: &'static str,
+    mod_file_name: &'static str,
+    path: PathBuf,
 ) {
-    let file_path = Path::new(path);
-    let mod_name = parse_module_name(base_name, file_path);
-    let dependencies = parse_dependencies(state, file_path, Some(mod_name)).await;
-
-    let target: &'static dyn Target = Box::leak(Box::new(ModuleFile {
-        module_name: mod_name,
-    }));
+    let mod_name = parse_mod_file_name(base_name, &path);
 
     let state = state.borrow_mut().unwrap();
+    let self_id = state.push_mod(path);
 
-    let mut deps = Vec::<u32>::new();
+    let deps = scan_mod_deps(state, &path, &mod_name);
 
-    let self_id = state.push_or_get_path(path);
+    let state = state.borrow_mut().unwrap();
+    let idx = usize::try_from(id).unwrap();
 
     for dep in dependencies {
-        let dep_path: &'static str = if let Some(p) = state.path_intern_set.get(dep.as_str()) {
+        let dep_path: &'static str = if let Some(p) = state.intern_set.get(dep.as_str()) {
             p
         } else {
             let dl = dep.leak();
-            state.path_intern_set.insert(dl);
+            state.intern_set.insert(dl);
             dl
         };
         let dep_id = state.push_or_get_path(dep_path);
@@ -469,48 +484,78 @@ async fn parse_and_register__module_file(
     assert_eq!(self_id, state.push_target(target, path, deps));
 }
 
-async fn parse_and_register_module_test(
-    local_ex: LocalExRef,
-    state: StateRef,
-    base_name: &'static str,
-    path: &'static str,
-) {
-    let file_path = Path::new(path);
+async fn parse_and_register_module(local_ex: LocalExRef, state: StateRef, base_path: PathBuf) {
+    let mod_path = mod_path.join("mod");
+    let lib_path = mod_path.join("lib");
+    let test_path = mod_path.join("test");
+    let bin_path = mod_path.join("bin");
+    let zx_json_path = mod_path.join("zx.json");
+
+    let zx_json = read_and_parse_zx_json(state, &zx_json_path).await;
+
+    let base_name = base_path.file_name().unwrap().to_str().unwrap();
+
+    let mut cpp = Vec::new();
+    let mut cppm = Vec::new();
+    let mut test = Vec::new();
+    let mut bin = Vec::new();
+
+    let mut futs = futures::future::FuturesUnordered::new();
+    let concurrency = 4;
+
+    let (id, base_name): (u32, &'static str) = {
+        let state = state.borrow_mut().unwrap();
+        let id = state.get_or_push_mod(base_name);
+        (id, state.mods[id].name)
+    };
+
+    let mut mod_dir = smol::fs::read_dir(mod_path).await.unwrap();
+    while let Some(entry) = mod_dir.next().await {
+        if futs.len() >= concurrency {
+            futs.next().await.unwrap();
+        }
+        let path = entry.path().to_owned();
+        let cppm_name = parse_cppm_name();
+        futs.push(local_ex.spawn(parse_and_register_mod_file(state, id, base_name, path)));
+    }
+
+    while let Some(entry) = dir.next().await {
+        if futs.len() >= concurrency {
+            futs.next().await.unwrap();
+        }
+        let path = file_path.to_str().unwrap().to_owned().leak();
+        futs.push(local_ex.spawn(parse_and_register_module_file(state, base_name, path)));
+    }
+
+    let mut test_dir = smol::fs::read_dir(test_path).await.unwrap();
+
+    while let Some(entry) = dir.next().await {
+        if futs.len() >= concurrency {
+            futs.next().await.unwrap();
+        }
+        futs.push(local_ex.spawn(parse_module_test));
+    }
+
+    while futs.len() > 0 {
+        futs.next().await.unwrap();
+    }
 }
 
-async fn parse_modules(local_ex: LocalExRef, state: StateRef) {
-    let mut mods_dir = smol::fs::read_dir(state.cfg.module_path).await.unwrap();
+async fn parse_and_register_modules(local_ex: LocalExRef, state: StateRef) {
+    let mut src_dir = smol::fs::read_dir(state.cfg.src_path).await.unwrap();
 
     let concurrency = num_cpus::get();
-    let mut futs = futures::FuturesUnordered::new();
+    let mut futs = futures::future::FuturesUnordered::new();
 
-    while let Some(mod_entry) = mods_dir.next().await {
+    while let Some(mod_entry) = src_dir.next().await {
         let mod_entry = mod_entry.unwrap();
+        let mod_path = mod_entry.path().to_owned();
 
-        let src_path = mod_entry.path().join("src");
-        let test_path = mod_entry.path().join("test");
-        let deps_json_path = mod_entry.path().join("deps.json");
-
-        futs.push(local_ex.spawn(parse_module_deps_json));
-
-        let mut src_dir = smol::fs::read_dir(src_path).await.unwrap();
-
-        while let Some(entry) = dir.next().await {
-            if futs.len() >= concurrency {
-                futs.next().await.unwrap();
-            }
-            let path = file_path.to_str().unwrap().to_owned().leak();
-            futs.push(local_ex.spawn(parse_module_file));
+        if futs.len() >= concurrency {
+            futs.next().await.unwrap();
         }
 
-        let mut test_dir = smol::fs::read_dir(test_path).await.unwrap();
-
-        while let Some(entry) = dir.next().await {
-            if futs.len() >= concurrency {
-                futs.next().await.unwrap();
-            }
-            futs.push(local_ex.spawn(parse_module_test));
-        }
+        futs.push(local_ex.spawn(parse_module(local_ex, state, mod_path)));
     }
 
     while futs.len() > 0 {
@@ -528,8 +573,9 @@ fn main() {
 
     let state = Box::leak(Box::new(RefCell::new(State {
         cfg,
+        interner: Interner::new(),
         path_map: HashMap::new(),
-        entities: Vec::new(),
+        targets: Vec::new(),
         deps: Vec::new(),
         rev_deps: Vec::new(),
         is_ready: Vec::new(),
