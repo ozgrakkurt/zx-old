@@ -87,7 +87,12 @@ def read_deps_json(path: str) -> DepsJson:
 def build(cfg: Config) -> None:
     pass
 
-def parse_file_name(filename: str, expected_extension: str) -> str:
+@dataclass
+class FileName:
+    name: str
+    extension: str
+
+def parse_file_name(filename: str) -> FileName:
     parts = filename.split(".")
 
     assert len(parts) == 2
@@ -99,9 +104,10 @@ def parse_file_name(filename: str, expected_extension: str) -> str:
     assert "-" not in name
     assert len(name) > 0
 
-    assert ext == expected_extension
-
-    return name
+    return FileName(
+        name=name,
+        extension=ext,
+    )
 
 
 def scan_entry(cfg: Config, path: str) -> list[Target]:
@@ -116,9 +122,13 @@ def scan_entry(cfg: Config, path: str) -> list[Target]:
     test_path = os.path.join(path, "test")
 
     lib_dir = os.listdir(lib_path)
-    for filename in lib_dir:
+    for file_name in lib_dir:
         file_path = os.path.join(lib_path, filename)
+        file_name = parse_file_name(file_name)
 
+        if file_name.extension == "cppm":
+        elif file_name.extension == "cc":
+        elif file_name.extension == "s":
 
     targets = []
 
