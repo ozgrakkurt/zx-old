@@ -1,0 +1,104 @@
+#include <zx/zx_fmt.h>
+#include <zx/zx_int.h>
+#include <zx/zx_panic.h>
+#include <zx/zx_slice.h>
+#include <zx/zx_sys.h>
+
+static void assert(bool v) {
+  if (!v) {
+    zx_panic();
+  }
+}
+
+int main(void) {
+  constexpr zx_u64 cap = 1 << 12;
+  zx_u8 arr[cap];
+  ZXSliceMut<zx_u8> mem = ZXSliceMut<zx_u8>::init_unsafe(arr, cap);
+  ZXFmt fmt = ZXFmt::init(mem);
+
+  for (zx_u64 i = 0; i < 2; i++) {
+    bool overflow = false;
+    fmt.push_i64(-1212, &overflow);
+    assert(fmt.n_written() == 5);
+    assert(fmt.written().len() == 5);
+    assert(!overflow);
+    assert(ZXCString::init_unsafe("-1212").slice().equals(fmt.written()));
+
+    fmt.push_char('x', &overflow);
+    assert(fmt.n_written() == 6);
+    assert(fmt.written().len() == 6);
+    assert(!overflow);
+    assert(ZXCString::init_unsafe("-1212x").slice().equals(fmt.written()));
+
+    fmt.push_i64(10, &overflow);
+    assert(fmt.n_written() == 8);
+    assert(fmt.written().len() == 8);
+    assert(!overflow);
+    assert(ZXCString::init_unsafe("-1212x10").slice().equals(fmt.written()));
+
+    fmt.push_u64(1010, &overflow);
+    assert(fmt.n_written() == 12);
+    assert(fmt.written().len() == 12);
+    assert(!overflow);
+    assert(
+        ZXCString::init_unsafe("-1212x101010").slice().equals(fmt.written()));
+
+    fmt.push_i64(9'223'372'036'854'775'807__wb, &overflow);
+    assert(fmt.n_written() == 31);
+    assert(fmt.written().len() == 31);
+    assert(!overflow);
+    assert(ZXCString::init_unsafe("-1212x1010109223372036854775807")
+               .slice()
+               .equals(fmt.written()));
+
+    fmt.push_i64(-9'223'372'036'854'775'808__wb, &overflow);
+    assert(fmt.n_written() == 51);
+    assert(fmt.written().len() == 51);
+    assert(!overflow);
+    assert(ZXCString::init_unsafe(
+               "-1212x1010109223372036854775807-9223372036854775808")
+               .slice()
+               .equals(fmt.written()));
+
+    fmt.push_i64(0__wb, &overflow);
+    assert(fmt.n_written() == 52);
+    assert(fmt.written().len() == 52);
+    assert(!overflow);
+    assert(ZXCString::init_unsafe(
+               "-1212x1010109223372036854775807-92233720368547758080")
+               .slice()
+               .equals(fmt.written()));
+
+    fmt.push_u64(0__wb, &overflow);
+    assert(fmt.n_written() == 53);
+    assert(fmt.written().len() == 53);
+    assert(!overflow);
+    assert(ZXCString::init_unsafe(
+               "-1212x1010109223372036854775807-922337203685477580800")
+               .slice()
+               .equals(fmt.written()));
+
+    fmt.push_u64(18'446'744'073'709'551'615__wb, &overflow);
+    assert(fmt.n_written() == 73);
+    assert(fmt.written().len() == 73);
+    assert(!overflow);
+    assert(ZXCString::init_unsafe("-1212x1010109223372036854775807-"
+                                  "92233720368547758080018446744073709551615")
+               .slice()
+               .equals(fmt.written()));
+
+    fmt.reset();
+  }
+
+  ZXFmt ofmt = ZXFmt::init(ZXSliceMut<zx_u8>::init_dangling());
+  bool oflow = false;
+  ofmt.push_u64(1, &oflow);
+
+  return 0;
+}
+
+// zx_u64 n_written = 0;
+// ZXSysStatus const w_status =
+//     zx_sys_write(ZX_STDERR, fmt.written(), &n_written);
+// (void)w_status;
+// (void)n_written;
