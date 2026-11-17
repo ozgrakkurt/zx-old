@@ -1,0 +1,46 @@
+{
+  "version": 3,
+  "configurePresets": [
+    {
+      "name": "base-config",
+      "hidden": true,
+      "generator": "Ninja",
+      "cacheVariables": {
+        "CMAKE_C_COMPILER": "clang",
+        "CMAKE_CXX_COMPILER": "clang++"
+      }
+    },
+    {
+      "name": "test",
+      "inherits": "base-config",
+      "binaryDir": "${sourceDir}/build/test",
+      "cacheVariables": {
+        "CMAKE_BUILD_TYPE": "None",
+        "CMAKE_C_FLAGS": "-O2 -g",
+        "CMAKE_CXX_FLAGS": "-O2 -g"
+      }
+    },
+    {
+      "name": "release",
+      "inherits": "base-config",
+      "binaryDir": "${sourceDir}/build/release",
+      "cacheVariables": {
+        "CMAKE_BUILD_TYPE": "Release",
+        "CMAKE_INTERPROCEDURAL_OPTIMIZATION": "true",
+      }
+    },
+    {
+      "name": "fuzz",
+      "binaryDir": "${sourceDir}/build/fuzz",
+      "generator": "Ninja",
+      "cacheVariables": {
+        "CMAKE_C_COMPILER": "${sourceDir}/../honggfuzz/hfuzz_cc/hfuzz-clang",
+        "CMAKE_CXX_COMPILER": "${sourceDir}/../honggfuzz/hfuzz_cc/hfuzz-clang++",
+        "CMAKE_BUILD_TYPE": "None",
+        "CMAKE_C_FLAGS": "-O2 -g",
+        "CMAKE_CXX_FLAGS": "-O2 -g",
+        "KIT_FUZZ_TARGETS": "ON"
+      }
+    }
+  ]
+}
