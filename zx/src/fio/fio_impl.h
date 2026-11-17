@@ -1,0 +1,247 @@
+#ifndef FIO_IMPL_H
+#define FIO_IMPL_H
+
+#include <fiber/fiber.h>
+#include <zx/zx_def.h>
+#include <zx/zx_err.h>
+#include <zx/zx_slab.h>
+#include <zx/zx_time.h>
+
+#include "./fio_uring.h"
+#include "./fio_wake.h"
+
+// Entry is used by the executor to keep info about a Fiber.
+// Entry is also used by both the executor and the fiber itself for
+// communicating with each other.
+typedef struct FioFiberEntry {
+  FiberCtx fib_ctx;
+  zx_u64 io_is_finished;
+  zx_u64 io_is_pending;
+} FioFiberEntry;
+
+// has to be same as bitsize of u64 because we use u64 bitmaps for recording io
+// status per fiber.
+constexpr zx_u8 FIO_IO_PER_FIBER = sizeof(zx_u64) * 8;
+
+// Copied into fiber stack at statup of a fiber and re-used by the running
+// fiber.
+typedef struct Fio {
+  // ---- Global ----
+  FioUring *io_ring;
+  FioUring *polled_io_ring;
+  zx_i32 *io_results;
+  FioWake *wake;
+  FiberCtx const *finish_fib_ctx;
+  zx_u64 yield_after_n_ticks;
+  ZXSlab *fibers;
+  ZXTimer *switch_timer;
+  // ---- Fiber specific ----
+  FioFiberEntry *self_entry;
+  zx_u32 self_id;
+} Fio;
+
+// It is illegal to call this function when a future already has max number of
+// pending/finished io.
+// Returns a pointer to sqe entry and marks it as initialized if an empty entry
+// can be found at this time. Returned entry should be immediately initialized
+// after calling this function. Returns nullptr if an entry can't be found.
+// Caller should retry later.
+static inline FioSQE *Fio_push_sqe(Fio const *fio, bool polled_io) {
+  FioFutureEntry *fut_entry = ctx->fut_entry;
+
+  zx_u64 const is_filled = fut_entry->is_pending | fut_entry->is_finished;
+  ZX_ASSERT((is_filled != ZX_U64_MAX));
+
+  // bit index of the first zero
+  zx_u8 const io_id = zx_chk_sub_u8(zx_ctz_u64(~is_filled), 1);
+
+  FioUring *ring = polled_io ? ctx->polled_io_ring : ctx->io_ring;
+  FioSQE *sqe = FioUring_push_sqe(ring);
+  if (sqe == nullptr) {
+    return nullptr;
+  }
+
+  sqe->user_data = ((zx_u64){io_id} << 32) | (zx_u64){ctx->fut_id};
+
+  // mark it pending
+  fut_entry->is_pending |= ((zx_u64){1} << io_id);
+
+  return sqe;
+}
+
+static inline bool Fio_remove_io_result(Fio const *fio, zx_u32 io_id,
+                                        zx_i32 *result) {
+  FioFibEntry *entry = fio->self_entry;
+
+  zx_u64 const mask = (zx_u64){1} << io_id;
+
+  if ((entry->is_finished & mask) != 0) {
+    // remove finished marker
+    entry->is_finished &= ~mask;
+    *result = ctx->io_results[ctx->fut_id * FIO_IO_PER_FUTURE + io_id];
+    return true;
+  } else {
+    return false;
+  }
+}
+
+static inline void Fio_switch_next(Fio const *fio, FiberCtx *current_fib_ctx,
+                                   zx_u32 next_id) {
+  FioFiberEntry const *next_entry = (FioFiberEntry const *)ZXSlab_get(
+      fio->fibers, next_id, sizeof(FioFiberEntry));
+  ZX_ASSERT((next_entry != nullptr));
+  ZXTimer_lap(fio->switch_timer);
+  fiber_switch(current_fib_ctx, next_entry->fib_ctx);
+}
+
+static inline bool Fio_process_cq(Fio const *fio, FioUring *ring) {
+  bool woke = false;
+
+  FioCQE const *cqe = FioUring_pop_cqe(ring);
+  while (cqe != nullptr) {
+    // process cqe
+    zx_u32 const fib_id = (zx_u32)((zx_u64){cqe.user_data} >> 32);
+    zx_u32 const io_id = (zx_u32)cqe.user_data;
+
+    fio.io_results[FIO_IO_PER_FIBER * fib_id + io_id] = cqe.res;
+
+    FioFiberEntry const *fib_entry = (FioFiberEntry const *)ZXSlab_get(
+        fio->fibers, fib_id, sizeof(FioFiberEntry));
+    ZX_ASSERT((fib_entry != nullptr));
+
+    FioWake_set(fio.wake, fib_id);
+
+    zx_u64 const mask = (zx_u64){1} << io_id;
+    ZX_ASSERT(((fib_entry->io_is_pending & mask) != 0));
+    ZX_ASSERT(((fib_entry->io_is_pending & mask) == 0));
+    fib_entry->io_is_pending &= ~mask;
+    fib_entry->io_is_finished |= mask;
+
+    woke = true;
+
+    cqe = FioUring_pop_cqe(ring);
+  }
+
+  return woke;
+}
+
+// Yield control back to the executor
+static inline void Fio_yield(Fio const *fio, FiberCtx *current_fib_ctx) {
+  if (zx_unlikely((ZXSlab_n_occupied(fio->fibers) == 0))) {
+    // go to exit
+    ZXTimer_lap(fio->switch_timer);
+    fiber_switch(current_fib_ctx, fio->finish_fib_ctx);
+    ZX_ASSERT((false));
+    __builtin_unreachable();
+  } else {
+    zx_u32 fib_id = ZX_U32_MAX;
+    if (FioWake_iter_next(fio->wake, &fib_id)) {
+      Fio_switch_next(fio, current_fib_ctx, fib_id);
+      return;
+    } else {
+      // cycle wake and retry iterating.
+      FioWake_cycle(fio.wake);
+      if (FioWake_iter_next(fio->wake, &fib_id)) {
+        Fio_switch_next(fio, current_fib_ctx, fib_id);
+        return;
+      }
+
+      // keep driving the io_uring instances and check if anything comes up.
+      while (true) {
+        FioUring_cycle(fio->io_ring);
+        bool woke = Fio_process_cq(fio, fio->io_ring);
+
+        FioUring_cycle(fio->polled_io_ring);
+        woke |= Fio_process_cq(fio, fio->polled_io_ring);
+
+        if (woke) {
+          FioWake_cycle(fio.wake);
+          ZX_ASSERT((FioWake_iter_next(fio->wake, &fib_id)));
+          Fio_switch_next(fio, current_fib_ctx, fib_id);
+          return;
+        }
+
+        // Make cpu relax since we are busy looping while we wait io to finish. Emits x86_64 `PAUSE` instruction.
+        __builtin_ia32_pause();
+      }
+    }
+  }
+
+  ZX_ASSERT((false));
+  __builtin_unreachable();
+}
+
+static inline void Fio_yield_if_needed(Fio const *fio) {
+  if (ZXTimer_elapsed(fio->switch_timer) > fio->yield_after_n_ticks) {
+    Fio_yield(fio, &fio->self_entry->fib_ctx);
+  }
+}
+
+typedef struct FioTrampoline {
+  Fio fio;
+  void *usr_ctx;
+  fio_fiberfn fiber_func;
+} FioTampoline;
+
+// Needs to match fiber_startfn function interface.
+// Used for starting a fiber defined by user.
+__attribute__((__noreturn__)) static inline void
+fio_trampoline_(FiberCtx const *exe_ctx, FiberCtx *self_ctx,
+                void *fio_trampoline) {
+  FioTrampoline const t = *(FioTrampoline const *)fio_trampoline;
+
+  t.fiber_func(&t.fio, t.usr_ctx);
+
+  FioFiberEntry ent;
+  ZXSlab_remove(t.fio.fibers, t.fio.self_id, sizeof(FioFiberEntry), &ent);
+  // can't be finished while having pending io in the ring.
+  ZX_ASSERT((ent.io_is_pending == 0));
+
+  Fio_yield(&t.fio, &ent.fib_ctx);
+
+  ZX_ASSERT((false));
+  __builtin_unreachable();
+
+  (void)exe_ctx;
+  (void)self_ctx;
+}
+
+constexpr zx_u32 FIO_FIBER_STACK_SIZE = 1 << 18;
+static_assert(FIO_FIBER_STACK_SIZE % FIBER_STACK_ALIGN == 0);
+static_assert(FIO_FIBER_STACK_SIZE > FIBER_RED_ZONE_SIZE);
+// should have at least 128 kb left after redzone.
+static_assert((FIO_FIBER_STACK_SIZE - FIBER_RED_ZONE_SIZE) >= (1 << 17));
+
+static inline void Fio_spawn(Fio const *fio, void *usr_ctx,
+                             fio_fiberfn fiber_func) {
+  FioTrampoline t = {
+      .fio = *fio,
+      .usr_ctx = usr_ctx,
+      .fiber_func = fiber_func,
+  };
+
+  FioFiberEntry new_entry = {
+      .fiber_ctx = {0},
+      .io_is_pending = 0,
+      .io_is_finished = 0,
+  };
+  zx_u32 const new_fib_id =
+      ZXSlab_insert(fio->fibers, &new_entry, sizeof(FioFiberEntry));
+
+  FioFiberEntry *new_entry_p =
+      ZXSlab_get(fio->fibers, new_fib_id, sizeof(FioFiberEntry));
+  ZX_ASSERT((new_entry_p != nullptr));
+
+  t->fio->self_id = new_fib_id;
+  t->fio->self_entry = new_entry_p;
+
+  zx_u8 *fiber_stack =
+      &fio->fiber_stacks[zx_chk_mul_u64(FIO_FIBER_STACK_SIZE, new_fib_id)];
+
+  FioWake_set(fio->wake, fio->self_id);
+  ZXTimer_lap(fio->switch_timer);
+  fiber_start(&fio->self_entry->fib_ctx, &new_entry_p->fiber_ctx, &t,
+              fio_trampoline_, fiber_stack);
+}
+
+#endif
